@@ -267,13 +267,15 @@ model Voucher {
 model Cart {
   id        Int      @id @default(autoincrement())
   user      User     @relation(fields: [userId], references: [id])
-  userId    Int      @unique
-  store     Store    @relation(fields: [storeId], references: [id]) // relasi ke store
-  storeId   Int // foreign key store
+  userId    Int
+  store     Store    @relation(fields: [storeId], references: [id])
+  storeId   Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   items CartItem[]
+
+  @@unique([userId, storeId])
 }
 
 model CartItem {
@@ -283,7 +285,7 @@ model CartItem {
   product           Product  @relation(fields: [productId], references: [id])
   productId         Int
   qty               Int
-  unitPriceSnapshot Decimal  @db.Decimal(12, 2) // harga snapshot dari StoreInventory
+  unitPriceSnapshot Decimal  @db.Decimal(12, 2)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
