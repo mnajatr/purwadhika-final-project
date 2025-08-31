@@ -1,34 +1,81 @@
 import express from "express";
-
+import cors from "cors";
 import { prisma } from "@repo/database";
 import { CreateUserSchema } from "@repo/schemas";
+import { errorMiddleware } from "./middleware/error.middleware.js";
+import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 
-const app = express();
+export class App {
+  public app: express.Application;
 
-app.use(express.json());
+  constructor() {
+    this.app = express();
 
-app.get("/api/health", (request, response) =>
-  response.status(200).json({ message: "API running!" })
-);
+    this.app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+    this.app.use(express.json());
 
-app.get("/api/users", async (request, response) => {
-  const users = await prisma.user.findMany();
-  response.status(200).json(users);
-});
+    this.app.get("/api/health", (request, response) =>
+      response.status(200).json({ message: "API running!" })
+    );
 
-app.post("/api/users", async (request, response) => {
-  const parsedData = CreateUserSchema.safeParse(request.body);
+    this.app.get("/api/users", async (request, response) => {
+      const users = await prisma.user.findMany({
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          createdAt: true,
+          profile: { select: { fullName: true } },
+        },
+      });
+      response.status(200).json(users);
+    });
 
-  if (!parsedData.success) {
-    return response.status(400).json({ message: parsedData.error });
+    this.app.get("/api/users/:id", async (request, response) => {
+      const { id } = request.params;
+      const user = await prisma.user.findUnique({
+        where: { id: parseInt(id) },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          createdAt: true,
+          profile: { select: { fullName: true } },
+        },
+      });
+
+      if (!user) {
+        return response.status(404).json({ message: "User not found" });
+      }
+
+      response.status(200).json(user);
+    });
+
+    this.app.post("/api/users", async (request, response) => {
+      const parsedData = CreateUserSchema.safeParse(request.body);
+
+      if (!parsedData.success) {
+        return response.status(400).json({ message: parsedData.error });
+      }
+
+      const userData = {
+        email: parsedData.data.email,
+        passwordHash: "", // default empty password for now
+        role: "USER" as const, // default role
+      };
+      const user = await prisma.user.create({ data: userData });
+      response.status(201).json({ message: "User created", user });
+    });
+
+    this.app.use(notFoundMiddleware);
+    this.app.use(errorMiddleware);
   }
 
-  const user = await prisma.user.create({ data: parsedData.data });
+  listen(port: number | string) {
+    this.app.listen(port, () => {
+      console.info(`Server is listening on port: ${port}`);
+    });
+  }
+}
 
-  response.status(201).json({ message: "User created", user });
-});
-
-const PORT = process.env.PORT || "8000";
-app.listen(PORT, () => console.info(`Server is listening on port: ${PORT}`));
-
-export default app;
+export default App;
