@@ -1,6 +1,19 @@
+"use client";
+
 import Image from "next/image";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
+import { useUsers } from "@/hooks/useUsers";
 
 export default function Home() {
+  const { data: users, isLoading, error } = useUsers();
+
+  const products = [
+    { id: 1, name: "Fresh Bananas", storeId: 1 },
+    { id: 2, name: "Red Apples", storeId: 1 },
+    { id: 3, name: "Potato", storeId: 1 },
+  ];
+  const userId = 4; // USER role
+
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
@@ -98,6 +111,38 @@ export default function Home() {
           Go to nextjs.org →
         </a>
       </footer>
+      <div>
+        <h1>Daftar Produk</h1>
+        {products.map((p) => (
+          <div key={p.id}>
+            <span>{p.name}</span>
+            <AddToCartButton
+              productId={p.id}
+              storeId={p.storeId}
+              userId={userId}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-xl font-bold mb-4">Users (with TanStack Query)</h2>
+        {isLoading && <div>Loading users...</div>}
+        {error && <div className="text-red-500">Error: {error.message}</div>}
+        {users && (
+          <div className="space-y-2">
+            {users.map((user) => (
+              <div key={user.id} className="p-2 border rounded">
+                <div>Email: {user.email}</div>
+                <div>Role: {user.role}</div>
+                {user.profile?.fullName && (
+                  <div>Name: {user.profile.fullName}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
