@@ -1,9 +1,13 @@
 import express from "express";
 import cors from "cors";
+import cartRouter from "./routes/cart.routes.js";
 import { prisma } from "@repo/database";
 import { CreateUserSchema } from "@repo/schemas";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
+import {
+  apiRateLimit,
+} from "./middleware/rateLimit.middleware.js";
 
 export class App {
   public app: express.Application;
@@ -12,7 +16,10 @@ export class App {
     this.app = express();
 
     this.app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+    this.app.use(apiRateLimit);
     this.app.use(express.json());
+
+    this.app.use("/api/cart", cartRouter);
 
     this.app.get("/api/health", (request, response) =>
       response.status(200).json({ message: "API running!" })
@@ -59,9 +66,8 @@ export class App {
       }
 
       const userData = {
-        email: parsedData.data.email,
-        passwordHash: "", // default empty password for now
-        role: "USER" as const, // default role
+        ...(parsedData.data as any),
+        password: (parsedData.data as any).password || "",
       };
       const user = await prisma.user.create({ data: userData });
       response.status(201).json({ message: "User created", user });
