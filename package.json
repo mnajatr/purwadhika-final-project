@@ -11,10 +11,14 @@
     "packages/*"
   ],
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "cross-env": "^10.0.0",
     "tsx": "^4.20.3",
     "turbo": "^2.5.5",
     "typescript": "^5.8.3",
     "zod": "^4.0.13"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0"
   }
 }
