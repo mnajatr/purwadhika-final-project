@@ -98,9 +98,13 @@ export const createCartActions = (set: any, get: any) => {
 
       try {
         const data: UpdateCartItemRequest = { qty, userId, storeId };
-        await cartService.updateCartItem(itemId, data);
-        // Setelah backend response sukses, fetch ulang cart
-        await get().refreshCart(userId);
+        const response = await cartService.updateCartItem(itemId, data);
+        // merge server response if present to keep local state consistent,
+        // but avoid a full refetch (per task requirement)
+        if (response?.data) {
+          set({ cart: response.data });
+          get().updateComputedValues();
+        }
         showCartSuccessMessage("Cart item updated successfully");
       } catch (error) {
         set({ cart: prevCart });

@@ -36,7 +36,7 @@ const createRateLimit = (
 
 export const apiRateLimit = createRateLimit(
   15 * 60 * 1000,
-  100,
+  500,
   "You have exceeded the rate limit. Please try again later."
 );
 

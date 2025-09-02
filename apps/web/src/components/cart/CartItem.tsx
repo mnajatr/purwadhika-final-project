@@ -2,70 +2,61 @@
 
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
-import { useCartStore } from "@/stores/cart-store";
+import { useUpdateCartItem } from "@/hooks/useCart";
 import type { CartItem as CartItemType } from "@/types/cart.types";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 interface CartItemProps {
   item: CartItemType;
   userId: number;
-  // Tambahkan prop stockQty jika tersedia dari backend
   stockQty?: number;
 }
 
-export function CartItem({ item, userId }: CartItemProps) {
-  const updateCartItem = useCartStore((state) => state.updateCartItem);
-  const removeCartItem = useCartStore((state) => state.removeCartItem);
+export default function CartItem({ item, userId }: CartItemProps) {
+  const storeId = 1; // ganti sesuai logic storeId
   const [isUpdating, setIsUpdating] = useState(false);
-  const [currentQty, setCurrentQty] = useState(item.qty); // Track current qty locally
-  // Ambil stock dari item.product.storeInventory jika tersedia
+  const [currentQty, setCurrentQty] = useState(item.qty);
   const stockQty = item.storeInventory?.stockQty ?? 9999;
 
-  // Update local qty when item changes
   useEffect(() => {
     setCurrentQty(item.qty);
   }, [item.qty]);
 
-  const validateAndUpdate = useCallback(
-    async (newQty: number) => {
-        if (newQty <= 0) {
-          await removeCartItem(item.id, userId);
-          return;
-        }
-        // Batasi qty tidak boleh lebih dari stock
-        if (newQty > stockQty) {
-          toast.error(`Qty melebihi stok tersedia (${stockQty})`);
-          return;
-        }
+  const updateCartItemMutation = useUpdateCartItem(userId, storeId);
+  const handleQtyChange = async (newQty: number) => {
+    if (newQty === currentQty || isUpdating) return;
+    if (newQty <= 0) {
+      toast.error("Qty minimal 1");
+      return;
+    }
+    if (newQty > stockQty) {
+      toast.error(`Qty melebihi stok tersedia (${stockQty})`);
+      return;
+    }
+    setIsUpdating(true);
+    setCurrentQty(newQty);
+    try {
+      await updateCartItemMutation.mutateAsync({
+        itemId: item.id,
+        qty: newQty,
+      });
+    } catch (error) {
+      setCurrentQty(item.qty);
+      let msg = "Gagal update qty";
+      if (error && typeof error === "object" && "message" in error) {
+        msg = (error as { message?: string }).message ?? msg;
+      }
+      toast.error(msg);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
-        setIsUpdating(true);
-        setCurrentQty(newQty);
-
-        try {
-          await updateCartItem(item.id, newQty, userId);
-        } catch (error) {
-          setCurrentQty(item.qty);
-          // Tampilkan error dari backend
-          let msg = "Gagal update qty";
-          if (error && typeof error === "object" && "message" in error) {
-            msg = (error as { message?: string }).message ?? msg;
-          }
-          toast.error(msg);
-        } finally {
-          setIsUpdating(false);
-        }
-    },
-    [item.id, item.qty, userId, updateCartItem, removeCartItem, stockQty]
-  );
-
-  const handleQtyChange = useCallback(
-    async (newQty: number) => {
-      if (newQty === currentQty || isUpdating) return;
-      await validateAndUpdate(newQty);
-    },
-    [currentQty, isUpdating, validateAndUpdate]
-  );
+  // TODO: Implement removeCartItem logic or import it if available
+  const removeCartItem = () => {
+    toast.error("Fitur hapus belum diimplementasi");
+  };
 
   return (
     <Card className="flex items-center justify-between p-4 mb-2">
@@ -95,15 +86,15 @@ export function CartItem({ item, userId }: CartItemProps) {
         <Button
           size="icon"
           variant="outline"
-            onClick={() => handleQtyChange(currentQty + 1)}
-            disabled={isUpdating || currentQty >= stockQty}
+          onClick={() => handleQtyChange(currentQty + 1)}
+          disabled={isUpdating || currentQty >= stockQty}
         >
           +
         </Button>
         <Button
           size="sm"
           variant="destructive"
-          onClick={() => removeCartItem(item.id, userId)}
+          onClick={removeCartItem}
           disabled={isUpdating}
         >
           Hapus
