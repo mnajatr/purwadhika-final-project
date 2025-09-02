@@ -9,46 +9,21 @@ import type {
   UpdateCartItemRequest,
   CartItem,
   Cart,
-  CartTotals,
 } from "../types/cart.types";
+import type { CartStoreState } from "../types/cart.types";
 import {
   updateCartOptimistically,
   updateCartItemOptimistically,
   removeCartItemOptimistically,
 } from "./cart-helpers";
 
-interface LocalCartState {
-  cart: Cart | null;
-  totals: CartTotals | null;
-  isLoading: boolean;
-  error: string | null;
-  isInitialized: boolean;
-  storeId: number;
-  itemCount: number;
-  totalAmount: number;
-  isEmpty: boolean;
-
-  updateComputedValues: () => void;
-  initializeCart: (userId: number) => Promise<void>;
-  addToCart: (productId: number, qty: number, userId: number) => Promise<void>;
-  updateCartItem: (
-    itemId: number,
-    qty: number,
-    userId: number
-  ) => Promise<void>;
-  removeCartItem: (itemId: number, userId: number) => Promise<void>;
-  clearCart: (userId: number) => Promise<void>;
-  refreshCart: (userId: number) => Promise<void>;
-  refreshTotals: (userId: number) => Promise<void>;
-}
-
 export const createCartActions = (
   set: (
     partial:
-      | Partial<LocalCartState>
-      | ((state: LocalCartState) => Partial<LocalCartState>)
+      | Partial<CartStoreState>
+      | ((state: CartStoreState) => Partial<CartStoreState>)
   ) => void,
-  get: () => LocalCartState
+  get: () => CartStoreState
 ) => {
   const setCartAndCompute = (cart: Cart | null) => {
     set({ cart, error: null });

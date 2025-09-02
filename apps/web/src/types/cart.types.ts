@@ -70,3 +70,33 @@ export interface Product {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface CartStoreState {
+  cart: Cart | null;
+  totals: CartTotals | null;
+  isLoading: boolean;
+  error: string | null;
+  isInitialized: boolean;
+  storeId: number;
+  itemCount: number;
+  totalAmount: number;
+  isEmpty: boolean;
+
+  setStoreId: (storeId: number) => void;
+  clearError: () => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+
+  updateComputedValues: () => void;
+  initializeCart: (userId: number) => Promise<void>;
+  addToCart: (productId: number, qty: number, userId: number) => Promise<void>;
+  updateCartItem: (
+    itemId: number,
+    qty: number,
+    userId: number
+  ) => Promise<void>;
+  removeCartItem: (itemId: number, userId: number) => Promise<void>;
+  clearCart: (userId: number) => Promise<void>;
+  refreshCart: (userId: number) => Promise<void>;
+  refreshTotals: (userId: number) => Promise<void>;
+}
