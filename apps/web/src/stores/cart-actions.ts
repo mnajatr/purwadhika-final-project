@@ -8,6 +8,8 @@ import type {
   AddToCartRequest,
   UpdateCartItemRequest,
   CartItem,
+  Cart,
+  CartTotals,
 } from "../types/cart.types";
 import {
   updateCartOptimistically,
@@ -15,15 +17,50 @@ import {
   removeCartItemOptimistically,
 } from "./cart-helpers";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const createCartActions = (set: any, get: any) => {
+interface LocalCartState {
+  cart: Cart | null;
+  totals: CartTotals | null;
+  isLoading: boolean;
+  error: string | null;
+  isInitialized: boolean;
+  storeId: number;
+  itemCount: number;
+  totalAmount: number;
+  isEmpty: boolean;
+
+  updateComputedValues: () => void;
+  initializeCart: (userId: number) => Promise<void>;
+  addToCart: (productId: number, qty: number, userId: number) => Promise<void>;
+  updateCartItem: (
+    itemId: number,
+    qty: number,
+    userId: number
+  ) => Promise<void>;
+  removeCartItem: (itemId: number, userId: number) => Promise<void>;
+  clearCart: (userId: number) => Promise<void>;
+  refreshCart: (userId: number) => Promise<void>;
+  refreshTotals: (userId: number) => Promise<void>;
+}
+
+export const createCartActions = (
+  set: (
+    partial:
+      | Partial<LocalCartState>
+      | ((state: LocalCartState) => Partial<LocalCartState>)
+  ) => void,
+  get: () => LocalCartState
+) => {
+  const setCartAndCompute = (cart: Cart | null) => {
+    set({ cart, error: null });
+    get().updateComputedValues();
+  };
+
   return {
     updateComputedValues: () => {
       const state = get();
       const cart = state.cart;
       const itemCount = cart?.items?.length || 0;
 
-      // Hitung total amount dari items di cart
       const totalAmount =
         cart?.items?.reduce((sum: number, item: CartItem) => {
           const unitPrice = Number(item.unitPriceSnapshot) || 0;
@@ -64,22 +101,18 @@ export const createCartActions = (set: any, get: any) => {
       const storeId = get().storeId;
       const prevCart = get().cart;
 
-      // Optimistic update
       if (prevCart) {
         const updatedCart = updateCartOptimistically(prevCart, productId, qty);
-        set({ cart: updatedCart, error: null });
-        get().updateComputedValues();
+        setCartAndCompute(updatedCart);
       }
 
-      // API call
       try {
         const data: AddToCartRequest = { productId, qty, storeId, userId };
         const response = await cartService.addToCart(data);
-        set({ cart: response.data });
-        get().updateComputedValues();
+        setCartAndCompute(response.data);
         showCartSuccessMessage("Item added to cart successfully");
       } catch (error) {
-        set({ cart: prevCart });
+        setCartAndCompute(prevCart);
         const cartError = handleApiError(error);
         set({ error: cartError.message });
         showCartErrorMessage(cartError.message);
@@ -91,23 +124,18 @@ export const createCartActions = (set: any, get: any) => {
       const prevCart = get().cart;
       if (!prevCart) return;
 
-      // Optimistic update
       const updatedCart = updateCartItemOptimistically(prevCart, itemId, qty);
-      set({ cart: updatedCart, error: null });
-      get().updateComputedValues();
+      setCartAndCompute(updatedCart);
 
       try {
         const data: UpdateCartItemRequest = { qty, userId, storeId };
         const response = await cartService.updateCartItem(itemId, data);
-        // merge server response if present to keep local state consistent,
-        // but avoid a full refetch (per task requirement)
         if (response?.data) {
-          set({ cart: response.data });
-          get().updateComputedValues();
+          setCartAndCompute(response.data);
         }
         showCartSuccessMessage("Cart item updated successfully");
       } catch (error) {
-        set({ cart: prevCart });
+        setCartAndCompute(prevCart);
         const cartError = handleApiError(error);
         set({ error: cartError.message });
         showCartErrorMessage(cartError.message);
@@ -119,10 +147,8 @@ export const createCartActions = (set: any, get: any) => {
       const prevCart = get().cart;
       if (!prevCart) return;
 
-      // Optimistic update
       const updatedCart = removeCartItemOptimistically(prevCart, itemId);
-      set({ cart: updatedCart, error: null });
-      get().updateComputedValues();
+      setCartAndCompute(updatedCart);
 
       try {
         const response = await cartService.removeCartItem(
@@ -130,8 +156,7 @@ export const createCartActions = (set: any, get: any) => {
           userId,
           storeId
         );
-        set({ cart: response.data });
-        get().updateComputedValues();
+        setCartAndCompute(response.data);
         showCartSuccessMessage("Item removed from cart");
       } catch (error) {
         set({ cart: prevCart });

@@ -8,7 +8,6 @@ import type {
   UpdateCartItemRequest,
 } from "@/types/cart.types";
 
-// Query keys
 const cartQueryKey = (userId: number, storeId: number) => [
   "cart",
   userId,

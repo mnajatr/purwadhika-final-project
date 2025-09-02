@@ -1,9 +1,8 @@
-// Cart Types
 export interface CartItem {
   id: number;
   productId: number;
   qty: number;
-  unitPriceSnapshot: string; // Decimal dari backend dikirim sebagai string
+  unitPriceSnapshot: string;
   createdAt: string;
   updatedAt: string;
   product: {
@@ -40,7 +39,6 @@ export interface CartTotals {
   }>;
 }
 
-// Request Types
 export interface AddToCartRequest {
   productId: number;
   qty: number;
@@ -62,7 +60,6 @@ export interface CartQueryParams {
   userId?: string;
 }
 
-// Product Types (for cart integration)
 export interface Product {
   id: number;
   name: string;

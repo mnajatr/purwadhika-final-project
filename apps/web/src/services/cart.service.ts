@@ -10,7 +10,6 @@ import type {
 export class CartService {
   private readonly basePath = "/cart";
 
-  // Get user's cart
   async getCart(
     userId: number,
     storeId: number
@@ -19,7 +18,6 @@ export class CartService {
     return apiClient.get<ApiResponse<Cart | null>>(this.basePath, params);
   }
 
-  // Get cart totals
   async getCartTotals(
     userId: number,
     storeId: number
@@ -31,12 +29,10 @@ export class CartService {
     );
   }
 
-  // Add item to cart
   async addToCart(data: AddToCartRequest): Promise<ApiResponse<Cart>> {
     return apiClient.post<ApiResponse<Cart>>(this.basePath, data);
   }
 
-  // Update cart item quantity
   async updateCartItem(
     itemId: number,
     data: UpdateCartItemRequest
@@ -47,7 +43,6 @@ export class CartService {
     );
   }
 
-  // Remove item from cart
   async removeCartItem(
     itemId: number,
     userId: number,
@@ -59,7 +54,6 @@ export class CartService {
     });
   }
 
-  // Clear entire cart
   async clearCart(userId: number, storeId: number): Promise<ApiResponse<Cart>> {
     return apiClient.delete<ApiResponse<Cart>>(this.basePath, {
       userId,
@@ -68,5 +62,4 @@ export class CartService {
   }
 }
 
-// Export singleton instance
 export const cartService = new CartService();

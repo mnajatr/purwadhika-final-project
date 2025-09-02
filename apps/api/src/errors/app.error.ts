@@ -10,7 +10,6 @@ export class AppError extends Error {
   }
 }
 
-// Common error factory functions
 export const createNotFoundError = (resource: string) =>
   new AppError(`${resource} not found`, 404);
 

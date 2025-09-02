@@ -1,13 +1,13 @@
-import type { CartItem } from "../types/cart.types";
+import type { CartItem, Cart } from "../types/cart.types";
 
 /**
  * Helper function untuk optimistic update cart
  */
 export const updateCartOptimistically = (
-  prevCart: { id: number; items: CartItem[] },
+  prevCart: Cart,
   productId: number,
   qty: number
-) => {
+): Cart => {
   const existingItem = prevCart.items.find(
     (item: CartItem) => item.productId === productId
   );
@@ -20,9 +20,8 @@ export const updateCartOptimistically = (
       ),
     };
   } else {
-    const newItem = {
+    const newItem: CartItem = {
       id: Date.now(),
-      cartId: prevCart.id,
       productId,
       qty,
       unitPriceSnapshot: "0",
@@ -32,7 +31,7 @@ export const updateCartOptimistically = (
         id: productId,
         name: "",
         slug: "",
-        description: "",
+        description: null,
         isActive: true,
       },
     };
@@ -44,10 +43,10 @@ export const updateCartOptimistically = (
  * Helper function update item cart
  */
 export const updateCartItemOptimistically = (
-  prevCart: { items: CartItem[] },
+  prevCart: Cart,
   itemId: number,
   qty: number
-) => {
+): Cart => {
   const updatedItems = prevCart.items.map((item: CartItem) =>
     item.id === itemId ? { ...item, qty } : item
   );
@@ -58,9 +57,9 @@ export const updateCartItemOptimistically = (
  * Helper function remove item cart
  */
 export const removeCartItemOptimistically = (
-  prevCart: { items: CartItem[] },
+  prevCart: Cart,
   itemId: number
-) => {
+): Cart => {
   const updatedItems = prevCart.items.filter(
     (item: CartItem) => item.id !== itemId
   );

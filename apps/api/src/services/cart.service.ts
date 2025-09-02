@@ -1,5 +1,5 @@
 import { prisma } from "@repo/database";
-import { CART_CONSTANTS, ERROR_MESSAGES } from "../utils/helpers.js";
+import { ERROR_MESSAGES } from "../utils/helpers.js";
 import { CartData, CartBusiness, CartValidation } from "../lib/cart/index.js";
 
 export class CartService {

@@ -4,7 +4,6 @@ import { createCartActions } from "./cart-actions";
 import type { Cart, CartTotals } from "../types/cart.types";
 
 interface CartState {
-  // State
   cart: Cart | null;
   totals: CartTotals | null;
   isLoading: boolean;

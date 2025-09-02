@@ -47,7 +47,6 @@ export class CartData {
       include: this.CART_INCLUDE,
     });
     if (!cart) return null;
-    // Mapping manual stockQty ke setiap item
     const itemsWithStock = await Promise.all(
       cart.items.map(async (item) => {
         const inventory = await prisma.storeInventory.findFirst({

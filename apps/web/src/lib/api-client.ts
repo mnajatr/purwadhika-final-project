@@ -33,7 +33,6 @@ export class ApiClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        // Ambil pesan error dari field 'error' jika ada, lalu fallback ke 'message'
         const errorMsg =
           errorData.error ||
           errorData.message ||
@@ -81,5 +80,4 @@ export class ApiClient {
   }
 }
 
-// Export singleton instance
 export const apiClient = new ApiClient();

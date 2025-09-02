@@ -2,7 +2,7 @@
 
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
-import { useUpdateCartItem } from "@/hooks/useCart";
+import { useUpdateCartItem, useRemoveCartItem } from "@/hooks/useCart";
 import type { CartItem as CartItemType } from "@/types/cart.types";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -14,7 +14,9 @@ interface CartItemProps {
 }
 
 export default function CartItem({ item, userId }: CartItemProps) {
-  const storeId = 1; // ganti sesuai logic storeId
+  // TODO: derive `storeId` from route, user session, or app context
+  // Temporary hardcoded value for development when store data isn't available.
+  const storeId = 1;
   const [isUpdating, setIsUpdating] = useState(false);
   const [currentQty, setCurrentQty] = useState(item.qty);
   const stockQty = item.storeInventory?.stockQty ?? 9999;
@@ -24,10 +26,11 @@ export default function CartItem({ item, userId }: CartItemProps) {
   }, [item.qty]);
 
   const updateCartItemMutation = useUpdateCartItem(userId, storeId);
+  const removeCartItemMutation = useRemoveCartItem(userId, storeId);
   const handleQtyChange = async (newQty: number) => {
     if (newQty === currentQty || isUpdating) return;
     if (newQty <= 0) {
-      toast.error("Qty minimal 1");
+      await removeCartItem();
       return;
     }
     if (newQty > stockQty) {
@@ -53,9 +56,21 @@ export default function CartItem({ item, userId }: CartItemProps) {
     }
   };
 
-  // TODO: Implement removeCartItem logic or import it if available
-  const removeCartItem = () => {
-    toast.error("Fitur hapus belum diimplementasi");
+  const removeCartItem = async () => {
+    if (isUpdating) return;
+    setIsUpdating(true);
+    try {
+      await removeCartItemMutation.mutateAsync(item.id);
+      toast.success("Item berhasil dihapus");
+    } catch (error) {
+      let msg = "Gagal menghapus item";
+      if (error && typeof error === "object" && "message" in error) {
+        msg = (error as { message?: string }).message ?? msg;
+      }
+      toast.error(msg);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (

@@ -4,14 +4,14 @@ import CartItem from "./CartItem";
 import { useCart, useClearCart } from "@/hooks/useCart";
 import { Button } from "../ui/button";
 
-
-
 interface CartPageProps {
   userId: number;
 }
 
 export function CartPage({ userId }: CartPageProps) {
-  const storeId = 1; // ganti sesuai kebutuhan
+  // TODO: derive `storeId` from the route, user session, or app context instead of hardcoding.
+  // Temporary hardcoded value for development when store data isn't available.
+  const storeId = 1;
   const { data: cart, isLoading } = useCart(userId, storeId);
   const clearCartMutation = useClearCart(userId, storeId);
 
