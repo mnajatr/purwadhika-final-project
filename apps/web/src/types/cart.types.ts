@@ -13,6 +13,9 @@ export interface CartItem {
     description: string | null;
     isActive: boolean;
   };
+  storeInventory?: {
+    stockQty: number;
+  };
 }
 
 export interface Cart {
