@@ -56,7 +56,7 @@ export class CartService {
     );
 
     const inventory = await prisma.storeInventory.findFirst({
-      where: { productId: cartItem.productId },
+      where: { productId: cartItem.productId, storeId: storeId },
     });
     if (!inventory) throw new Error(ERROR_MESSAGES.INVENTORY.NO_INVENTORY);
     if (inventory.stockQty < qty) {

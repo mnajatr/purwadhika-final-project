@@ -5,10 +5,13 @@ import { Card } from "../ui/card";
 import { useCartStore } from "@/stores/cart-store";
 import type { CartItem as CartItemType } from "@/types/cart.types";
 import { useState, useCallback, useEffect } from "react";
+import { toast } from "sonner";
 
 interface CartItemProps {
   item: CartItemType;
   userId: number;
+  // Tambahkan prop stockQty jika tersedia dari backend
+  stockQty?: number;
 }
 
 export function CartItem({ item, userId }: CartItemProps) {
@@ -16,6 +19,8 @@ export function CartItem({ item, userId }: CartItemProps) {
   const removeCartItem = useCartStore((state) => state.removeCartItem);
   const [isUpdating, setIsUpdating] = useState(false);
   const [currentQty, setCurrentQty] = useState(item.qty); // Track current qty locally
+  // Ambil stock dari item.product.storeInventory jika tersedia
+  const stockQty = item.storeInventory?.stockQty ?? 9999;
 
   // Update local qty when item changes
   useEffect(() => {
@@ -24,23 +29,34 @@ export function CartItem({ item, userId }: CartItemProps) {
 
   const validateAndUpdate = useCallback(
     async (newQty: number) => {
-      if (newQty <= 0) {
-        await removeCartItem(item.id, userId);
-        return;
-      }
+        if (newQty <= 0) {
+          await removeCartItem(item.id, userId);
+          return;
+        }
+        // Batasi qty tidak boleh lebih dari stock
+        if (newQty > stockQty) {
+          toast.error(`Qty melebihi stok tersedia (${stockQty})`);
+          return;
+        }
 
-      setIsUpdating(true);
-      setCurrentQty(newQty);
+        setIsUpdating(true);
+        setCurrentQty(newQty);
 
-      try {
-        await updateCartItem(item.id, newQty, userId);
-      } catch {
-        setCurrentQty(item.qty);
-      } finally {
-        setIsUpdating(false);
-      }
+        try {
+          await updateCartItem(item.id, newQty, userId);
+        } catch (error) {
+          setCurrentQty(item.qty);
+          // Tampilkan error dari backend
+          let msg = "Gagal update qty";
+          if (error && typeof error === "object" && "message" in error) {
+            msg = (error as { message?: string }).message ?? msg;
+          }
+          toast.error(msg);
+        } finally {
+          setIsUpdating(false);
+        }
     },
-    [item.id, item.qty, userId, updateCartItem, removeCartItem]
+    [item.id, item.qty, userId, updateCartItem, removeCartItem, stockQty]
   );
 
   const handleQtyChange = useCallback(
@@ -79,8 +95,8 @@ export function CartItem({ item, userId }: CartItemProps) {
         <Button
           size="icon"
           variant="outline"
-          onClick={() => handleQtyChange(currentQty + 1)}
-          disabled={isUpdating}
+            onClick={() => handleQtyChange(currentQty + 1)}
+            disabled={isUpdating || currentQty >= stockQty}
         >
           +
         </Button>
