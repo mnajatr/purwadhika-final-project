@@ -38,7 +38,6 @@ export const isApiError = (data: unknown): data is ApiError => {
   );
 };
 
-// Toast notifications using Sonner
 export const showCartSuccessMessage = (message: string) => {
   toast.success(message);
 };

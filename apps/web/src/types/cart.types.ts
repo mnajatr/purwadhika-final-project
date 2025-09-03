@@ -1,9 +1,8 @@
-// Cart Types
 export interface CartItem {
   id: number;
   productId: number;
   qty: number;
-  unitPriceSnapshot: string; // Decimal dari backend dikirim sebagai string
+  unitPriceSnapshot: string;
   createdAt: string;
   updatedAt: string;
   product: {
@@ -40,7 +39,6 @@ export interface CartTotals {
   }>;
 }
 
-// Request Types
 export interface AddToCartRequest {
   productId: number;
   qty: number;
@@ -62,7 +60,6 @@ export interface CartQueryParams {
   userId?: string;
 }
 
-// Product Types (for cart integration)
 export interface Product {
   id: number;
   name: string;
@@ -72,4 +69,34 @@ export interface Product {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CartStoreState {
+  cart: Cart | null;
+  totals: CartTotals | null;
+  isLoading: boolean;
+  error: string | null;
+  isInitialized: boolean;
+  storeId: number;
+  itemCount: number;
+  totalAmount: number;
+  isEmpty: boolean;
+
+  setStoreId: (storeId: number) => void;
+  clearError: () => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+
+  updateComputedValues: () => void;
+  initializeCart: (userId: number) => Promise<void>;
+  addToCart: (productId: number, qty: number, userId: number) => Promise<void>;
+  updateCartItem: (
+    itemId: number,
+    qty: number,
+    userId: number
+  ) => Promise<void>;
+  removeCartItem: (itemId: number, userId: number) => Promise<void>;
+  clearCart: (userId: number) => Promise<void>;
+  refreshCart: (userId: number) => Promise<void>;
+  refreshTotals: (userId: number) => Promise<void>;
 }

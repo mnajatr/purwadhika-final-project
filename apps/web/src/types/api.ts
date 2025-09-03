@@ -1,4 +1,3 @@
-// API Request/Response Types
 export type RequestData =
   | Record<string, unknown>
   | Record<number, unknown>
@@ -16,8 +15,6 @@ export interface ApiError {
   error?: string;
 }
 
-// HTTP Methods
 export type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
-// Query Parameters
 export type QueryParams = Record<string, string | number | boolean>;

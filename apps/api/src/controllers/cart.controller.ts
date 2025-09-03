@@ -2,6 +2,12 @@ import { Request, Response } from "express";
 import { CartService } from "../services/cart.service.js";
 import { successResponse, errorResponse } from "../utils/helpers.js";
 
+function toNumber(value: unknown, fallback?: number) {
+  if (value === undefined || value === null) return fallback;
+  const n = Number(value);
+  return Number.isNaN(n) ? fallback : n;
+}
+
 export class CartController {
   private cartService: CartService;
 
@@ -12,13 +18,18 @@ export class CartController {
   getCart = async (req: Request, res: Response) => {
     try {
       // TODO: Get userId from auth middleware when implemented
-      const userId = parseInt((req.query.userId as string) || "1");
-      const storeId = parseInt(
-        (req.query.storeId as string) || req.body.storeId || "1"
+      const userId = toNumber(req.query?.userId, undefined);
+      const storeId = toNumber(
+        req.query?.storeId,
+        toNumber(req.body?.storeId, 1)
       );
+
+      if (!userId) {
+        return res.status(400).json(errorResponse("Missing userId in request"));
+      }
       const cart = await this.cartService.getCartByUserIdAndStoreId(
-        userId,
-        storeId
+        userId!,
+        storeId ?? 1
       );
 
       const response = successResponse(cart, "Cart retrieved successfully");
@@ -35,14 +46,26 @@ export class CartController {
   addToCart = async (req: Request, res: Response) => {
     try {
       // TODO: Get userId from auth middleware when implemented
-      const userId = req.body.userId || "user-1";
-      const { productId, qty, storeId } = req.body;
+      const userId = toNumber(req.body?.userId, undefined);
+      const { productId, qty } = req.body;
+      const storeId = toNumber(req.body?.storeId, 1);
+
+      if (!userId) {
+        return res
+          .status(400)
+          .json(errorResponse("Missing userId in request body"));
+      }
+      if (!productId) {
+        return res
+          .status(400)
+          .json(errorResponse("Missing productId in request body"));
+      }
 
       const cart = await this.cartService.addToCart(
-        userId,
+        userId!,
         productId,
         qty,
-        storeId
+        storeId ?? 1
       );
 
       const response = successResponse(cart, "Item added to cart successfully");
@@ -70,15 +93,27 @@ export class CartController {
   updateCartItem = async (req: Request, res: Response) => {
     try {
       // TODO: Get userId from auth middleware when implemented
-      const userId = parseInt(req.body.userId) || 1;
-      const itemId = parseInt(req.params.itemId);
-      const { qty, storeId } = req.body;
+      const userId = toNumber(req.body?.userId, undefined);
+      const itemId = toNumber(req.params?.itemId, undefined);
+      const { qty } = req.body;
+      const storeId = toNumber(req.body?.storeId, 1);
+
+      if (!userId)
+        return res
+          .status(400)
+          .json(errorResponse("Missing userId in request body"));
+      if (!itemId)
+        return res.status(400).json(errorResponse("Missing itemId in params"));
+      if (typeof qty === "undefined")
+        return res
+          .status(400)
+          .json(errorResponse("Missing qty in request body"));
 
       const cart = await this.cartService.updateCartItem(
-        userId,
-        itemId,
+        userId!,
+        itemId!,
         qty,
-        storeId
+        storeId ?? 1
       );
 
       const response = successResponse(cart, "Cart item updated successfully");
@@ -105,14 +140,21 @@ export class CartController {
   deleteCartItem = async (req: Request, res: Response) => {
     try {
       // TODO: Get userId from auth middleware when implemented
-      const userId = parseInt(req.body.userId) || 1;
-      const itemId = parseInt(req.params.itemId);
-      const storeId = parseInt(req.body.storeId) || 1;
+      const userId = toNumber(req.body?.userId, undefined);
+      const itemId = toNumber(req.params?.itemId, undefined);
+      const storeId = toNumber(req.body?.storeId, 1);
+
+      if (!userId)
+        return res
+          .status(400)
+          .json(errorResponse("Missing userId in request body"));
+      if (!itemId)
+        return res.status(400).json(errorResponse("Missing itemId in params"));
 
       const cart = await this.cartService.deleteCartItem(
-        userId,
-        itemId,
-        storeId
+        userId!,
+        itemId!,
+        storeId ?? 1
       );
 
       const response = successResponse(
@@ -136,10 +178,15 @@ export class CartController {
   clearCart = async (req: Request, res: Response) => {
     try {
       // TODO: Get userId from auth middleware when implemented
-      const userId = parseInt(req.body.userId) || 1;
-      const storeId = parseInt(req.body.storeId) || 1;
+      const userId = toNumber(req.body?.userId, undefined);
+      const storeId = toNumber(req.body?.storeId, 1);
 
-      const cart = await this.cartService.clearCart(userId, storeId);
+      if (!userId)
+        return res
+          .status(400)
+          .json(errorResponse("Missing userId in request body"));
+
+      const cart = await this.cartService.clearCart(userId!, storeId ?? 1);
 
       const response = successResponse(cart, "Cart cleared successfully");
       res.json(response);
@@ -156,12 +203,20 @@ export class CartController {
   getCartTotals = async (req: Request, res: Response) => {
     try {
       // TODO: Get userId from auth middleware when implemented
-      const userId = parseInt((req.query.userId as string) || "1");
-      const storeId = parseInt(
-        (req.query.storeId as string) || req.body.storeId || "1"
+      const userId = toNumber(req.query?.userId, undefined);
+      const storeId = toNumber(
+        req.query?.storeId,
+        toNumber(req.body?.storeId, 1)
       );
 
-      const totals = await this.cartService.getCartTotals(userId, storeId);
+      if (!userId) {
+        return res.status(400).json(errorResponse("Missing userId in query"));
+      }
+
+      const totals = await this.cartService.getCartTotals(
+        userId!,
+        storeId ?? 1
+      );
 
       const response = successResponse(
         totals,

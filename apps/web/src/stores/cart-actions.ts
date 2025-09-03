@@ -8,22 +8,34 @@ import type {
   AddToCartRequest,
   UpdateCartItemRequest,
   CartItem,
+  Cart,
 } from "../types/cart.types";
+import type { CartStoreState } from "../types/cart.types";
 import {
   updateCartOptimistically,
   updateCartItemOptimistically,
   removeCartItemOptimistically,
 } from "./cart-helpers";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const createCartActions = (set: any, get: any) => {
+export const createCartActions = (
+  set: (
+    partial:
+      | Partial<CartStoreState>
+      | ((state: CartStoreState) => Partial<CartStoreState>)
+  ) => void,
+  get: () => CartStoreState
+) => {
+  const setCartAndCompute = (cart: Cart | null) => {
+    set({ cart, error: null });
+    get().updateComputedValues();
+  };
+
   return {
     updateComputedValues: () => {
       const state = get();
       const cart = state.cart;
       const itemCount = cart?.items?.length || 0;
 
-      // Hitung total amount dari items di cart
       const totalAmount =
         cart?.items?.reduce((sum: number, item: CartItem) => {
           const unitPrice = Number(item.unitPriceSnapshot) || 0;
@@ -64,22 +76,18 @@ export const createCartActions = (set: any, get: any) => {
       const storeId = get().storeId;
       const prevCart = get().cart;
 
-      // Optimistic update
       if (prevCart) {
         const updatedCart = updateCartOptimistically(prevCart, productId, qty);
-        set({ cart: updatedCart, error: null });
-        get().updateComputedValues();
+        setCartAndCompute(updatedCart);
       }
 
-      // API call
       try {
         const data: AddToCartRequest = { productId, qty, storeId, userId };
         const response = await cartService.addToCart(data);
-        set({ cart: response.data });
-        get().updateComputedValues();
+        setCartAndCompute(response.data);
         showCartSuccessMessage("Item added to cart successfully");
       } catch (error) {
-        set({ cart: prevCart });
+        setCartAndCompute(prevCart);
         const cartError = handleApiError(error);
         set({ error: cartError.message });
         showCartErrorMessage(cartError.message);
@@ -91,19 +99,18 @@ export const createCartActions = (set: any, get: any) => {
       const prevCart = get().cart;
       if (!prevCart) return;
 
-      // Optimistic update
       const updatedCart = updateCartItemOptimistically(prevCart, itemId, qty);
-      set({ cart: updatedCart, error: null });
-      get().updateComputedValues();
+      setCartAndCompute(updatedCart);
 
       try {
         const data: UpdateCartItemRequest = { qty, userId, storeId };
-        await cartService.updateCartItem(itemId, data);
-        // Setelah backend response sukses, fetch ulang cart
-        await get().refreshCart(userId);
+        const response = await cartService.updateCartItem(itemId, data);
+        if (response?.data) {
+          setCartAndCompute(response.data);
+        }
         showCartSuccessMessage("Cart item updated successfully");
       } catch (error) {
-        set({ cart: prevCart });
+        setCartAndCompute(prevCart);
         const cartError = handleApiError(error);
         set({ error: cartError.message });
         showCartErrorMessage(cartError.message);
@@ -115,10 +122,8 @@ export const createCartActions = (set: any, get: any) => {
       const prevCart = get().cart;
       if (!prevCart) return;
 
-      // Optimistic update
       const updatedCart = removeCartItemOptimistically(prevCart, itemId);
-      set({ cart: updatedCart, error: null });
-      get().updateComputedValues();
+      setCartAndCompute(updatedCart);
 
       try {
         const response = await cartService.removeCartItem(
@@ -126,8 +131,7 @@ export const createCartActions = (set: any, get: any) => {
           userId,
           storeId
         );
-        set({ cart: response.data });
-        get().updateComputedValues();
+        setCartAndCompute(response.data);
         showCartSuccessMessage("Item removed from cart");
       } catch (error) {
         set({ cart: prevCart });

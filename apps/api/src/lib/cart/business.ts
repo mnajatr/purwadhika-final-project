@@ -1,6 +1,3 @@
-/**
- * Business logic utilities for cart operations
- */
 export class CartBusiness {
   static findExistingCartItem(cartItems: any[], productId: number) {
     return cartItems.find((item: any) => item.productId === productId);
