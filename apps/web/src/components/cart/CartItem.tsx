@@ -11,11 +11,16 @@ interface CartItemProps {
   item: CartItemType;
   userId: number;
   stockQty?: number;
+  selected?: boolean;
+  onToggle?: () => void;
 }
 
-export default function CartItem({ item, userId }: CartItemProps) {
-  // TODO: derive `storeId` from route, user session, or app context
-  // Temporary hardcoded value for development when store data isn't available.
+export default function CartItem({
+  item,
+  userId,
+  selected = true,
+  onToggle,
+}: CartItemProps) {
   const storeId = 1;
   const [isUpdating, setIsUpdating] = useState(false);
   const [currentQty, setCurrentQty] = useState(item.qty);
@@ -27,6 +32,7 @@ export default function CartItem({ item, userId }: CartItemProps) {
 
   const updateCartItemMutation = useUpdateCartItem(userId, storeId);
   const removeCartItemMutation = useRemoveCartItem(userId, storeId);
+
   const handleQtyChange = async (newQty: number) => {
     if (newQty === currentQty || isUpdating) return;
     if (newQty <= 0) {
@@ -74,46 +80,85 @@ export default function CartItem({ item, userId }: CartItemProps) {
   };
 
   return (
-    <Card className="flex items-center justify-between p-4 mb-2">
-      <div className="flex-1">
-        <div className="font-semibold">{item.product.name}</div>
-        <div className="text-sm text-muted-foreground">
-          {item.product.description || "No description"}
+    <Card className="p-4">
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-3 w-full">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggle}
+          className="h-5 w-5 rounded-md accent-primary"
+        />
+
+        {/* Gambar + Detail produk */}
+        <div className="flex flex-row items-start gap-3 flex-1 ml-2">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-muted rounded-lg flex-shrink-0 overflow-hidden">
+            <img
+              src={`https://picsum.photos/seed/${item.productId}/200/200`}
+              alt={item.product.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-base md:text-lg whitespace-normal break-words">
+              {item.product.name}
+            </div>
+            <div className="text-sm text-muted-foreground mt-1 whitespace-normal">
+              {item.product.description || "eceran"}
+            </div>
+            <div className="text-sm text-muted-foreground mt-2">
+              Unit: Rp {Number(item.unitPriceSnapshot).toLocaleString()}
+            </div>
+          </div>
         </div>
-        <div className="text-sm font-medium">
-          Rp {Number(item.unitPriceSnapshot).toLocaleString()} x {currentQty}
+
+        {/* Harga total + qty control */}
+        <div className="mt-3 md:mt-0 md:ml-auto flex-shrink-0 w-full md:w-auto">
+          <div className="flex items-center justify-between md:flex-col md:items-end gap-3 w-full md:w-auto">
+            <div className="text-base font-semibold">
+              Rp{" "}
+              {(Number(item.unitPriceSnapshot) * currentQty).toLocaleString()}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                className="inline-flex items-center justify-center h-8 w-8 rounded-full border border-gray-200 text-sm text-muted-foreground hover:bg-gray-50"
+                onClick={() => handleQtyChange(currentQty - 1)}
+                disabled={isUpdating}
+                aria-label="Decrease quantity"
+              >
+                -
+              </button>
+              <div className="w-10 text-center font-medium">{currentQty}</div>
+              <button
+                className="inline-flex items-center justify-center h-8 w-8 rounded-full border border-gray-200 text-sm text-muted-foreground hover:bg-gray-50"
+                onClick={() => handleQtyChange(currentQty + 1)}
+                disabled={isUpdating || currentQty >= stockQty}
+                aria-label="Increase quantity"
+              >
+                +
+              </button>
+
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={removeCartItem}
+                disabled={isUpdating}
+                className="ml-2"
+                aria-label="Remove item"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  className="w-4 h-4"
+                  fill="currentColor"
+                >
+                  <path d="M3 6h18v2H3V6zm3 3h12l-1 11H7L6 9zM9 4h6l1 1H8l1-1z" />
+                </svg>
+              </Button>
+            </div>
+          </div>
         </div>
-        <div className="text-sm font-bold text-primary">
-          Total: Rp{" "}
-          {(Number(item.unitPriceSnapshot) * currentQty).toLocaleString()}
-        </div>
-      </div>
-      <div className="flex items-center gap-2 ml-4">
-        <Button
-          size="icon"
-          variant="outline"
-          onClick={() => handleQtyChange(currentQty - 1)}
-          disabled={isUpdating}
-        >
-          -
-        </Button>
-        <span className="w-8 text-center font-medium">{currentQty}</span>
-        <Button
-          size="icon"
-          variant="outline"
-          onClick={() => handleQtyChange(currentQty + 1)}
-          disabled={isUpdating || currentQty >= stockQty}
-        >
-          +
-        </Button>
-        <Button
-          size="sm"
-          variant="destructive"
-          onClick={removeCartItem}
-          disabled={isUpdating}
-        >
-          Hapus
-        </Button>
       </div>
     </Card>
   );
