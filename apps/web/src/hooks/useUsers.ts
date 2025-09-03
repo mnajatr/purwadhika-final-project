@@ -1,19 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
-
-export interface User {
-  id: number;
-  email: string;
-  role: string;
-  createdAt: string;
-  profile?: {
-    fullName?: string;
-  } | null;
-}
+import usersService from "@/services/users.service";
 
 export function useUsers() {
   return useQuery({
     queryKey: ["users"],
-    queryFn: () => apiClient.get<User[]>("/users"),
+    queryFn: () => usersService.getUsers(),
   });
 }

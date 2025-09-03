@@ -20,7 +20,6 @@ export function CartPage({ userId }: CartPageProps) {
 
   React.useEffect(() => {
     if (!cart) return;
-    // default: all selected
     const map: Record<number, boolean> = {};
     cart.items.forEach((it) => (map[it.id] = true));
     setSelectedIds(map);
@@ -51,7 +50,6 @@ export function CartPage({ userId }: CartPageProps) {
     <div className="max-w-6xl mx-auto p-4 sm:p-6">
       <h2 className="text-2xl font-bold mb-6">Shopping Cart</h2>
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
-        {/* left: items list */}
         <div className="bg-card rounded-xl border-2 border-gray-300 p-4 sm:p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-1 pb-4 border-b mb-4">
             <div className="flex items-center gap-3">
@@ -64,7 +62,6 @@ export function CartPage({ userId }: CartPageProps) {
               />
               <span className="text-lg font-semibold">Select All</span>
             </div>
-            {/* button moved to the bottom of the card with a separating line */}
           </div>
 
           <div className="divide-y">
@@ -80,7 +77,6 @@ export function CartPage({ userId }: CartPageProps) {
             ))}
           </div>
 
-          {/* bottom actions with a separator line similar to the header */}
           <div className="mt-6 border-t pt-4">
             <div className="flex w-full items-center justify-end">
               <div className="w-full sm:w-auto">
@@ -98,7 +94,6 @@ export function CartPage({ userId }: CartPageProps) {
           </div>
         </div>
 
-        {/* right: summary */}
         <div className="w-full lg:w-auto">
           <div className="bg-card rounded-xl border-2 border-gray-300 p-6 shadow-sm lg:sticky lg:top-6">
             <h3 className="text-xl font-semibold mb-4">Shopping Summary</h3>

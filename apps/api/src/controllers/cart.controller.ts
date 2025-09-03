@@ -8,38 +8,48 @@ function toNumber(value: unknown, fallback?: number) {
   return Number.isNaN(n) ? fallback : n;
 }
 
-export class CartController {
-  private cartService: CartService;
+function pickStoreId(req: Request) {
+  // prefer query, then body, then default to 1
+  // TODO: Clean the comment
+  return toNumber(req.query?.storeId, toNumber(req.body?.storeId, 1)) ?? 1;
+}
 
-  constructor() {
-    this.cartService = new CartService();
-  }
+function handleError(
+  res: Response,
+  baseMessage: string,
+  err: unknown,
+  badKeywords: string[] = [
+    "not found",
+    "not available",
+    "Insufficient",
+    "exceed",
+    "cannot",
+  ]
+) {
+  const msg = err instanceof Error ? err.message : "Unknown error";
+  const isBadRequest = badKeywords.some((k) => msg.includes(k));
+  const status = isBadRequest ? 400 : 500;
+  return res.status(status).json(errorResponse(baseMessage, msg));
+}
+
+export class CartController {
+  private cartService = new CartService();
 
   getCart = async (req: Request, res: Response) => {
     try {
       // TODO: Get userId from auth middleware when implemented
       const userId = toNumber(req.query?.userId, undefined);
-      const storeId = toNumber(
-        req.query?.storeId,
-        toNumber(req.body?.storeId, 1)
-      );
-
-      if (!userId) {
+      if (!userId)
         return res.status(400).json(errorResponse("Missing userId in request"));
-      }
-      const cart = await this.cartService.getCartByUserIdAndStoreId(
-        userId!,
-        storeId ?? 1
-      );
 
-      const response = successResponse(cart, "Cart retrieved successfully");
-      res.json(response);
-    } catch (error) {
-      const response = errorResponse(
-        "Error getting cart",
-        error instanceof Error ? error.message : "Unknown error"
+      const storeId = pickStoreId(req);
+      const cart = await this.cartService.getCartByUserIdAndStoreId(
+        userId,
+        storeId
       );
-      res.status(500).json(response);
+      return res.json(successResponse(cart, "Cart retrieved successfully"));
+    } catch (e) {
+      return handleError(res, "Error getting cart", e, []);
     }
   };
 
@@ -47,46 +57,28 @@ export class CartController {
     try {
       // TODO: Get userId from auth middleware when implemented
       const userId = toNumber(req.body?.userId, undefined);
-      const { productId, qty } = req.body;
-      const storeId = toNumber(req.body?.storeId, 1);
+      const productId = req.body?.productId;
+      const qty = req.body?.qty;
+      const storeId = pickStoreId(req);
 
-      if (!userId) {
+      if (!userId)
         return res
           .status(400)
           .json(errorResponse("Missing userId in request body"));
-      }
-      if (!productId) {
+      if (!productId)
         return res
           .status(400)
           .json(errorResponse("Missing productId in request body"));
-      }
 
       const cart = await this.cartService.addToCart(
-        userId!,
+        userId,
         productId,
         qty,
-        storeId ?? 1
+        storeId
       );
-
-      const response = successResponse(cart, "Item added to cart successfully");
-      res.json(response);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      const statusCode =
-        errorMessage.includes("not found") ||
-        errorMessage.includes("not available") ||
-        errorMessage.includes("Insufficient") ||
-        errorMessage.includes("exceed") ||
-        errorMessage.includes("cannot")
-          ? 400
-          : 500;
-
-      const response = errorResponse(
-        "Failed to add item to cart",
-        errorMessage
-      );
-      res.status(statusCode).json(response);
+      return res.json(successResponse(cart, "Item added to cart successfully"));
+    } catch (e) {
+      return handleError(res, "Failed to add item to cart", e);
     }
   };
 
@@ -95,8 +87,8 @@ export class CartController {
       // TODO: Get userId from auth middleware when implemented
       const userId = toNumber(req.body?.userId, undefined);
       const itemId = toNumber(req.params?.itemId, undefined);
-      const { qty } = req.body;
-      const storeId = toNumber(req.body?.storeId, 1);
+      const qty = req.body?.qty;
+      const storeId = pickStoreId(req);
 
       if (!userId)
         return res
@@ -110,30 +102,14 @@ export class CartController {
           .json(errorResponse("Missing qty in request body"));
 
       const cart = await this.cartService.updateCartItem(
-        userId!,
-        itemId!,
+        userId,
+        itemId,
         qty,
-        storeId ?? 1
+        storeId
       );
-
-      const response = successResponse(cart, "Cart item updated successfully");
-      res.json(response);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      const statusCode =
-        errorMessage.includes("not found") ||
-        errorMessage.includes("Insufficient") ||
-        errorMessage.includes("exceed") ||
-        errorMessage.includes("cannot")
-          ? 400
-          : 500;
-
-      const response = errorResponse(
-        "Failed to update cart item",
-        errorMessage
-      );
-      res.status(statusCode).json(response);
+      return res.json(successResponse(cart, "Cart item updated successfully"));
+    } catch (e) {
+      return handleError(res, "Failed to update cart item", e);
     }
   };
 
@@ -142,7 +118,7 @@ export class CartController {
       // TODO: Get userId from auth middleware when implemented
       const userId = toNumber(req.body?.userId, undefined);
       const itemId = toNumber(req.params?.itemId, undefined);
-      const storeId = toNumber(req.body?.storeId, 1);
+      const storeId = pickStoreId(req);
 
       if (!userId)
         return res
@@ -152,26 +128,15 @@ export class CartController {
         return res.status(400).json(errorResponse("Missing itemId in params"));
 
       const cart = await this.cartService.deleteCartItem(
-        userId!,
-        itemId!,
-        storeId ?? 1
+        userId,
+        itemId,
+        storeId
       );
-
-      const response = successResponse(
-        cart,
-        "Item removed from cart successfully"
+      return res.json(
+        successResponse(cart, "Item removed from cart successfully")
       );
-      res.json(response);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      const statusCode = errorMessage.includes("not found") ? 400 : 500;
-
-      const response = errorResponse(
-        "Failed to remove cart item",
-        errorMessage
-      );
-      res.status(statusCode).json(response);
+    } catch (e) {
+      return handleError(res, "Failed to remove cart item", e, ["not found"]);
     }
   };
 
@@ -179,24 +144,16 @@ export class CartController {
     try {
       // TODO: Get userId from auth middleware when implemented
       const userId = toNumber(req.body?.userId, undefined);
-      const storeId = toNumber(req.body?.storeId, 1);
-
+      const storeId = pickStoreId(req);
       if (!userId)
         return res
           .status(400)
           .json(errorResponse("Missing userId in request body"));
 
-      const cart = await this.cartService.clearCart(userId!, storeId ?? 1);
-
-      const response = successResponse(cart, "Cart cleared successfully");
-      res.json(response);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      const statusCode = errorMessage.includes("not found") ? 400 : 500;
-
-      const response = errorResponse("Failed to clear cart", errorMessage);
-      res.status(statusCode).json(response);
+      const cart = await this.cartService.clearCart(userId, storeId);
+      return res.json(successResponse(cart, "Cart cleared successfully"));
+    } catch (e) {
+      return handleError(res, "Failed to clear cart", e, ["not found"]);
     }
   };
 
@@ -204,31 +161,16 @@ export class CartController {
     try {
       // TODO: Get userId from auth middleware when implemented
       const userId = toNumber(req.query?.userId, undefined);
-      const storeId = toNumber(
-        req.query?.storeId,
-        toNumber(req.body?.storeId, 1)
-      );
-
-      if (!userId) {
+      if (!userId)
         return res.status(400).json(errorResponse("Missing userId in query"));
-      }
 
-      const totals = await this.cartService.getCartTotals(
-        userId!,
-        storeId ?? 1
+      const storeId = pickStoreId(req);
+      const totals = await this.cartService.getCartTotals(userId, storeId);
+      return res.json(
+        successResponse(totals, "Cart totals retrieved successfully")
       );
-
-      const response = successResponse(
-        totals,
-        "Cart totals retrieved successfully"
-      );
-      res.json(response);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-
-      const response = errorResponse("Failed to get cart totals", errorMessage);
-      res.status(500).json(response);
+    } catch (e) {
+      return handleError(res, "Failed to get cart totals", e);
     }
   };
 }
