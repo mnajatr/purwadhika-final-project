@@ -4,7 +4,7 @@ import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { useUpdateCartItem, useRemoveCartItem } from "@/hooks/useCart";
 import type { CartItem as CartItemType } from "@/types/cart.types";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 interface CartItemProps {
@@ -25,6 +25,8 @@ export default function CartItem({
   const [isUpdating, setIsUpdating] = useState(false);
   const [currentQty, setCurrentQty] = useState(item.qty);
   const stockQty = item.storeInventory?.stockQty ?? 9999;
+  const pendingQtyRef = useRef<number | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setCurrentQty(item.qty);
@@ -33,37 +35,58 @@ export default function CartItem({
   const updateCartItemMutation = useUpdateCartItem(userId, storeId);
   const removeCartItemMutation = useRemoveCartItem(userId, storeId);
 
-  const handleQtyChange = async (newQty: number) => {
+  const handleQtyChange = (newQty: number) => {
     if (newQty === currentQty || isUpdating) return;
     if (newQty <= 0) {
-      await removeCartItem();
+      
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+        pendingQtyRef.current = null;
+      }
+      void removeCartItem();
       return;
     }
     if (newQty > stockQty) {
       toast.error(`Qty melebihi stok tersedia (${stockQty})`);
       return;
     }
-    setIsUpdating(true);
+
     setCurrentQty(newQty);
-    try {
-      await updateCartItemMutation.mutateAsync({
-        itemId: item.id,
-        qty: newQty,
-      });
-    } catch (error) {
-      setCurrentQty(item.qty);
-      let msg = "Gagal update qty";
-      if (error && typeof error === "object" && "message" in error) {
-        msg = (error as { message?: string }).message ?? msg;
+
+    pendingQtyRef.current = newQty;
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(async () => {
+      const qtyToSend = pendingQtyRef.current;
+      pendingQtyRef.current = null;
+      debounceTimerRef.current = null;
+      if (qtyToSend == null) return;
+      setIsUpdating(true);
+      try {
+        await updateCartItemMutation.mutateAsync({
+          itemId: item.id,
+          qty: qtyToSend,
+        });
+      } catch (error) {
+        setCurrentQty(item.qty);
+        let msg = "Gagal update qty";
+        if (error && typeof error === "object" && "message" in error) {
+          msg = (error as { message?: string }).message ?? msg;
+        }
+        toast.error(msg);
+      } finally {
+        setIsUpdating(false);
       }
-      toast.error(msg);
-    } finally {
-      setIsUpdating(false);
-    }
+    }, 250);
   };
 
   const removeCartItem = async () => {
     if (isUpdating) return;
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+      pendingQtyRef.current = null;
+    }
     setIsUpdating(true);
     try {
       await removeCartItemMutation.mutateAsync(item.id);
@@ -79,6 +102,16 @@ export default function CartItem({
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+        pendingQtyRef.current = null;
+      }
+    };
+  }, []);
+
   return (
     <Card className="p-4">
       <div className="flex flex-col md:flex-row items-start md:items-center gap-3 w-full">
@@ -89,7 +122,6 @@ export default function CartItem({
           className="h-5 w-5 rounded-md accent-primary"
         />
 
-        {/* Gambar + Detail produk */}
         <div className="flex flex-row items-start gap-3 flex-1 ml-2">
           <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-muted rounded-lg flex-shrink-0 overflow-hidden">
             <img
@@ -112,7 +144,6 @@ export default function CartItem({
           </div>
         </div>
 
-        {/* Harga total + qty control */}
         <div className="mt-3 md:mt-0 md:ml-auto flex-shrink-0 w-full md:w-auto">
           <div className="flex items-center justify-between md:flex-col md:items-end gap-3 w-full md:w-auto">
             <div className="text-base font-semibold">
