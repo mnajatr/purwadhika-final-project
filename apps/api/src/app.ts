@@ -1,13 +1,12 @@
 import express from "express";
 import cors from "cors";
 import cartRouter from "./routes/cart.routes.js";
+import ordersRouter from "./routes/orders.routes.js";
 import { prisma } from "@repo/database";
 import { CreateUserSchema } from "@repo/schemas";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
-import {
-  apiRateLimit,
-} from "./middleware/rateLimit.middleware.js";
+import { apiRateLimit } from "./middleware/rateLimit.middleware.js";
 
 export class App {
   public app: express.Application;
@@ -20,6 +19,7 @@ export class App {
     this.app.use(express.json());
 
     this.app.use("/api/cart", cartRouter);
+    this.app.use("/api/orders", ordersRouter);
 
     this.app.get("/api/health", (request, response) =>
       response.status(200).json({ message: "API running!" })
