@@ -136,6 +136,8 @@ model UserAddress {
   longitude     Decimal
   isPrimary     Boolean  @default(false)
   updatedAt     DateTime @updatedAt
+
+  orders Order[]
 }
 
 model Store {
@@ -151,7 +153,7 @@ model Store {
   orders        Order[]
   assignments   StoreAdminAssignment[]
   stockJournals StockJournal[]
-  Cart          Cart[]
+  cart          Cart[]
 }
 
 model StoreLocation {
@@ -268,12 +270,14 @@ model Cart {
   id        Int      @id @default(autoincrement())
   user      User     @relation(fields: [userId], references: [id])
   userId    Int
+  store     Store   @relation(fields: [storeId], references: [id])
+  storeId   Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items   CartItem[]
-  Store   Store?     @relation(fields: [storeId], references: [id])
-  storeId Int?
+  items CartItem[]
+
+  @@unique([userId, storeId])
 }
 
 model CartItem {
@@ -295,6 +299,8 @@ model Order {
   userId            Int
   store             Store         @relation(fields: [storeId], references: [id])
   storeId           Int
+  address           UserAddress   @relation(fields: [addressId], references: [id])
+  addressId         Int
   status            OrderStatus
   paymentMethod     PaymentMethod
   subtotalAmount    Int

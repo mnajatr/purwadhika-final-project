@@ -4,6 +4,7 @@ import * as React from "react";
 import CartItem from "./CartItem";
 import { useCart, useClearCart } from "@/hooks/useCart";
 import { Button } from "../ui/button";
+import useCreateOrder from "@/hooks/useOrder";
 
 interface CartPageProps {
   userId: number;
@@ -17,6 +18,12 @@ export function CartPage({ userId }: CartPageProps) {
   const [selectedIds, setSelectedIds] = React.useState<Record<number, boolean>>(
     {}
   );
+
+  const [idempotencyKey, setIdempotencyKey] = React.useState<string | null>(
+    null
+  );
+  const createOrder = useCreateOrder(userId, storeId);
+  const creating = createOrder.status === "pending";
 
   React.useEffect(() => {
     if (!cart) return;
@@ -43,7 +50,7 @@ export function CartPage({ userId }: CartPageProps) {
 
   const subtotal = cart.items.reduce((sum, item) => {
     if (!selectedIds[item.id]) return sum;
-    return sum + Number(item.unitPriceSnapshot) * item.qty;
+    return sum + Number(item.product?.price ?? 0) * item.qty;
   }, 0);
 
   return (
@@ -106,12 +113,70 @@ export function CartPage({ userId }: CartPageProps) {
               </div>
             </div>
             <div className="mt-6">
-              <Button
-                className="w-full bg-blue-600 text-white hover:bg-blue-700"
-                size="lg"
-              >
-                Checkout
-              </Button>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    readOnly
+                    value={idempotencyKey ?? "(no key generated)"}
+                    className="flex-1 input input-bordered"
+                    aria-label="idempotency-key"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      setIdempotencyKey(String(Math.random()).slice(2, 14))
+                    }
+                  >
+                    Generate
+                  </Button>
+                </div>
+
+                <Button
+                  className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                  size="lg"
+                  onClick={() => {
+                    const selected = cart.items
+                      .filter((it) => selectedIds[it.id])
+                      .map((it) => ({ productId: it.productId, qty: it.qty }));
+                    const key =
+                      idempotencyKey ?? String(Math.random()).slice(2, 14);
+                    setIdempotencyKey(key);
+                    createOrder.mutate({
+                      items: selected,
+                      idempotencyKey: key,
+                    });
+                  }}
+                  disabled={creating}
+                >
+                  {creating ? "Processing..." : "Checkout"}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const selected = cart.items
+                      .filter((it) => selectedIds[it.id])
+                      .map((it) => ({ productId: it.productId, qty: it.qty }));
+                    const key =
+                      idempotencyKey ?? String(Math.random()).slice(2, 14);
+                    setIdempotencyKey(key);
+                    createOrder.mutate({
+                      items: selected,
+                      idempotencyKey: key,
+                    });
+                    setTimeout(() => {
+                      createOrder.mutate({
+                        items: selected,
+                        idempotencyKey: key,
+                      });
+                    }, 200);
+                  }}
+                >
+                  Simulate double-submit
+                </Button>
+              </div>
             </div>
           </div>
         </div>

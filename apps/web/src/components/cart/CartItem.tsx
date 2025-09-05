@@ -38,7 +38,6 @@ export default function CartItem({
   const handleQtyChange = (newQty: number) => {
     if (newQty === currentQty || isUpdating) return;
     if (newQty <= 0) {
-      
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
@@ -139,7 +138,7 @@ export default function CartItem({
               {item.product.description || "eceran"}
             </div>
             <div className="text-sm text-muted-foreground mt-2">
-              Unit: Rp {Number(item.unitPriceSnapshot).toLocaleString()}
+              Unit: Rp {Number(item.product?.price ?? 0).toLocaleString()}
             </div>
           </div>
         </div>
@@ -148,7 +147,7 @@ export default function CartItem({
           <div className="flex items-center justify-between md:flex-col md:items-end gap-3 w-full md:w-auto">
             <div className="text-base font-semibold">
               Rp{" "}
-              {(Number(item.unitPriceSnapshot) * currentQty).toLocaleString()}
+              {(Number(item.product?.price ?? 0) * currentQty).toLocaleString()}
             </div>
 
             <div className="flex items-center gap-2">

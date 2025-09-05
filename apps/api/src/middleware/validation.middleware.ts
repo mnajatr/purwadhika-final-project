@@ -33,7 +33,8 @@ export const validateSchema = (schema: {
             })),
           });
         }
-        req.params = paramsResult.data as any;
+        // assign parsed params with a safer cast to the expected Request['params'] shape
+        req.params = paramsResult.data as Request["params"];
       }
 
       if (schema.query) {
@@ -47,7 +48,7 @@ export const validateSchema = (schema: {
             })),
           });
         }
-        req.query = queryResult.data as any;
+        req.query = queryResult.data as Request["query"];
       }
 
       next();

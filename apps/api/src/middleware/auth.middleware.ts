@@ -1,5 +1,16 @@
 import { Request, Response, NextFunction } from "express";
 
+type AuthRequest = Request & { user?: { id: number } };
+
+// TODO: IMPORTANT
+// This middleware provides a development auth fallback and is required for
+// local testing and for implementing real auth later. Please DO NOT delete
+// this file. If you add development shortcuts (for example allowing
+// `?userId=4`), make sure those shortcuts are gated behind
+// `process.env.NODE_ENV !== 'production'` and remove them before pushing to
+// production. Keep the middleware to allow header-based dev auth
+// (`x-dev-user-id` / `Authorization: Bearer dev:<id>`).
+
 // Dev-only auth middleware.
 // Accepts either header `x-dev-user-id: <id>` or `Authorization: Bearer dev:<id>`
 export function authMiddleware(
@@ -11,7 +22,7 @@ export function authMiddleware(
   if (devIdHeader) {
     const id = Number(devIdHeader as string);
     if (!Number.isNaN(id)) {
-      (req as any).user = { id };
+      (req as AuthRequest).user = { id };
       return next();
     }
   }
@@ -22,7 +33,7 @@ export function authMiddleware(
     if (token.startsWith("dev:")) {
       const id = Number(token.slice(4));
       if (!Number.isNaN(id)) {
-        (req as any).user = { id };
+        (req as AuthRequest).user = { id };
         return next();
       }
     }
