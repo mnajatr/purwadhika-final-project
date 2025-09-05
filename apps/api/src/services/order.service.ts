@@ -4,9 +4,15 @@ type OrderItemInput = { productId: number; qty: number };
 
 // TODO: This in-memory idempotency store is fine for local development and
 // short-lived processes but must be replaced with a durable DB backed table
-// (idempotency_keys) for production. The map stores promises so concurrent
-// identical requests can share the same result.
-const idempotencyStore = new Map<string, Promise<any>>();
+// (idempotency_keys) for production. The store keeps both in-flight promises
+// and recently resolved results for a short TTL so retries after success
+// return the same response instead of re-creating resources.
+type IdempotencyEntry =
+  | { type: "pending"; promise: Promise<any> }
+  | { type: "done"; result: any; expiresAt: number };
+
+const IDEMPOTENCY_TTL_MS = 60 * 1000; // keep resolved results for 60s
+const idempotencyStore = new Map<string, IdempotencyEntry>();
 
 export class OrderService {
   async createOrder(
@@ -16,21 +22,36 @@ export class OrderService {
     idempotencyKey?: string
   ) {
     if (idempotencyKey) {
-      const existing = idempotencyStore.get(idempotencyKey);
-      if (existing) return existing; // return existing promise result
+      const entry = idempotencyStore.get(idempotencyKey);
+      if (entry) {
+        if (entry.type === "pending") return entry.promise;
+        if (entry.type === "done") {
+          // if result still fresh, return it
+          if (Date.now() < entry.expiresAt)
+            return Promise.resolve(entry.result);
+          // expired -> delete and continue
+          idempotencyStore.delete(idempotencyKey);
+        }
+      }
     }
 
     const work = this._createOrderImpl(userId, storeId, items);
 
     if (idempotencyKey) {
       // store the in-flight promise
-      idempotencyStore.set(idempotencyKey, work);
-      // ensure the key is cleaned up after resolution to avoid memory leak
+      idempotencyStore.set(idempotencyKey, { type: "pending", promise: work });
       work
-        .catch(() => {})
-        .finally(() => {
-          // keep a short TTL here if you want; for now remove immediately
-          idempotencyStore.delete(idempotencyKey);
+        .then((res) => {
+          // store resolved result for short TTL
+          idempotencyStore.set(idempotencyKey!, {
+            type: "done",
+            result: res,
+            expiresAt: Date.now() + IDEMPOTENCY_TTL_MS,
+          });
+        })
+        .catch(() => {
+          // on failure remove entry so future retries can attempt again
+          idempotencyStore.delete(idempotencyKey!);
         });
     }
 

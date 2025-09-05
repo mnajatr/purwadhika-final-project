@@ -11,12 +11,12 @@ const controller = new OrderController();
 // deploying to production (Feature 1). The conditional below keeps the
 // route protected when NODE_ENV === 'production'.
 if (process.env.NODE_ENV !== "production") {
-	// Dev: let controller handle userId fallback (query/body/header) so
-	// frontend can test using ?userId=4 or body.userId without sending auth
-	router.post("/", controller.createOrder);
+  // Dev: let controller handle userId fallback (query/body/header) so
+  // frontend can test using ?userId=4 or body.userId without sending auth
+  router.post("/", controller.createOrder);
 } else {
-	// Production: require auth middleware
-	router.post("/", authMiddleware, controller.createOrder);
+  // Production: require auth middleware
+  router.post("/", authMiddleware, controller.createOrder);
 }
 
 export default router;
