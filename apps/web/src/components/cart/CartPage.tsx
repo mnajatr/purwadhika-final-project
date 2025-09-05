@@ -50,7 +50,7 @@ export function CartPage({ userId }: CartPageProps) {
 
   const subtotal = cart.items.reduce((sum, item) => {
     if (!selectedIds[item.id]) return sum;
-    return sum + Number(item.unitPriceSnapshot) * item.qty;
+    return sum + Number(item.product?.price ?? 0) * item.qty;
   }, 0);
 
   return (

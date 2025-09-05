@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 
+type AuthRequest = Request & { user?: { id: number } };
+
 // TODO: IMPORTANT
 // This middleware provides a development auth fallback and is required for
 // local testing and for implementing real auth later. Please DO NOT delete
@@ -20,7 +22,7 @@ export function authMiddleware(
   if (devIdHeader) {
     const id = Number(devIdHeader as string);
     if (!Number.isNaN(id)) {
-      (req as any).user = { id };
+      (req as AuthRequest).user = { id };
       return next();
     }
   }
@@ -31,7 +33,7 @@ export function authMiddleware(
     if (token.startsWith("dev:")) {
       const id = Number(token.slice(4));
       if (!Number.isNaN(id)) {
-        (req as any).user = { id };
+        (req as AuthRequest).user = { id };
         return next();
       }
     }

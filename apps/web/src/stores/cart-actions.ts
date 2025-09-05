@@ -38,7 +38,7 @@ export const createCartActions = (
 
       const totalAmount =
         cart?.items?.reduce((sum: number, item: CartItem) => {
-          const unitPrice = Number(item.unitPriceSnapshot) || 0;
+          const unitPrice = Number(item.product?.price ?? 0) || 0;
           return sum + unitPrice * item.qty;
         }, 0) || 0;
 

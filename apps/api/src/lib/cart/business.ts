@@ -11,7 +11,7 @@ export class CartBusiness {
     );
     const subtotal = cartItems.reduce(
       (sum: number, item: any) =>
-        sum + Number(item.unitPriceSnapshot) * item.qty,
+        sum + Number(item.product?.price ?? 0) * item.qty,
       0
     );
 
@@ -24,8 +24,8 @@ export class CartBusiness {
       productId: item.productId,
       productName: item.product.name,
       quantity: item.qty,
-      unitPrice: Number(item.unitPriceSnapshot),
-      total: Number(item.unitPriceSnapshot) * item.qty,
+      unitPrice: Number(item.product?.price ?? 0),
+      total: Number(item.product?.price ?? 0) * item.qty,
     }));
   }
 }

@@ -33,12 +33,7 @@ export class CartService {
       return this.updateCartItem(userId, existingItem.id, newQty, storeId);
     }
 
-    await CartData.createCartItem(
-      cart.id,
-      productId,
-      qty,
-      inventory.price.toString()
-    );
+    await CartData.createCartItem(cart.id, productId, qty);
     return this.getCartByUserIdAndStoreId(userId, storeId);
   }
 
@@ -65,7 +60,7 @@ export class CartService {
       );
     }
 
-    await CartData.updateCartItem(itemId, qty, inventory.price.toString());
+    await CartData.updateCartItem(itemId, qty);
     return this.getCartByUserIdAndStoreId(userId, storeId);
   }
 

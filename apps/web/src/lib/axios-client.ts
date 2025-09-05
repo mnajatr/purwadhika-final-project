@@ -23,7 +23,8 @@ class ApiClient {
       withCredentials: true,
     });
 
-    // Normalize errors in one place so callers get Error.message and can access response via (err as any).response
+    // Normalize errors in one place so callers get Error.message and can access the Axios response
+    // via the ApiError.response property when available.
     this.client.interceptors.response.use(
       (resp: AxiosResponse) => resp,
       (error: AxiosError) => {

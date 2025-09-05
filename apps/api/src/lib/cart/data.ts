@@ -11,7 +11,6 @@ export class CartData {
         id: true,
         productId: true,
         qty: true,
-        unitPriceSnapshot: true,
         createdAt: true,
         updatedAt: true,
         product: {
@@ -20,6 +19,7 @@ export class CartData {
             name: true,
             slug: true,
             description: true,
+            price: true,
             isActive: true,
           },
         },
@@ -75,27 +75,12 @@ export class CartData {
     });
   }
 
-  static async createCartItem(
-    cartId: number,
-    productId: number,
-    qty: number,
-    price: string
-  ) {
-    return prisma.cartItem.create({
-      data: {
-        cartId,
-        productId,
-        qty,
-        unitPriceSnapshot: price,
-      },
-    });
+  static async createCartItem(cartId: number, productId: number, qty: number) {
+    return prisma.cartItem.create({ data: { cartId, productId, qty } });
   }
 
-  static async updateCartItem(itemId: number, qty: number, price: string) {
-    return prisma.cartItem.update({
-      where: { id: itemId },
-      data: { qty, unitPriceSnapshot: price },
-    });
+  static async updateCartItem(itemId: number, qty: number) {
+    return prisma.cartItem.update({ where: { id: itemId }, data: { qty } });
   }
 
   static async deleteCartItem(itemId: number) {

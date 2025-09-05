@@ -112,12 +112,16 @@ const productsData = {
 async function cleanDatabase() {
   console.log("🧹 Cleaning existing data...");
 
+  // Delete dependent tables first to avoid foreign key constraint errors
+  await prisma.orderItem.deleteMany();
+  await prisma.order.deleteMany();
   await prisma.cartItem.deleteMany();
   await prisma.cart.deleteMany();
   await prisma.storeInventory.deleteMany();
   await prisma.product.deleteMany();
   await prisma.productCategory.deleteMany();
   await prisma.store.deleteMany();
+  await prisma.userAddress.deleteMany();
   await prisma.user.deleteMany();
 
   // Reset auto-increment/sequence for PostgreSQL
@@ -145,6 +149,16 @@ async function cleanDatabase() {
     `ALTER SEQUENCE "CartItem_id_seq" RESTART WITH 1;`
   );
 
+  await prisma.$executeRawUnsafe(
+    `ALTER SEQUENCE "Order_id_seq" RESTART WITH 1;`
+  );
+  await prisma.$executeRawUnsafe(
+    `ALTER SEQUENCE "OrderItem_id_seq" RESTART WITH 1;`
+  );
+  await prisma.$executeRawUnsafe(
+    `ALTER SEQUENCE "UserAddress_id_seq" RESTART WITH 1;`
+  );
+
   console.log("✅ Database cleaned and sequences reset");
 }
 
@@ -161,7 +175,7 @@ async function seedUsers() {
     const user = await prisma.user.create({
       data: {
         email,
-        passwordHash,
+        password: passwordHash,
         isVerified: faker.datatype.boolean(),
         role: i === 0 ? "SUPER_ADMIN" : i <= 2 ? "STORE_ADMIN" : "USER",
         referralCode,
@@ -222,6 +236,8 @@ async function seedProducts(categories: any[]) {
           slug: productData.slug,
           description: productData.description,
           price: productData.basePrice,
+          weight: 0,
+          volume: 0,
           isActive: true,
         },
       });
@@ -241,8 +257,6 @@ async function seedInventories(stores: any[], products: any[]) {
 
   for (const store of stores) {
     for (const product of products) {
-      const priceVariation = faker.number.float({ min: 0.8, max: 1.2 });
-      const price = Math.round(product.basePrice * priceVariation);
       const stockQty = faker.number.int({ min: 10, max: 500 });
       const reservedStock = faker.number.int({
         min: 0,
@@ -255,7 +269,6 @@ async function seedInventories(stores: any[], products: any[]) {
           productId: product.id,
           stockQty,
           reservedStock,
-          price,
         },
       });
 
@@ -295,15 +308,8 @@ async function seedCarts(users: any[], products: any[], stores: any[]) {
           productId: product.id,
         },
       });
-      const unitPriceSnapshot = inventory ? inventory.price : product.basePrice;
-
       await prisma.cartItem.create({
-        data: {
-          cartId: cart.id,
-          productId: product.id,
-          qty,
-          unitPriceSnapshot,
-        },
+        data: { cartId: cart.id, productId: product.id, qty },
       });
     }
   }

@@ -1,4 +1,7 @@
 import { Request, Response } from "express";
+import type { Request as ExpressRequest } from "express";
+// Reuse the AuthRequest shape used in auth middleware
+type AuthRequest = ExpressRequest & { user?: { id: number } };
 import { OrderService } from "../services/order.service.js";
 import { successResponse, errorResponse } from "../utils/helpers.js";
 
@@ -10,7 +13,8 @@ function toNumber(value: unknown, fallback?: number) {
 
 function pickUserId(req: Request): number | undefined {
   // Prefer authenticated user id if present
-  const authUser = Number((req as any).user?.id ?? undefined);
+  const authReq = req as AuthRequest;
+  const authUser = Number(authReq.user?.id ?? undefined);
   if (authUser) return authUser;
 
   // TODO: temporary dev-friendly fallback so frontend can test without auth.

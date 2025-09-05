@@ -2,7 +2,6 @@ export interface CartItem {
   id: number;
   productId: number;
   qty: number;
-  unitPriceSnapshot: string;
   createdAt: string;
   updatedAt: string;
   product: {
@@ -10,6 +9,7 @@ export interface CartItem {
     name: string;
     slug: string;
     description: string | null;
+    price: number;
     isActive: boolean;
   };
   storeInventory?: {

@@ -90,13 +90,29 @@ export class OrderService {
       let subtotal = 0;
       let totalItems = 0;
 
-      const orderNo = `ORD-${Date.now()}-${Math.floor(Math.random() * 9000)}`;
+      // ensure we have an address for the order (schema requires addressId)
+      let address = await tx.userAddress.findFirst({ where: { userId } });
+      if (!address) {
+        address = await tx.userAddress.create({
+          data: {
+            userId,
+            recipientName: "Default Recipient",
+            addressLine: "Auto-created address",
+            province: "Unknown",
+            city: "Unknown",
+            district: null,
+            postalCode: "00000",
+            latitude: 0,
+            longitude: 0,
+          },
+        });
+      }
 
       const createdOrder = await tx.order.create({
         data: {
           userId,
           storeId,
-          orderNo,
+          addressId: address.id,
           status: "PENDING_PAYMENT",
           paymentMethod: "MANUAL_TRANSFER",
           subtotalAmount: 0,
@@ -111,7 +127,11 @@ export class OrderService {
       // create order items and decrement inventory
       for (const it of items) {
         const inv = inventories.find((i) => i.productId === it.productId)!;
-        const unitPrice = Math.round(Number(inv.price));
+        // fetch product price within transaction to capture current product.price
+        const product = await tx.product.findUnique({
+          where: { id: it.productId },
+        });
+        const unitPrice = Math.round(Number(product?.price ?? 0));
         const totalAmount = unitPrice * it.qty;
 
         subtotal += totalAmount;

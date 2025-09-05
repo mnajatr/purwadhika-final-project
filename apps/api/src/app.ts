@@ -65,10 +65,27 @@ export class App {
         return response.status(400).json({ message: parsedData.error });
       }
 
-      const userData = {
-        ...(parsedData.data as any),
-        password: (parsedData.data as any).password || "",
+      // parsedData.data should already be validated by CreateUserSchema
+      const pd = parsedData.data as {
+        email: string;
+        password?: string;
+        role?: string;
       };
+      // Narrow and validate role to the allowed union to satisfy Prisma types
+      type UserRole = "USER" | "SUPER_ADMIN" | "STORE_ADMIN";
+      const roleCandidate = pd.role;
+      const userRole =
+        roleCandidate === "USER" ||
+        roleCandidate === "SUPER_ADMIN" ||
+        roleCandidate === "STORE_ADMIN"
+          ? (roleCandidate as UserRole)
+          : undefined;
+
+      const userData: any = {
+        email: pd.email,
+        password: pd.password || "",
+      };
+      if (userRole) userData.role = userRole;
       const user = await prisma.user.create({ data: userData });
       response.status(201).json({ message: "User created", user });
     });

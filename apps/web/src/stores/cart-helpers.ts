@@ -19,24 +19,24 @@ export const updateCartOptimistically = (
         item.productId === productId ? { ...item, qty: item.qty + qty } : item
       ),
     };
-  } else {
-    const newItem: CartItem = {
-      id: Date.now(),
-      productId,
-      qty,
-      unitPriceSnapshot: "0",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      product: {
-        id: productId,
-        name: "",
-        slug: "",
-        description: null,
-        isActive: true,
-      },
-    };
-    return { ...prevCart, items: [...prevCart.items, newItem] };
   }
+
+  const newItem: CartItem = {
+    id: Date.now(),
+    productId,
+    qty,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    product: {
+      id: productId,
+      name: "",
+      slug: "",
+      description: null,
+      price: 0,
+      isActive: true,
+    },
+  };
+  return { ...prevCart, items: [...prevCart.items, newItem] };
 };
 
 /**
