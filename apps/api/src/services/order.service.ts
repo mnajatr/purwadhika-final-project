@@ -149,9 +149,28 @@ export class OrderService {
         });
 
         // decrement stock
-        await tx.storeInventory.update({
-          where: { id: inv.id },
+        // perform conditional atomic decrement to avoid oversell
+        const updateRes = await tx.storeInventory.updateMany({
+          where: { id: inv.id, stockQty: { gte: it.qty } },
           data: { stockQty: { decrement: it.qty } },
+        });
+
+        if (updateRes.count === 0) {
+          // some item has insufficient stock, abort transaction
+          throw new Error(
+            `${ERROR_MESSAGES.INVENTORY.INSUFFICIENT_STOCK}. Available: ${inv.stockQty}`
+          );
+        }
+
+        // record stock journal for the decrement
+        await tx.stockJournal.create({
+          data: {
+            storeId: inv.storeId,
+            productId: inv.productId,
+            qtyChange: -it.qty,
+            reason: "REMOVE",
+            adminId: userId,
+          },
         });
       }
 

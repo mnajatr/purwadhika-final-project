@@ -3,7 +3,11 @@ import type { Request as ExpressRequest } from "express";
 // Reuse the AuthRequest shape used in auth middleware
 type AuthRequest = ExpressRequest & { user?: { id: number } };
 import { OrderService } from "../services/order.service.js";
-import { successResponse, errorResponse } from "../utils/helpers.js";
+import {
+  successResponse,
+  errorResponse,
+  ERROR_MESSAGES,
+} from "../utils/helpers.js";
 
 function toNumber(value: unknown, fallback?: number) {
   if (value === undefined || value === null) return fallback;
@@ -63,11 +67,25 @@ export class OrderController {
       return res.status(201).json(successResponse(result, "Order created"));
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      const isBad = msg.includes("Insufficient") || msg.includes("not found");
-      const status = isBad ? 400 : 500;
-      return res
-        .status(status)
-        .json(errorResponse("Failed to create order", msg));
+
+      // Map known inventory errors to 400 so frontend can surface actionable UX
+      if (
+        msg.includes(ERROR_MESSAGES.INVENTORY.INSUFFICIENT_STOCK) ||
+        msg.includes(ERROR_MESSAGES.INVENTORY.NO_INVENTORY) ||
+        msg.toLowerCase().includes("not found")
+      ) {
+        // Provide a concise client-friendly message and include the raw error
+        // in `error` for debugging and an `errors` entry for field-level hints.
+        return res
+          .status(400)
+          .json(
+            errorResponse("Order cannot be created", msg, [
+              { field: "items", message: msg },
+            ])
+          );
+      }
+
+      return res.status(500).json(errorResponse("Failed to create order", msg));
     }
   };
 }

@@ -36,6 +36,19 @@ export function useCreateOrder(userId: number, storeId = 1) {
       qc.invalidateQueries({ queryKey: ["cart", userId, storeId] });
       qc.invalidateQueries({ queryKey: ["cart", "totals", userId, storeId] });
     },
+    onError: async (err) => {
+      // bubble up server message so consuming components can show friendly UI
+      const e = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const message =
+        e?.response?.data?.message || e?.message || "Failed to place order";
+      // option: invalidate cart to refresh latest inventory state
+      qc.invalidateQueries({ queryKey: ["cart", userId, storeId] });
+      qc.invalidateQueries({ queryKey: ["cart", "totals", userId, storeId] });
+      throw new Error(message);
+    },
   });
 }
 
