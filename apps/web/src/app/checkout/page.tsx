@@ -19,7 +19,8 @@ export default function CheckoutPage() {
   const userId = storedUserId ? Number(storedUserId) : 1;
   const storeId = 1;
   const { data: cart, isLoading } = useCart(userId, storeId);
-  const createOrder = useCreateOrder(userId, storeId);
+  // do not pass storeId to createOrder so backend can resolve nearest store
+  const createOrder = useCreateOrder(userId);
 
   const [idempotencyKey, setIdempotencyKey] = React.useState<string | null>(
     null

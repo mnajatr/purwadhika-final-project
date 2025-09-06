@@ -14,7 +14,7 @@ function uuidv4(): string {
 }
 
 // Hook: createOrder with client-generated idempotency key
-export function useCreateOrder(userId: number, storeId = 1) {
+export function useCreateOrder(userId: number, storeId?: number) {
   const qc = useQueryClient();
 
   type Payload = {
@@ -42,10 +42,12 @@ export function useCreateOrder(userId: number, storeId = 1) {
       return res.data;
     },
     onSuccess: async (data) => {
-      // clear cart and refresh
-      await cartService.clearCart(userId, storeId);
-      qc.invalidateQueries({ queryKey: ["cart", userId, storeId] });
-      qc.invalidateQueries({ queryKey: ["cart", "totals", userId, storeId] });
+      // clear cart and refresh only if storeId known on client
+      if (typeof storeId === "number") {
+        await cartService.clearCart(userId, storeId);
+        qc.invalidateQueries({ queryKey: ["cart", userId, storeId] });
+        qc.invalidateQueries({ queryKey: ["cart", "totals", userId, storeId] });
+      }
 
       // navigate to the created order detail page if we have an id
       try {
@@ -70,9 +72,11 @@ export function useCreateOrder(userId: number, storeId = 1) {
       };
       const message =
         e?.response?.data?.message || e?.message || "Failed to place order";
-      // option: invalidate cart to refresh latest inventory state
-      qc.invalidateQueries({ queryKey: ["cart", userId, storeId] });
-      qc.invalidateQueries({ queryKey: ["cart", "totals", userId, storeId] });
+      // option: invalidate cart to refresh latest inventory state (only when storeId is known)
+      if (typeof storeId === "number") {
+        qc.invalidateQueries({ queryKey: ["cart", userId, storeId] });
+        qc.invalidateQueries({ queryKey: ["cart", "totals", userId, storeId] });
+      }
       throw new Error(message);
     },
   });

@@ -8,14 +8,15 @@ export class OrderService {
 
   async createOrder(
     userId: number,
-    storeId: number,
+    storeId: number | undefined,
     items: OrderItem[],
     idempotencyKey?: string,
     userLat?: number,
     userLon?: number,
     addressId?: number
   ): Promise<ApiResponse<unknown>> {
-    const body: Record<string, unknown> = { items, storeId, userId };
+    const body: Record<string, unknown> = { items, userId };
+    if (typeof storeId === "number") body.storeId = storeId;
     if (idempotencyKey) body.idempotencyKey = idempotencyKey;
     if (typeof userLat === "number") body.userLat = userLat;
     if (typeof userLon === "number") body.userLon = userLon;

@@ -39,47 +39,55 @@ export class OrderService {
     }
 
     const work = (async () => {
-      // if storeId is not provided, attempt to compute nearest store using
-      // provided user coordinates, the provided address coordinates, or
-      // fallback to user's primary address.
+      // if storeId is not provided, attempt to compute nearest store.
+      // Resolution priority:
+      // 1) Explicit coordinates passed in request (userLat/userLon).
+      //    If provided and no store is within radius -> throw NO_NEARBY.
+      // 2) Address coordinates for provided addressId (if coords not passed).
+      // 3) User's primary address (only if coords and addressId not provided).
       let resolvedStoreId = storeId;
+      const coordsExplicit =
+        typeof userLat === "number" && typeof userLon === "number";
+
       if (!resolvedStoreId) {
-        // try coordinates passed explicitly
-        if (typeof userLat === "number" && typeof userLon === "number") {
-          resolvedStoreId = await this._findNearestStoreId(userLat, userLon);
-        }
-
-        // if an addressId was provided and coords not explicitly passed,
-        // try to use the address coordinates to find nearest store
-        if (!resolvedStoreId && typeof addressId === "number") {
-          const addr = await prisma.userAddress.findUnique({
-            where: { id: addressId },
-          });
-          if (addr && addr.latitude && addr.longitude) {
-            resolvedStoreId = await this._findNearestStoreId(
-              Number(addr.latitude),
-              Number(addr.longitude)
-            );
+        if (coordsExplicit) {
+          // If user explicitly provided coords, only use them. If no store is
+          // within MAX_STORE_RADIUS_KM, surface NO_NEARBY instead of falling
+          // back to a different address.
+          resolvedStoreId = await this._findNearestStoreId(userLat!, userLon!);
+          if (!resolvedStoreId) {
+            throw new Error(ERROR_MESSAGES.STORE.NO_NEARBY);
           }
-        }
-
-        // fallback: try to use user's primary address coordinates
-        if (!resolvedStoreId) {
-          const addr = await prisma.userAddress.findFirst({
-            where: { userId },
-          });
-          if (addr && addr.latitude && addr.longitude) {
-            resolvedStoreId = await this._findNearestStoreId(
-              Number(addr.latitude),
-              Number(addr.longitude)
-            );
+        } else {
+          // No explicit coords: try addressId coords first
+          if (typeof addressId === "number") {
+            const addr = await prisma.userAddress.findUnique({
+              where: { id: addressId },
+            });
+            if (addr && addr.latitude && addr.longitude) {
+              resolvedStoreId = await this._findNearestStoreId(
+                Number(addr.latitude),
+                Number(addr.longitude)
+              );
+            }
           }
-        }
 
-        // if still not found, surface an explicit error so frontend can
-        // inform the user instead of silently assigning a distant store.
-        if (!resolvedStoreId) {
-          throw new Error(ERROR_MESSAGES.STORE.NO_NEARBY);
+          // Finally try user's primary address if still not resolved
+          if (!resolvedStoreId) {
+            const addr = await prisma.userAddress.findFirst({
+              where: { userId },
+            });
+            if (addr && addr.latitude && addr.longitude) {
+              resolvedStoreId = await this._findNearestStoreId(
+                Number(addr.latitude),
+                Number(addr.longitude)
+              );
+            }
+          }
+
+          if (!resolvedStoreId) {
+            throw new Error(ERROR_MESSAGES.STORE.NO_NEARBY);
+          }
         }
       }
 

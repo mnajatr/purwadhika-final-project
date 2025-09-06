@@ -16,11 +16,9 @@ const categories = [
   { name: "Snacks", description: "Chips, crackers, and snacks" },
 ];
 
-// Store locations
+// Store definitions - only seed Store Bandung for radius testing (no Jakarta store)
 const stores = [
-  { name: "Jakarta Central Store" },
-  { name: "Surabaya Main Branch" },
-  { name: "Bandung Downtown" },
+  { name: "Store Bandung", isActive: true },
 ];
 
 // Sample products for each category
@@ -117,9 +115,13 @@ async function cleanDatabase() {
   await prisma.order.deleteMany();
   await prisma.cartItem.deleteMany();
   await prisma.cart.deleteMany();
+  // StockJournal references storeInventory via composite FK; delete journals first
+  await prisma.stockJournal.deleteMany();
   await prisma.storeInventory.deleteMany();
   await prisma.product.deleteMany();
   await prisma.productCategory.deleteMany();
+  // Delete store locations first to avoid FK constraint errors
+  await prisma.storeLocation.deleteMany();
   await prisma.store.deleteMany();
   await prisma.userAddress.deleteMany();
   await prisma.user.deleteMany();
@@ -214,6 +216,28 @@ async function seedStores() {
     });
     createdStores.push(created);
   }
+
+  // Create explicit StoreLocation rows for Bandung and Jakarta
+  // Bandung location (lat: -6.9175, lon: 107.6191)
+  const bandung = createdStores.find((s) =>
+    s.name.toLowerCase().includes("bandung")
+  );
+  if (bandung) {
+    await prisma.storeLocation.create({
+      data: {
+        storeId: bandung.id,
+        addressLine: "Jl. Merdeka No.1",
+        province: "Jawa Barat",
+        city: "Bandung",
+        district: "Sumur Bandung",
+        postalCode: "40111",
+        latitude: -6.9175,
+        longitude: 107.6191,
+      },
+    });
+  }
+
+  // No Jakarta store seeded for radius-negative test case
 
   console.log(`✅ Created ${createdStores.length} stores`);
   return createdStores;
@@ -317,6 +341,52 @@ async function seedCarts(users: any[], products: any[], stores: any[]) {
   console.log(`✅ Created ${cartUsers.length} sample carts (USER role only)`);
 }
 
+async function seedUserAddresses(users: any[]) {
+  // Prefer user with id=4 for testing, fallback to first seeded user
+  const user = users.find((u) => u.id === 4) ?? users[0];
+  console.log(`📫 Seeding user addresses for userId=${user?.id ?? "(none)"}...`);
+  if (!user) {
+    console.log("No users available to seed addresses");
+    return;
+  }
+
+  // Bandung - Home (primary)
+  await prisma.userAddress.create({
+    data: {
+      userId: user.id,
+      label: "Rumah",
+      recipientName: "Siti Pelanggan",
+      addressLine: "Jl. Merdeka No.10",
+      province: "Jawa Barat",
+      city: "Bandung",
+      district: "Sumur Bandung",
+      postalCode: "40111",
+      latitude: -6.9175,
+      longitude: 107.6191,
+      isPrimary: true,
+    },
+  });
+
+  // Jakarta - Office
+  await prisma.userAddress.create({
+    data: {
+      userId: user.id,
+      label: "Kantor",
+      recipientName: "Siti Pelanggan",
+      addressLine: "Jl. Sudirman Kav. 1",
+      province: "DKI Jakarta",
+      city: "Jakarta",
+      district: "Tanah Abang",
+      postalCode: "10210",
+      latitude: -6.2,
+      longitude: 106.8166,
+      isPrimary: false,
+    },
+  });
+
+  console.log(`✅ Seeded 2 addresses for userId=${user.id}`);
+}
+
 async function seed() {
   try {
     console.log("🌱 Starting database seeding...\n");
@@ -332,6 +402,8 @@ async function seed() {
     await seedCarts(users, products, stores);
 
     const regularUsers = users.filter((user) => user.role === "USER");
+  // Seed specific user addresses for testing (userId = 1)
+  await seedUserAddresses(users);
 
     console.log("\n� Database seeding completed successfully!");
     console.log(`

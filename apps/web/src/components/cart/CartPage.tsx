@@ -23,7 +23,8 @@ export function CartPage({ userId }: CartPageProps) {
   const [idempotencyKey, setIdempotencyKey] = React.useState<string | null>(
     null
   );
-  const createOrder = useCreateOrder(userId, storeId);
+  // do not pass storeId so server can resolve the best store for the order
+  const createOrder = useCreateOrder(userId);
   const creating = createOrder.status === "pending";
   const router = useRouter();
 
