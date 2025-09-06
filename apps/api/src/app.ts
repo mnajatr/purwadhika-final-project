@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cartRouter from "./routes/cart.routes.js";
 import ordersRouter from "./routes/orders.routes.js";
+import { v2 as cloudinary } from "cloudinary";
 import { prisma } from "@repo/database";
 import { CreateUserSchema } from "@repo/schemas";
 import { errorMiddleware } from "./middleware/error.middleware.js";
@@ -13,6 +14,44 @@ export class App {
 
   constructor() {
     this.app = express();
+
+    // Configure Cloudinary at startup from env to ensure SDK has credentials
+    try {
+      if (process.env.CLOUDINARY_URL) {
+        // cloudinary://<api_key>:<api_secret>@<cloud_name>
+        try {
+          const parsed = new URL(process.env.CLOUDINARY_URL);
+          const apiKey = parsed.username;
+          const apiSecret = parsed.password;
+          const cloudName = parsed.hostname;
+          if (apiKey && apiSecret && cloudName) {
+            cloudinary.config({
+              cloud_name: cloudName,
+              api_key: apiKey,
+              api_secret: apiSecret,
+              secure: true,
+            });
+            console.info('Cloudinary configured from CLOUDINARY_URL');
+          } else {
+            cloudinary.config({ secure: true });
+            console.warn('CLOUDINARY_URL present but parsing failed');
+          }
+        } catch (err) {
+          cloudinary.config({ secure: true });
+          console.warn('Failed to parse CLOUDINARY_URL:', String(err));
+        }
+      } else if (process.env.CLOUDINARY_CLOUD_NAME) {
+        cloudinary.config({
+          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+          api_key: process.env.CLOUDINARY_API_KEY,
+          api_secret: process.env.CLOUDINARY_API_SECRET,
+          secure: true,
+        });
+        console.info('Cloudinary configured from CLOUDINARY_CLOUD_NAME/API_KEY');
+      }
+    } catch (err) {
+      console.warn('Cloudinary configuration error:', String(err));
+    }
 
     this.app.use(cors({ origin: "http://localhost:3000", credentials: true }));
     this.app.use(apiRateLimit);
@@ -56,6 +95,21 @@ export class App {
       }
 
       response.status(200).json(user);
+    });
+
+    // Internal debug: report Cloudinary configuration status (non-sensitive)
+    this.app.get("/api/_internal/cloudinary", (req, res) => {
+      try {
+        const cfg = cloudinary.config();
+        // only return cloud_name and whether CLOUDINARY_URL exists
+        res.json({
+          cloud_name: cfg.cloud_name || null,
+          has_url_env: !!process.env.CLOUDINARY_URL,
+          has_key_env: !!process.env.CLOUDINARY_API_KEY,
+        });
+      } catch (err) {
+        res.status(500).json({ error: String(err) });
+      }
     });
 
     // Return addresses for a user (used by frontend checkout)

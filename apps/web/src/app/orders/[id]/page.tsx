@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft } from "lucide-react";
+import PaymentUpload from "@/components/orders/PaymentUpload";
 
 interface OrderPageProps {
   params: { id: string };
@@ -19,8 +20,10 @@ type OrderType = {
     productId: number;
     qty: number;
     totalAmount?: number;
+    product?: { id: number; name?: string; price?: number } | null;
   }>;
   payment?: { status?: string; amount?: number } | null;
+  paymentMethod?: string | null;
   address?: {
     recipientName: string;
     addressLine: string;
@@ -93,7 +96,11 @@ export default async function OrderPage({ params }: OrderPageProps) {
           <div className="text-right">
             <CardTitle>Total</CardTitle>
             <div className="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-rose-500">
-              Rp {order.grandTotal?.toLocaleString()}
+              {new Intl.NumberFormat("id-ID", {
+                style: "currency",
+                currency: "IDR",
+                maximumFractionDigits: 0,
+              }).format(Number(order.grandTotal ?? 0))}
             </div>
           </div>
         </CardHeader>
@@ -145,13 +152,20 @@ export default async function OrderPage({ params }: OrderPageProps) {
                     className="flex justify-between items-center border-b pb-2"
                   >
                     <div>
-                      <div className="font-medium">Product #{it.productId}</div>
+                      <div className="font-medium">
+                        {/** Show product name if available */}
+                        {it.product?.name ? it.product.name : `Product #${it.productId}`}
+                      </div>
                       <div className="text-sm text-muted-foreground">
                         Qty: {it.qty}
                       </div>
                     </div>
                     <div className="font-semibold">
-                      Rp {it.totalAmount?.toLocaleString()}
+                      {new Intl.NumberFormat("id-ID", {
+                        style: "currency",
+                        currency: "IDR",
+                        maximumFractionDigits: 0,
+                      }).format(Number(it.totalAmount ?? 0))}
                     </div>
                   </li>
                 ))}
@@ -180,7 +194,11 @@ export default async function OrderPage({ params }: OrderPageProps) {
                 <div className="flex justify-between">
                   <span>Amount</span>
                   <span className="font-medium">
-                    Rp {order.payment.amount?.toLocaleString()}
+                    {new Intl.NumberFormat("id-ID", {
+                      style: "currency",
+                      currency: "IDR",
+                      maximumFractionDigits: 0,
+                    }).format(Number(order.payment.amount ?? 0))}
                   </span>
                 </div>
               </div>
@@ -189,6 +207,16 @@ export default async function OrderPage({ params }: OrderPageProps) {
                 No payment recorded
               </p>
             )}
+
+            {/* If pending payment with manual transfer, show upload UI */}
+            {order.status === "PENDING_PAYMENT" &&
+              (order.payment?.status === undefined ||
+                order.payment?.status === "PENDING") &&
+              order.paymentMethod === "MANUAL_TRANSFER" && (
+                <div className="mt-4">
+                  <PaymentUpload orderId={order.id} apiBase={apiBase} />
+                </div>
+              )}
           </CardContent>
         </Card>
       </div>

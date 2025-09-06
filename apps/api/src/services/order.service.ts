@@ -1,5 +1,6 @@
 import { prisma } from "@repo/database";
 import { ERROR_MESSAGES } from "../utils/helpers.js";
+import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
 type OrderItemInput = { productId: number; qty: number };
 
 // TODO: This in-memory idempotency store is fine for local development and
@@ -23,7 +24,7 @@ export class OrderService {
     userLat?: number,
     userLon?: number,
     addressId?: number
-  ) {
+  ): Promise<any> {
     if (idempotencyKey) {
       const entry = idempotencyStore.get(idempotencyKey);
       if (entry) {
@@ -38,7 +39,7 @@ export class OrderService {
       }
     }
 
-    const work = (async () => {
+  const work: Promise<any> = (async () => {
       // if storeId is not provided, attempt to compute nearest store.
       // Resolution priority:
       // 1) Explicit coordinates passed in request (userLat/userLon).
@@ -91,7 +92,8 @@ export class OrderService {
         }
       }
 
-      return this._createOrderImpl(userId, resolvedStoreId!, items, addressId);
+  // resolvedStoreId is guaranteed to exist here, cast to number for clarity
+  return this._createOrderImpl(userId, resolvedStoreId as number, items, addressId);
     })();
 
     if (idempotencyKey) {
@@ -307,4 +309,57 @@ export class OrderService {
   }
 
   // ...existing methods above are preserved
+
+  async uploadPaymentProof(orderId: number, base64Data: string, mime: string) {
+    // Upload base64 image to Cloudinary and persist proofImageUrl
+    // Cloudinary should already be configured at app startup
+    
+    // Sanity check: ensure cloudinary has credentials available before upload
+    const config = cloudinary.config();
+    if (!config.cloud_name || !config.api_key) {
+      throw new Error("Cloudinary not configured: missing cloud_name or api_key");
+    }
+
+    const order = await prisma.order.findUnique({ where: { id: orderId }, include: { payment: true } });
+    if (!order) throw new Error("Order not found");
+
+    const dataUri = `data:${mime};base64,${base64Data}`;
+
+    // upload via upload_stream wrapped as promise
+    const uploadRes = (await new Promise<UploadApiResponse>((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: `orders/${orderId}` },
+        (error: Error | undefined, result: UploadApiResponse | undefined) => {
+          if (error) return reject(error);
+          if (!result) return reject(new Error("Empty upload result"));
+          resolve(result);
+        }
+      );
+      // write buffer
+      const buffer = Buffer.from(base64Data, "base64");
+      stream.end(buffer);
+    })) as UploadApiResponse;
+
+    const proofUrl = uploadRes.secure_url ?? uploadRes.url;
+
+    if (order.payment) {
+      await prisma.payment.update({
+        where: { id: order.payment.id },
+        data: { proofImageUrl: proofUrl, status: "PENDING" },
+      });
+    } else {
+      await prisma.payment.create({
+        data: {
+          orderId: order.id,
+          status: "PENDING",
+          amount: Math.round(Number(order.grandTotal ?? 0)),
+          proofImageUrl: proofUrl,
+        },
+      });
+    }
+
+    await prisma.order.update({ where: { id: order.id }, data: { status: "PAYMENT_REVIEW" } });
+
+    return { proofUrl };
+  }
 }

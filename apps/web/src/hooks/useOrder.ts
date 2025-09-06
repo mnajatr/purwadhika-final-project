@@ -59,14 +59,8 @@ export function useCreateOrder(userId: number, storeId?: number) {
 
         if (createdItems.length > 0 && typeof resolvedStoreId === "number") {
           // read current cart from cache to find item ids to remove
-          type CartCache = {
-            items?: Array<{ id: number; productId: number }>;
-          } | null;
-          const cartCache = qc.getQueryData<CartCache>([
-            "cart",
-            userId,
-            resolvedStoreId,
-          ]);
+          type CartCache = { items?: Array<{ id: number; productId: number }> } | null;
+          const cartCache = qc.getQueryData<CartCache>(["cart", userId, resolvedStoreId]);
           const cartItems = cartCache?.items ?? [];
 
           const toRemove = cartItems.filter((ci) =>
@@ -84,9 +78,7 @@ export function useCreateOrder(userId: number, storeId?: number) {
           }
 
           qc.invalidateQueries({ queryKey: ["cart", userId, resolvedStoreId] });
-          qc.invalidateQueries({
-            queryKey: ["cart", "totals", userId, resolvedStoreId],
-          });
+          qc.invalidateQueries({ queryKey: ["cart", "totals", userId, resolvedStoreId] });
         }
       } catch (err) {
         console.warn("Failed to sync cart after order creation", err);

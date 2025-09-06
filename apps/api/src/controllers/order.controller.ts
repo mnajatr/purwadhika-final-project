@@ -3,6 +3,7 @@ import type { Request as ExpressRequest } from "express";
 // Reuse the AuthRequest shape used in auth middleware
 type AuthRequest = ExpressRequest & { user?: { id: number } };
 import { OrderService } from "../services/order.service.js";
+// cleaned unused imports
 import { prisma } from "@repo/database";
 import {
   successResponse,
@@ -127,6 +128,41 @@ export class OrderController {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return res.status(500).json(errorResponse("Failed to fetch order", msg));
+    }
+  };
+
+  uploadPaymentProof = async (req: Request, res: Response) => {
+    try {
+      const id = Number(req.params.id);
+      if (!id) return res.status(400).json(errorResponse("Invalid order id"));
+
+      // Expect JSON body: { proofBase64: 'data:image/png;base64,...' }
+      const bodyProof = (req as any).body?.proofBase64;
+      if (!bodyProof || typeof bodyProof !== "string")
+        return res
+          .status(400)
+          .json(errorResponse("Missing proofBase64 in request body"));
+
+      // data URL format: data:<mime>;base64,<data>
+  const matches = bodyProof.match(/^data:(image\/(png|jpeg|jpg));base64,(.+)$/);
+  if (!matches) return res.status(400).json(errorResponse("Invalid proof format"));
+
+  const mime = matches[1];
+  const b64 = matches[3];
+  const allowed = ["image/png", "image/jpeg", "image/jpg"];
+  if (!allowed.includes(mime)) return res.status(400).json(errorResponse("Invalid file type"));
+
+  const MAX_BYTES = 1 * 1024 * 1024;
+  const buffer = Buffer.from(b64, "base64");
+  if (buffer.length > MAX_BYTES) return res.status(400).json(errorResponse("File too large"));
+
+  // Hand off base64 to service which will upload to Cloudinary
+  const uploadResult = await this.service.uploadPaymentProof(id, b64, mime);
+
+  return res.status(200).json(successResponse(uploadResult, "Upload saved"));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return res.status(500).json(errorResponse("Upload failed", msg));
     }
   };
 }
