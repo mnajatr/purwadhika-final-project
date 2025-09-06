@@ -64,6 +64,79 @@ export default function CheckoutPage() {
     }
   }, []);
 
+  // fetch basic user profile for display in order summary
+  const [customer, setCustomer] = React.useState<
+    { fullName?: string; phone?: string; email?: string } | null
+  >(null);
+
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/users/${userId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (mounted) {
+          setCustomer({
+            fullName: data?.profile?.fullName,
+            // placeholder: phone not returned by /api/users currently
+            phone: undefined,
+            email: data?.email,
+          });
+        }
+      } catch {}
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [userId]);
+
+  const [selectedAddressFull, setSelectedAddressFull] = React.useState<
+    | { id: number; addressLine?: string; city?: string; postalCode?: string }
+    | null
+  >(null);
+
+  React.useEffect(() => {
+    let mounted = true;
+    if (!selectedAddress) {
+      setSelectedAddressFull(null);
+      return;
+    }
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/users/${userId}/addresses`);
+        if (!res.ok) return;
+        const list = await res.json();
+        if (!Array.isArray(list)) return;
+        type Addr = {
+          id: number;
+          addressLine?: string;
+          city?: string;
+          postalCode?: string;
+        };
+        const typed = list as Addr[];
+        const found = typed.find((a) => a.id === selectedAddress.id);
+        if (mounted) {
+          setSelectedAddressFull(
+            found
+              ? {
+                  id: found.id,
+                  addressLine: found.addressLine,
+                  city: found.city,
+                  postalCode: found.postalCode,
+                }
+              : null
+          );
+        }
+      } catch {}
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedAddress, userId]);
+
   if (isLoading) return <div>Loading...</div>;
   if (!cart || cart.items.length === 0)
     return <div>Keranjang kosong. Tambahkan barang terlebih dahulu.</div>;
@@ -267,6 +340,8 @@ export default function CheckoutPage() {
           setIdempotencyKey={setIdempotencyKey}
           onPlaceOrder={handlePlaceOrder}
           isProcessing={createOrder.status === "pending"}
+          customer={customer ?? undefined}
+          address={selectedAddressFull ?? undefined}
         />
       </div>
     </div>
