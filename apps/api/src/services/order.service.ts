@@ -287,12 +287,20 @@ export class OrderService {
 
       const grandTotal = subtotal; // shipping/discount omitted in MVP
 
-      const updated = await tx.order.update({
+      await tx.order.update({
         where: { id: createdOrder.id },
         data: { subtotalAmount: subtotal, grandTotal, totalItems },
       });
 
-      return updated;
+      // return the created order including its items so callers can know
+      // which items were actually persisted and act accordingly (e.g., clear
+      // matching cart items on the client).
+      const full = await tx.order.findUnique({
+        where: { id: createdOrder.id },
+        include: { items: true },
+      });
+
+      return full;
     });
 
     return result;

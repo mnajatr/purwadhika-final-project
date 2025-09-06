@@ -42,25 +42,63 @@ export function useCreateOrder(userId: number, storeId?: number) {
       return res.data;
     },
     onSuccess: async (data) => {
-      // clear cart and refresh only if storeId known on client
-      if (typeof storeId === "number") {
-        await cartService.clearCart(userId, storeId);
-        qc.invalidateQueries({ queryKey: ["cart", userId, storeId] });
-        qc.invalidateQueries({ queryKey: ["cart", "totals", userId, storeId] });
+      // service may return either { data: order } or order directly
+      // normalize to created order object
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const payload: any = data;
+      const created = payload?.data ?? payload;
+
+      // determine resolved storeId from created order (backend selected store)
+      const resolvedStoreId: number | undefined =
+        created?.storeId ?? created?.order?.storeId ?? undefined;
+
+      // If we have created.order.items (array with productId), remove only matching cart items
+      try {
+        const createdItems: Array<{ productId: number; qty?: number }> =
+          created?.items ?? created?.order?.items ?? [];
+
+        if (createdItems.length > 0 && typeof resolvedStoreId === "number") {
+          // read current cart from cache to find item ids to remove
+          type CartCache = {
+            items?: Array<{ id: number; productId: number }>;
+          } | null;
+          const cartCache = qc.getQueryData<CartCache>([
+            "cart",
+            userId,
+            resolvedStoreId,
+          ]);
+          const cartItems = cartCache?.items ?? [];
+
+          const toRemove = cartItems.filter((ci) =>
+            createdItems.some((it) => it.productId === ci.productId)
+          );
+
+          // remove matching cart items (sequentially)
+          for (const it of toRemove) {
+            try {
+              await cartService.removeCartItem(it.id, userId, resolvedStoreId);
+            } catch (err) {
+              // ignore per-item removal errors; we'll invalidate cache anyway
+              console.warn("Failed to remove cart item", it.id, err);
+            }
+          }
+
+          qc.invalidateQueries({ queryKey: ["cart", userId, resolvedStoreId] });
+          qc.invalidateQueries({
+            queryKey: ["cart", "totals", userId, resolvedStoreId],
+          });
+        }
+      } catch (err) {
+        console.warn("Failed to sync cart after order creation", err);
       }
 
       // navigate to the created order detail page if we have an id
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const payload: any = data;
-        const created = payload?.data ?? payload; // service returns { data: order } or order
         const id = created?.id ?? created?.order?.id;
         if (id) {
-          // use full navigation to ensure post-order page loads fresh
           window.location.href = `/orders/${id}`;
         }
       } catch (err) {
-        // ignore navigation errors
         console.warn("Failed to redirect to order detail", err);
       }
     },

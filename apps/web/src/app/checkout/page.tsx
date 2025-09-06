@@ -9,6 +9,8 @@ import AddressCard from "@/components/checkout/AddressCard";
 import ItemsList from "@/components/checkout/ItemsList";
 import OrderSummary from "@/components/checkout/OrderSummary";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import usersService from "@/services/users.service";
 
 export default function CheckoutPage() {
   // read user id from sessionStorage (saved by CartPage) — fallback for dev
@@ -64,78 +66,49 @@ export default function CheckoutPage() {
     }
   }, []);
 
-  // fetch basic user profile for display in order summary
-  const [customer, setCustomer] = React.useState<
-    { fullName?: string; phone?: string; email?: string } | null
-  >(null);
+  // fetch basic user profile for display in order summary via React Query
+  const { data: userData } = useQuery({
+    queryKey: ["user", userId],
+    queryFn: () => usersService.getUser(userId),
+    enabled: Boolean(userId),
+  });
 
-  React.useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const res = await fetch(`/api/users/${userId}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (mounted) {
-          setCustomer({
-            fullName: data?.profile?.fullName,
-            // placeholder: phone not returned by /api/users currently
-            phone: undefined,
-            email: data?.email,
-          });
+  const customer = React.useMemo(() => {
+    return userData
+      ? {
+          fullName: userData.profile?.fullName,
+          phone: undefined,
+          email: userData.email,
         }
-      } catch {}
-    })();
-    return () => {
-      mounted = false;
+      : null;
+  }, [userData]);
+
+  // fetch user's addresses and pick the selected one from cache
+  const { data: userAddresses } = useQuery({
+    queryKey: ["user", userId, "addresses"],
+    queryFn: () => usersService.getUserAddresses(userId),
+    enabled: Boolean(userId),
+  });
+
+  const selectedAddressFull = React.useMemo(() => {
+    if (!selectedAddress || !Array.isArray(userAddresses)) return null;
+    type Addr = {
+      id: number;
+      addressLine?: string;
+      city?: string;
+      postalCode?: string;
     };
-  }, [userId]);
-
-  const [selectedAddressFull, setSelectedAddressFull] = React.useState<
-    | { id: number; addressLine?: string; city?: string; postalCode?: string }
-    | null
-  >(null);
-
-  React.useEffect(() => {
-    let mounted = true;
-    if (!selectedAddress) {
-      setSelectedAddressFull(null);
-      return;
-    }
-
-    (async () => {
-      try {
-        const res = await fetch(`/api/users/${userId}/addresses`);
-        if (!res.ok) return;
-        const list = await res.json();
-        if (!Array.isArray(list)) return;
-        type Addr = {
-          id: number;
-          addressLine?: string;
-          city?: string;
-          postalCode?: string;
-        };
-        const typed = list as Addr[];
-        const found = typed.find((a) => a.id === selectedAddress.id);
-        if (mounted) {
-          setSelectedAddressFull(
-            found
-              ? {
-                  id: found.id,
-                  addressLine: found.addressLine,
-                  city: found.city,
-                  postalCode: found.postalCode,
-                }
-              : null
-          );
+    const typed = userAddresses as Addr[];
+    const found = typed.find((a) => a.id === selectedAddress.id);
+    return found
+      ? {
+          id: found.id,
+          addressLine: found.addressLine,
+          city: found.city,
+          postalCode: found.postalCode,
         }
-      } catch {}
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, [selectedAddress, userId]);
+      : null;
+  }, [selectedAddress, userAddresses]);
 
   if (isLoading) return <div>Loading...</div>;
   if (!cart || cart.items.length === 0)
