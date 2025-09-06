@@ -3,6 +3,7 @@ import type { Request as ExpressRequest } from "express";
 // Reuse the AuthRequest shape used in auth middleware
 type AuthRequest = ExpressRequest & { user?: { id: number } };
 import { OrderService } from "../services/order.service.js";
+import { prisma } from "@repo/database";
 import {
   successResponse,
   errorResponse,
@@ -43,8 +44,14 @@ export class OrderController {
   createOrder = async (req: Request, res: Response) => {
     try {
       const userId = pickUserId(req);
-      const storeId = toNumber(req.body?.storeId, undefined) ?? 1;
+      // allow storeId to be omitted so backend can compute nearest store
+      const storeId = toNumber(req.body?.storeId, undefined);
       const items = req.body?.items;
+      const userLat = req.body?.userLat ? Number(req.body.userLat) : undefined;
+      const userLon = req.body?.userLon ? Number(req.body.userLon) : undefined;
+      const addressId = req.body?.addressId
+        ? Number(req.body.addressId)
+        : undefined;
       // TODO: Accept and forward an idempotency key so retries from the client
       // (or network retries) don't create duplicate orders. Replace in-memory
       // strategy with DB-backed idempotency table in production.
@@ -62,7 +69,10 @@ export class OrderController {
         userId,
         storeId,
         items,
-        idempotencyKey
+        idempotencyKey,
+        userLat,
+        userLon,
+        addressId
       );
       return res.status(201).json(successResponse(result, "Order created"));
     } catch (e) {
@@ -72,6 +82,7 @@ export class OrderController {
       if (
         msg.includes(ERROR_MESSAGES.INVENTORY.INSUFFICIENT_STOCK) ||
         msg.includes(ERROR_MESSAGES.INVENTORY.NO_INVENTORY) ||
+        msg.includes(ERROR_MESSAGES.STORE.NO_NEARBY) ||
         msg.toLowerCase().includes("not found")
       ) {
         // Provide a concise client-friendly message and include the raw error
@@ -86,6 +97,36 @@ export class OrderController {
       }
 
       return res.status(500).json(errorResponse("Failed to create order", msg));
+    }
+  };
+
+  getOrderById = async (req: Request, res: Response) => {
+    try {
+      const id = Number(req.params.id);
+      if (!id) return res.status(400).json(errorResponse("Invalid order id"));
+
+      // Use prisma directly for a simple read operation including relations
+      const order = await prisma.order.findUnique({
+        where: { id },
+        include: { items: true, payment: true, shipment: true },
+      });
+
+      if (!order) return res.status(404).json(errorResponse("Order not found"));
+
+      // Ownership check: allow request if same user or in dev fallback
+      const userId = pickUserId(req);
+      if (
+        userId &&
+        order.userId !== userId &&
+        process.env.NODE_ENV === "production"
+      ) {
+        return res.status(403).json(errorResponse("Forbidden"));
+      }
+
+      return res.status(200).json(successResponse(order));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return res.status(500).json(errorResponse("Failed to fetch order", msg));
     }
   };
 }

@@ -25,6 +25,22 @@ export default function CheckoutPage() {
     null
   );
 
+  // selected address from AddressCard (id + coords)
+  const [selectedAddress, setSelectedAddress] = React.useState<{
+    id: number;
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+
+  // stable callback to pass to AddressCard to avoid re-creating the function
+  // each render which caused AddressCard.useEffect to re-run and refetch.
+  const handleSelectAddress = React.useCallback(
+    (a: { id: number; latitude: number; longitude: number }) => {
+      setSelectedAddress(a);
+    },
+    []
+  );
+
   // read selection saved by CartPage (sessionStorage key: checkout:selectedIds)
   const [selectedIds, setSelectedIds] = React.useState<number[] | null>(null);
 
@@ -65,14 +81,29 @@ export default function CheckoutPage() {
         sessionStorage.setItem("checkout:idempotencyKey", key);
       } catch {}
 
-      await createOrder.mutateAsync({ items, idempotencyKey: key });
+      // use selected address coords (preferred) instead of device geolocation
+      let userLat: number | undefined;
+      let userLon: number | undefined;
+      let addressId: number | undefined;
+      if (selectedAddress) {
+        userLat = selectedAddress.latitude;
+        userLon = selectedAddress.longitude;
+        addressId = selectedAddress.id;
+      }
+
+      await createOrder.mutateAsync({
+        items,
+        idempotencyKey: key,
+        userLat,
+        userLon,
+        addressId,
+      });
       toast.success("Order created — redirecting...");
       // cleanup and redirect
       try {
         sessionStorage.removeItem("checkout:selectedIds");
         sessionStorage.removeItem("checkout:idempotencyKey");
       } catch {}
-      window.location.href = "/orders";
     } catch (err) {
       const msg =
         (err as { message?: string })?.message || "Gagal membuat pesanan";
@@ -85,7 +116,7 @@ export default function CheckoutPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
         <div>
-          <AddressCard />
+          <AddressCard onSelect={handleSelectAddress} />
           <ItemsList cart={cart} selectedIds={selectedIds} userId={userId} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">

@@ -58,6 +58,29 @@ export class App {
       response.status(200).json(user);
     });
 
+    // Return addresses for a user (used by frontend checkout)
+    this.app.get("/api/users/:id/addresses", async (request, response) => {
+      const { id } = request.params;
+      const userId = parseInt(id as string);
+      if (!userId)
+        return response.status(400).json({ message: "Invalid user id" });
+      const addresses = await prisma.userAddress.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          recipientName: true,
+          addressLine: true,
+          province: true,
+          city: true,
+          postalCode: true,
+          latitude: true,
+          longitude: true,
+          isPrimary: true,
+        },
+      });
+      return response.status(200).json(addresses);
+    });
+
     this.app.post("/api/users", async (request, response) => {
       const parsedData = CreateUserSchema.safeParse(request.body);
 

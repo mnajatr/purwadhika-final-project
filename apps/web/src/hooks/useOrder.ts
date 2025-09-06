@@ -20,21 +20,47 @@ export function useCreateOrder(userId: number, storeId = 1) {
   type Payload = {
     items: Array<{ productId: number; qty: number }>;
     idempotencyKey?: string;
+    userLat?: number;
+    userLon?: number;
+    addressId?: number;
   };
 
   return useMutation({
     // accept either: { items } or { items, idempotencyKey }
     mutationFn: async (payload: Payload) => {
-      const { items, idempotencyKey } = payload;
+      const { items, idempotencyKey, userLat, userLon, addressId } = payload;
       const key = idempotencyKey ?? uuidv4();
-      const res = await orderService.createOrder(userId, storeId, items, key);
+      const res = await orderService.createOrder(
+        userId,
+        storeId,
+        items,
+        key,
+        userLat,
+        userLon,
+        addressId
+      );
       return res.data;
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       // clear cart and refresh
       await cartService.clearCart(userId, storeId);
       qc.invalidateQueries({ queryKey: ["cart", userId, storeId] });
       qc.invalidateQueries({ queryKey: ["cart", "totals", userId, storeId] });
+
+      // navigate to the created order detail page if we have an id
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const payload: any = data;
+        const created = payload?.data ?? payload; // service returns { data: order } or order
+        const id = created?.id ?? created?.order?.id;
+        if (id) {
+          // use full navigation to ensure post-order page loads fresh
+          window.location.href = `/orders/${id}`;
+        }
+      } catch (err) {
+        // ignore navigation errors
+        console.warn("Failed to redirect to order detail", err);
+      }
     },
     onError: async (err) => {
       // bubble up server message so consuming components can show friendly UI
