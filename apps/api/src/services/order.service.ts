@@ -17,9 +17,12 @@ const idempotencyStore = new Map<string, IdempotencyEntry>();
 export class OrderService {
   async createOrder(
     userId: number,
-    storeId: number,
+    storeId: number | undefined,
     items: OrderItemInput[],
-    idempotencyKey?: string
+    idempotencyKey?: string,
+    userLat?: number,
+    userLon?: number,
+    addressId?: number
   ) {
     if (idempotencyKey) {
       const entry = idempotencyStore.get(idempotencyKey);
@@ -35,7 +38,61 @@ export class OrderService {
       }
     }
 
-    const work = this._createOrderImpl(userId, storeId, items);
+    const work = (async () => {
+      // if storeId is not provided, attempt to compute nearest store.
+      // Resolution priority:
+      // 1) Explicit coordinates passed in request (userLat/userLon).
+      //    If provided and no store is within radius -> throw NO_NEARBY.
+      // 2) Address coordinates for provided addressId (if coords not passed).
+      // 3) User's primary address (only if coords and addressId not provided).
+      let resolvedStoreId = storeId;
+      const coordsExplicit =
+        typeof userLat === "number" && typeof userLon === "number";
+
+      if (!resolvedStoreId) {
+        if (coordsExplicit) {
+          // If user explicitly provided coords, only use them. If no store is
+          // within MAX_STORE_RADIUS_KM, surface NO_NEARBY instead of falling
+          // back to a different address.
+          resolvedStoreId = await this._findNearestStoreId(userLat!, userLon!);
+          if (!resolvedStoreId) {
+            throw new Error(ERROR_MESSAGES.STORE.NO_NEARBY);
+          }
+        } else {
+          // No explicit coords: try addressId coords first
+          if (typeof addressId === "number") {
+            const addr = await prisma.userAddress.findUnique({
+              where: { id: addressId },
+            });
+            if (addr && addr.latitude && addr.longitude) {
+              resolvedStoreId = await this._findNearestStoreId(
+                Number(addr.latitude),
+                Number(addr.longitude)
+              );
+            }
+          }
+
+          // Finally try user's primary address if still not resolved
+          if (!resolvedStoreId) {
+            const addr = await prisma.userAddress.findFirst({
+              where: { userId },
+            });
+            if (addr && addr.latitude && addr.longitude) {
+              resolvedStoreId = await this._findNearestStoreId(
+                Number(addr.latitude),
+                Number(addr.longitude)
+              );
+            }
+          }
+
+          if (!resolvedStoreId) {
+            throw new Error(ERROR_MESSAGES.STORE.NO_NEARBY);
+          }
+        }
+      }
+
+      return this._createOrderImpl(userId, resolvedStoreId!, items, addressId);
+    })();
 
     if (idempotencyKey) {
       // store the in-flight promise
@@ -58,10 +115,49 @@ export class OrderService {
     return work;
   }
 
+  // Find nearest storeId given latitude and longitude, or undefined if none.
+  private async _findNearestStoreId(
+    lat: number,
+    lon: number
+  ): Promise<number | undefined> {
+    // Haversine formula constants
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const R = 6371; // Earth radius in km
+
+    // load all store locations (small number expected) and compute distance
+    const locations = await prisma.storeLocation.findMany({
+      include: { store: true },
+    });
+    if (!locations || locations.length === 0) return undefined;
+
+    let best: { storeId: number; distKm: number } | null = null;
+    for (const loc of locations) {
+      const dLat = toRad(Number(loc.latitude) - lat);
+      const dLon = toRad(Number(loc.longitude) - lon);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat)) *
+          Math.cos(toRad(Number(loc.latitude))) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const distKm = R * c;
+
+      if (!best || distKm < best.distKm)
+        best = { storeId: loc.storeId, distKm };
+    }
+
+    // enforce a max service radius (e.g., 50 km) to avoid assigning very distant store
+    const MAX_KM = Number(process.env.MAX_STORE_RADIUS_KM ?? 50);
+    if (best && best.distKm <= MAX_KM) return best.storeId;
+    return undefined;
+  }
+
   private async _createOrderImpl(
     userId: number,
     storeId: number,
-    items: OrderItemInput[]
+    items: OrderItemInput[],
+    addressId?: number
   ) {
     if (!items || items.length === 0) throw new Error("No items provided");
 
@@ -90,29 +186,44 @@ export class OrderService {
       let subtotal = 0;
       let totalItems = 0;
 
-      // ensure we have an address for the order (schema requires addressId)
-      let address = await tx.userAddress.findFirst({ where: { userId } });
-      if (!address) {
-        address = await tx.userAddress.create({
-          data: {
-            userId,
-            recipientName: "Default Recipient",
-            addressLine: "Auto-created address",
-            province: "Unknown",
-            city: "Unknown",
-            district: null,
-            postalCode: "00000",
-            latitude: 0,
-            longitude: 0,
-          },
+      // determine address for the order (schema requires addressId)
+      let chosenAddressId = addressId;
+      if (typeof chosenAddressId !== "number") {
+        // pick user's primary or first address; if none exist, auto-create a
+        // lightweight placeholder so DB constraints are satisfied.
+        const addr = await tx.userAddress.findFirst({ where: { userId } });
+        if (addr) chosenAddressId = addr.id;
+        else {
+          const createdAddr = await tx.userAddress.create({
+            data: {
+              userId,
+              recipientName: "Default Recipient",
+              addressLine: "Auto-created address",
+              province: "Unknown",
+              city: "Unknown",
+              district: null,
+              postalCode: "00000",
+              latitude: 0,
+              longitude: 0,
+            },
+          });
+          chosenAddressId = createdAddr.id;
+        }
+      } else {
+        // validate ownership: ensure the provided address belongs to the user
+        const addr = await tx.userAddress.findUnique({
+          where: { id: chosenAddressId },
         });
+        if (!addr || addr.userId !== userId) {
+          throw new Error("Address not found or does not belong to user");
+        }
       }
 
       const createdOrder = await tx.order.create({
         data: {
           userId,
           storeId,
-          addressId: address.id,
+          addressId: chosenAddressId,
           status: "PENDING_PAYMENT",
           paymentMethod: "MANUAL_TRANSFER",
           subtotalAmount: 0,
@@ -149,9 +260,28 @@ export class OrderService {
         });
 
         // decrement stock
-        await tx.storeInventory.update({
-          where: { id: inv.id },
+        // perform conditional atomic decrement to avoid oversell
+        const updateRes = await tx.storeInventory.updateMany({
+          where: { id: inv.id, stockQty: { gte: it.qty } },
           data: { stockQty: { decrement: it.qty } },
+        });
+
+        if (updateRes.count === 0) {
+          // some item has insufficient stock, abort transaction
+          throw new Error(
+            `${ERROR_MESSAGES.INVENTORY.INSUFFICIENT_STOCK}. Available: ${inv.stockQty}`
+          );
+        }
+
+        // record stock journal for the decrement
+        await tx.stockJournal.create({
+          data: {
+            storeId: inv.storeId,
+            productId: inv.productId,
+            qtyChange: -it.qty,
+            reason: "REMOVE",
+            adminId: userId,
+          },
         });
       }
 

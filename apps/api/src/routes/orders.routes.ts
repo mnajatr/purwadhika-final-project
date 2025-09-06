@@ -14,9 +14,11 @@ if (process.env.NODE_ENV !== "production") {
   // Dev: let controller handle userId fallback (query/body/header) so
   // frontend can test using ?userId=4 or body.userId without sending auth
   router.post("/", controller.createOrder);
+  router.get("/:id", controller.getOrderById);
 } else {
   // Production: require auth middleware
   router.post("/", authMiddleware, controller.createOrder);
+  router.get("/:id", authMiddleware, controller.getOrderById);
 }
 
 export default router;

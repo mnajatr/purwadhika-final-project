@@ -36,13 +36,13 @@ const createRateLimit = (
 
 export const apiRateLimit = createRateLimit(
   15 * 60 * 1000,
-  500,
+  1000,
   "You have exceeded the rate limit. Please try again later."
 );
 
 export const cartRateLimit = createRateLimit(
   5 * 60 * 1000,
-  50,
+  500,
   "You are performing cart operations too frequently. Please slow down."
 );
 

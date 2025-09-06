@@ -27,6 +27,9 @@ export const CART_CONSTANTS = {
 } as const;
 
 export const ERROR_MESSAGES = {
+  STORE: {
+    NO_NEARBY: "No store within service radius",
+  },
   CART: {
     ITEM_NOT_FOUND: "Cart item not found",
     CART_NOT_FOUND: "Cart not found",

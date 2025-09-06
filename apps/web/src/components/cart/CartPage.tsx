@@ -5,6 +5,7 @@ import CartItem from "./CartItem";
 import { useCart, useClearCart } from "@/hooks/useCart";
 import { Button } from "../ui/button";
 import useCreateOrder from "@/hooks/useOrder";
+import { useRouter } from "next/navigation";
 
 interface CartPageProps {
   userId: number;
@@ -22,8 +23,10 @@ export function CartPage({ userId }: CartPageProps) {
   const [idempotencyKey, setIdempotencyKey] = React.useState<string | null>(
     null
   );
-  const createOrder = useCreateOrder(userId, storeId);
+  // do not pass storeId so server can resolve the best store for the order
+  const createOrder = useCreateOrder(userId);
   const creating = createOrder.status === "pending";
+  const router = useRouter();
 
   React.useEffect(() => {
     if (!cart) return;
@@ -136,16 +139,18 @@ export function CartPage({ userId }: CartPageProps) {
                   className="w-full bg-blue-600 text-white hover:bg-blue-700"
                   size="lg"
                   onClick={() => {
-                    const selected = cart.items
-                      .filter((it) => selectedIds[it.id])
-                      .map((it) => ({ productId: it.productId, qty: it.qty }));
-                    const key =
-                      idempotencyKey ?? String(Math.random()).slice(2, 14);
-                    setIdempotencyKey(key);
-                    createOrder.mutate({
-                      items: selected,
-                      idempotencyKey: key,
-                    });
+                    const selectedIdsArr = Object.keys(selectedIds)
+                      .filter((k) => selectedIds[Number(k)])
+                      .map((k) => Number(k));
+                    // store selection + userId in session so Checkout page can read it
+                    try {
+                      sessionStorage.setItem(
+                        "checkout:selectedIds",
+                        JSON.stringify(selectedIdsArr)
+                      );
+                      sessionStorage.setItem("checkout:userId", String(userId));
+                    } catch {}
+                    router.push("/checkout");
                   }}
                   disabled={creating}
                 >
@@ -156,25 +161,20 @@ export function CartPage({ userId }: CartPageProps) {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    const selected = cart.items
-                      .filter((it) => selectedIds[it.id])
-                      .map((it) => ({ productId: it.productId, qty: it.qty }));
-                    const key =
-                      idempotencyKey ?? String(Math.random()).slice(2, 14);
-                    setIdempotencyKey(key);
-                    createOrder.mutate({
-                      items: selected,
-                      idempotencyKey: key,
-                    });
-                    setTimeout(() => {
-                      createOrder.mutate({
-                        items: selected,
-                        idempotencyKey: key,
-                      });
-                    }, 200);
+                    const selectedIdsArr = Object.keys(selectedIds)
+                      .filter((k) => selectedIds[Number(k)])
+                      .map((k) => Number(k));
+                    try {
+                      sessionStorage.setItem(
+                        "checkout:selectedIds",
+                        JSON.stringify(selectedIdsArr)
+                      );
+                      sessionStorage.setItem("checkout:userId", String(userId));
+                    } catch {}
+                    router.push("/checkout");
                   }}
                 >
-                  Simulate double-submit
+                  Go to Checkout (simulate double-submit)
                 </Button>
               </div>
             </div>
