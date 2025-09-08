@@ -20,6 +20,12 @@ interface Props {
   setIdempotencyKey: (k: string | null) => void;
   onPlaceOrder: () => void;
   isProcessing: boolean;
+  customer?: { fullName?: string; phone?: string; email?: string };
+  address?: {
+    addressLine?: string;
+    city?: string;
+    postalCode?: string | number;
+  };
 }
 
 export default function OrderSummary({
@@ -29,6 +35,8 @@ export default function OrderSummary({
   setIdempotencyKey,
   onPlaceOrder,
   isProcessing,
+  customer,
+  address,
 }: Props) {
   const subtotal = items.reduce((s, it) => {
     const p =
@@ -132,16 +140,16 @@ export default function OrderSummary({
           </h4>
           <div className="grid grid-cols-2 gap-2 text-sm mb-3">
             <div>Name</div>
-            <div className="font-medium">Zahra Ayu</div>
+            <div className="font-medium">{customer?.fullName ?? "-"}</div>
 
             <div>Address</div>
-            <div className="font-medium">cengkareng</div>
+            <div className="font-medium">{address?.addressLine ?? "-"}</div>
 
             <div>City</div>
-            <div className="font-medium">Jakarta Barat</div>
+            <div className="font-medium">{address?.city ?? "-"}</div>
 
             <div>Postal Code</div>
-            <div className="font-medium">11220</div>
+            <div className="font-medium">{address?.postalCode ?? "-"}</div>
           </div>
 
           <div className="border-t pt-4 mt-3">
@@ -164,10 +172,10 @@ export default function OrderSummary({
             </h4>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>Phone</div>
-              <div className="font-medium">082320488430</div>
+              <div className="font-medium">{customer?.phone ?? "-"}</div>
 
               <div>Email</div>
-              <div className="font-medium">bobajones012@gmail.com</div>
+              <div className="font-medium">{customer?.email ?? "-"}</div>
             </div>
           </div>
         </div>

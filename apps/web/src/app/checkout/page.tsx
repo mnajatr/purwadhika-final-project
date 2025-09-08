@@ -9,6 +9,8 @@ import AddressCard from "@/components/checkout/AddressCard";
 import ItemsList from "@/components/checkout/ItemsList";
 import OrderSummary from "@/components/checkout/OrderSummary";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import usersService from "@/services/users.service";
 
 export default function CheckoutPage() {
   // read user id from sessionStorage (saved by CartPage) — fallback for dev
@@ -63,6 +65,50 @@ export default function CheckoutPage() {
       /* ignore */
     }
   }, []);
+
+  // fetch basic user profile for display in order summary via React Query
+  const { data: userData } = useQuery({
+    queryKey: ["user", userId],
+    queryFn: () => usersService.getUser(userId),
+    enabled: Boolean(userId),
+  });
+
+  const customer = React.useMemo(() => {
+    return userData
+      ? {
+          fullName: userData.profile?.fullName,
+          phone: undefined,
+          email: userData.email,
+        }
+      : null;
+  }, [userData]);
+
+  // fetch user's addresses and pick the selected one from cache
+  const { data: userAddresses } = useQuery({
+    queryKey: ["user", userId, "addresses"],
+    queryFn: () => usersService.getUserAddresses(userId),
+    enabled: Boolean(userId),
+  });
+
+  const selectedAddressFull = React.useMemo(() => {
+    if (!selectedAddress || !Array.isArray(userAddresses)) return null;
+    type Addr = {
+      id: number;
+      addressLine?: string;
+      city?: string;
+      postalCode?: string;
+    };
+    const typed = userAddresses as Addr[];
+    const found = typed.find((a) => a.id === selectedAddress.id);
+    return found
+      ? {
+          id: found.id,
+          addressLine: found.addressLine,
+          city: found.city,
+          postalCode: found.postalCode,
+        }
+      : null;
+  }, [selectedAddress, userAddresses]);
 
   if (isLoading) return <div>Loading...</div>;
   if (!cart || cart.items.length === 0)
@@ -267,6 +313,8 @@ export default function CheckoutPage() {
           setIdempotencyKey={setIdempotencyKey}
           onPlaceOrder={handlePlaceOrder}
           isProcessing={createOrder.status === "pending"}
+          customer={customer ?? undefined}
+          address={selectedAddressFull ?? undefined}
         />
       </div>
     </div>
