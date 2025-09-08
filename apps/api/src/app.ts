@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cartRouter from "./routes/cart.routes.js";
 import ordersRouter from "./routes/orders.routes.js";
+import productRoutes from "./routes/product.routes.js";
 import { v2 as cloudinary } from "cloudinary";
 import { prisma } from "@repo/database";
 import { CreateUserSchema } from "@repo/schemas";
@@ -31,14 +32,14 @@ export class App {
               api_secret: apiSecret,
               secure: true,
             });
-            console.info('Cloudinary configured from CLOUDINARY_URL');
+            console.info("Cloudinary configured from CLOUDINARY_URL");
           } else {
             cloudinary.config({ secure: true });
-            console.warn('CLOUDINARY_URL present but parsing failed');
+            console.warn("CLOUDINARY_URL present but parsing failed");
           }
         } catch (err) {
           cloudinary.config({ secure: true });
-          console.warn('Failed to parse CLOUDINARY_URL:', String(err));
+          console.warn("Failed to parse CLOUDINARY_URL:", String(err));
         }
       } else if (process.env.CLOUDINARY_CLOUD_NAME) {
         cloudinary.config({
@@ -47,10 +48,12 @@ export class App {
           api_secret: process.env.CLOUDINARY_API_SECRET,
           secure: true,
         });
-        console.info('Cloudinary configured from CLOUDINARY_CLOUD_NAME/API_KEY');
+        console.info(
+          "Cloudinary configured from CLOUDINARY_CLOUD_NAME/API_KEY"
+        );
       }
     } catch (err) {
-      console.warn('Cloudinary configuration error:', String(err));
+      console.warn("Cloudinary configuration error:", String(err));
     }
 
     this.app.use(cors({ origin: "http://localhost:3000", credentials: true }));
@@ -59,6 +62,7 @@ export class App {
 
     this.app.use("/api/cart", cartRouter);
     this.app.use("/api/orders", ordersRouter);
+    this.app.use("/api/products", productRoutes);
 
     this.app.get("/api/health", (request, response) =>
       response.status(200).json({ message: "API running!" })
