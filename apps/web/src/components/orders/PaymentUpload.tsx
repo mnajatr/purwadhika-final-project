@@ -30,21 +30,13 @@ export default function PaymentUpload({ orderId, apiBase }: Props) {
     setMessage(null);
 
     try {
-      // read file as base64 data URL
-      const toDataUrl = (f: File) =>
-        new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result));
-          reader.onerror = (e) => reject(e);
-          reader.readAsDataURL(f);
-        });
-
-      const dataUrl = await toDataUrl(file);
+      // send as multipart/form-data using FormData to avoid base64 overhead
+      const fd = new FormData();
+      fd.append("proof", file);
 
       const res = await fetch(`${apiBase}/orders/${orderId}/payment-proof`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ proofBase64: dataUrl }),
+        body: fd,
       });
 
       if (!res.ok) {

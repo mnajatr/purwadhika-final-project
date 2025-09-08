@@ -47,7 +47,7 @@ export class OrderService {
       }
     }
 
-  const work: Promise<any> = (async () => {
+    const work: Promise<any> = (async () => {
       // if storeId is not provided, attempt to compute nearest store.
       // Resolution priority:
       // 1) Explicit coordinates passed in request (userLat/userLon).
@@ -100,8 +100,13 @@ export class OrderService {
         }
       }
 
-  // resolvedStoreId is guaranteed to exist here, cast to number for clarity
-  return this._createOrderImpl(userId, resolvedStoreId as number, items, addressId);
+      // resolvedStoreId is guaranteed to exist here, cast to number for clarity
+      return this._createOrderImpl(
+        userId,
+        resolvedStoreId as number,
+        items,
+        addressId
+      );
     })();
 
     if (idempotencyKey) {
@@ -320,54 +325,64 @@ export class OrderService {
 
   async uploadPaymentProof(
     orderId: number,
-    base64Data: string,
+    fileBuffer: Buffer | Uint8Array,
     mime: string
-  ): Promise<{ proofUrl: string; payment: PaymentMinimal | null; orderStatus: string }> {
-    // Upload base64 image to Cloudinary and persist proofImageUrl
+  ): Promise<{
+    proofUrl: string;
+    payment: PaymentMinimal | null;
+    orderStatus: string;
+  }> {
+    // Upload binary image buffer to Cloudinary and persist proofImageUrl
     // Cloudinary should already be configured at app startup
-    
+
     // Sanity check: ensure cloudinary has credentials available before upload
     const config = cloudinary.config();
     if (!config.cloud_name || !config.api_key) {
-      throw new Error("Cloudinary not configured: missing cloud_name or api_key");
+      throw new Error(
+        "Cloudinary not configured: missing cloud_name or api_key"
+      );
     }
 
-    const order = await prisma.order.findUnique({ where: { id: orderId }, include: { payment: true } });
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { payment: true },
+    });
     if (!order) throw new Error("Order not found");
 
-  // upload via upload_stream wrapped as promise
-  const uploadRes = (await new Promise<UploadApiResponse>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        { folder: `orders/${orderId}` },
-        (error: Error | undefined, result: UploadApiResponse | undefined) => {
-          if (error) return reject(error);
-          if (!result) return reject(new Error("Empty upload result"));
-          resolve(result);
-        }
-      );
-      // write buffer
-      const buffer = Buffer.from(base64Data, "base64");
-      stream.end(buffer);
-    })) as UploadApiResponse;
+    // upload via upload_stream wrapped as promise
+    const uploadRes = (await new Promise<UploadApiResponse>(
+      (resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: `orders/${orderId}`, resource_type: "image" },
+          (error: Error | undefined, result: UploadApiResponse | undefined) => {
+            if (error) return reject(error);
+            if (!result) return reject(new Error("Empty upload result"));
+            resolve(result);
+          }
+        );
+        // write buffer
+        stream.end(Buffer.from(fileBuffer));
+      }
+    )) as UploadApiResponse;
 
     const proofUrl = uploadRes.secure_url ?? uploadRes.url;
 
     let paymentRecord: PaymentMinimal | null = null;
 
     if (order.payment) {
-      paymentRecord = await prisma.payment.update({
+      paymentRecord = (await prisma.payment.update({
         where: { id: order.payment.id },
         data: { proofImageUrl: proofUrl, status: "PENDING" },
-      }) as unknown as PaymentMinimal;
+      })) as unknown as PaymentMinimal;
     } else {
-      paymentRecord = await prisma.payment.create({
+      paymentRecord = (await prisma.payment.create({
         data: {
           orderId: order.id,
           status: "PENDING",
           amount: Math.round(Number(order.grandTotal ?? 0)),
           proofImageUrl: proofUrl,
         },
-      }) as unknown as PaymentMinimal;
+      })) as unknown as PaymentMinimal;
     }
 
     const updatedOrder = await prisma.order.update({
@@ -376,6 +391,10 @@ export class OrderService {
       select: { status: true },
     });
 
-    return { proofUrl, payment: paymentRecord, orderStatus: updatedOrder.status };
+    return {
+      proofUrl,
+      payment: paymentRecord,
+      orderStatus: updatedOrder.status,
+    };
   }
 }

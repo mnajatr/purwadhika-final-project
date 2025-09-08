@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import z, { ZodError } from "zod";
 import { Prisma } from "@repo/database/generated/prisma";
 import { AppError } from "../errors/app.error.js";
+import { MulterError } from "multer";
 
 export function errorMiddleware(
   error: Error,
@@ -19,6 +20,14 @@ export function errorMiddleware(
 
   if (error instanceof AppError)
     return response.status(error.statusCode).json({ message: error.message });
+
+  // Multer (file upload) errors: return 400 with machine-friendly code
+  if (error instanceof MulterError) {
+    // e.g., LIMIT_FILE_SIZE, LIMIT_UNEXPECTED_FILE
+    return response
+      .status(400)
+      .json({ message: error.message, code: error.code });
+  }
 
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === "P2002") {

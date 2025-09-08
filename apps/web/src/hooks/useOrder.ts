@@ -43,10 +43,23 @@ export function useCreateOrder(userId: number, storeId?: number) {
     },
     onSuccess: async (data) => {
       // service may return either { data: order } or order directly
-      // normalize to created order object
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const payload: any = data;
-      const created = payload?.data ?? payload;
+      // normalize to created order object with a small runtime guard
+      type CreatedOrderShape = {
+        id?: number;
+        storeId?: number;
+        items?: Array<{ productId: number; qty?: number }>;
+        order?: {
+          id?: number;
+          storeId?: number;
+          items?: Array<{ productId: number; qty?: number }>;
+        };
+      };
+
+      function isWrapped(obj: unknown): obj is { data: CreatedOrderShape } {
+        return !!obj && typeof obj === "object" && "data" in obj;
+      }
+
+      const created: CreatedOrderShape = isWrapped(data) ? data.data : (data as CreatedOrderShape);
 
       // determine resolved storeId from created order (backend selected store)
       const resolvedStoreId: number | undefined =

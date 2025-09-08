@@ -34,7 +34,17 @@ type OrderType = {
 };
 
 export default async function OrderPage({ params }: OrderPageProps) {
-  const id = Number(params.id);
+  // `params` can be a Promise in some Next.js RSC contexts. Await if needed.
+  function isThenable(
+    p: unknown
+  ): p is { then: (fn: (v: unknown) => void) => void } {
+    if (!p || typeof p !== "object") return false;
+    const thenProp = (p as { then?: unknown }).then;
+    return typeof thenProp === "function";
+  }
+
+  const resolvedParams = isThenable(params) ? await params : params;
+  const id = Number((resolvedParams as { id?: string })?.id);
 
   const rawApi =
     process.env.NEXT_PUBLIC_API_URL ??
@@ -154,7 +164,9 @@ export default async function OrderPage({ params }: OrderPageProps) {
                     <div>
                       <div className="font-medium">
                         {/** Show product name if available */}
-                        {it.product?.name ? it.product.name : `Product #${it.productId}`}
+                        {it.product?.name
+                          ? it.product.name
+                          : `Product #${it.productId}`}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         Quantity: {it.qty}

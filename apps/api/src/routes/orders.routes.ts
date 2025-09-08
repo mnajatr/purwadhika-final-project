@@ -1,4 +1,5 @@
 import { Router } from "express";
+import upload from "../middleware/upload.middleware.js";
 import { OrderController } from "../controllers/order.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 
@@ -14,12 +15,21 @@ if (process.env.NODE_ENV !== "production") {
   // Dev: let controller handle userId fallback (query/body/header) so
   // frontend can test using ?userId=4 or body.userId without sending auth
   router.post("/", controller.createOrder);
-  router.post("/:id/payment-proof", controller.uploadPaymentProof);
+  router.post(
+    "/:id/payment-proof",
+    upload.single("proof"),
+    controller.uploadPaymentProof
+  );
   router.get("/:id", controller.getOrderById);
 } else {
   // Production: require auth middleware
   router.post("/", authMiddleware, controller.createOrder);
-  router.post("/:id/payment-proof", authMiddleware, controller.uploadPaymentProof);
+  router.post(
+    "/:id/payment-proof",
+    authMiddleware,
+    upload.single("proof"),
+    controller.uploadPaymentProof
+  );
   router.get("/:id", authMiddleware, controller.getOrderById);
 }
 
