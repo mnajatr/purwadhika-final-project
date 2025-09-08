@@ -3,6 +3,14 @@ import { ERROR_MESSAGES } from "../utils/helpers.js";
 import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
 type OrderItemInput = { productId: number; qty: number };
 
+type PaymentMinimal = {
+  id: number;
+  orderId: number;
+  status: string;
+  proofImageUrl?: string | null;
+  amount: number | null;
+};
+
 // TODO: This in-memory idempotency store is fine for local development and
 // short-lived processes but must be replaced with a durable DB backed table
 // (idempotency_keys) for production. The store keeps both in-flight promises
@@ -310,7 +318,11 @@ export class OrderService {
 
   // ...existing methods above are preserved
 
-  async uploadPaymentProof(orderId: number, base64Data: string, mime: string) {
+  async uploadPaymentProof(
+    orderId: number,
+    base64Data: string,
+    mime: string
+  ): Promise<{ proofUrl: string; payment: PaymentMinimal | null; orderStatus: string }> {
     // Upload base64 image to Cloudinary and persist proofImageUrl
     // Cloudinary should already be configured at app startup
     
@@ -323,10 +335,8 @@ export class OrderService {
     const order = await prisma.order.findUnique({ where: { id: orderId }, include: { payment: true } });
     if (!order) throw new Error("Order not found");
 
-    const dataUri = `data:${mime};base64,${base64Data}`;
-
-    // upload via upload_stream wrapped as promise
-    const uploadRes = (await new Promise<UploadApiResponse>((resolve, reject) => {
+  // upload via upload_stream wrapped as promise
+  const uploadRes = (await new Promise<UploadApiResponse>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         { folder: `orders/${orderId}` },
         (error: Error | undefined, result: UploadApiResponse | undefined) => {
@@ -342,24 +352,30 @@ export class OrderService {
 
     const proofUrl = uploadRes.secure_url ?? uploadRes.url;
 
+    let paymentRecord: PaymentMinimal | null = null;
+
     if (order.payment) {
-      await prisma.payment.update({
+      paymentRecord = await prisma.payment.update({
         where: { id: order.payment.id },
         data: { proofImageUrl: proofUrl, status: "PENDING" },
-      });
+      }) as unknown as PaymentMinimal;
     } else {
-      await prisma.payment.create({
+      paymentRecord = await prisma.payment.create({
         data: {
           orderId: order.id,
           status: "PENDING",
           amount: Math.round(Number(order.grandTotal ?? 0)),
           proofImageUrl: proofUrl,
         },
-      });
+      }) as unknown as PaymentMinimal;
     }
 
-    await prisma.order.update({ where: { id: order.id }, data: { status: "PAYMENT_REVIEW" } });
+    const updatedOrder = await prisma.order.update({
+      where: { id: order.id },
+      data: { status: "PAYMENT_REVIEW" },
+      select: { status: true },
+    });
 
-    return { proofUrl };
+    return { proofUrl, payment: paymentRecord, orderStatus: updatedOrder.status };
   }
 }

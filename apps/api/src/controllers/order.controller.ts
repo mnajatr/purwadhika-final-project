@@ -106,10 +106,22 @@ export class OrderController {
       const id = Number(req.params.id);
       if (!id) return res.status(400).json(errorResponse("Invalid order id"));
 
-      // Use prisma directly for a simple read operation including relations
+      // Use prisma directly for a simple read operation including relations.
+      // Include product.name for each order item so frontend can render the
+      // human-friendly product name instead of a fallback like "Product #3".
       const order = await prisma.order.findUnique({
         where: { id },
-        include: { items: true, payment: true, shipment: true },
+        include: {
+          items: {
+            include: {
+              product: {
+                select: { id: true, name: true, price: true },
+              },
+            },
+          },
+          payment: true,
+          shipment: true,
+        },
       });
 
       if (!order) return res.status(404).json(errorResponse("Order not found"));
@@ -144,22 +156,35 @@ export class OrderController {
           .json(errorResponse("Missing proofBase64 in request body"));
 
       // data URL format: data:<mime>;base64,<data>
-  const matches = bodyProof.match(/^data:(image\/(png|jpeg|jpg));base64,(.+)$/);
-  if (!matches) return res.status(400).json(errorResponse("Invalid proof format"));
+      const matches = bodyProof.match(
+        /^data:(image\/(png|jpeg|jpg));base64,(.+)$/
+      );
+      if (!matches)
+        return res.status(400).json(errorResponse("Invalid proof format"));
 
-  const mime = matches[1];
-  const b64 = matches[3];
-  const allowed = ["image/png", "image/jpeg", "image/jpg"];
-  if (!allowed.includes(mime)) return res.status(400).json(errorResponse("Invalid file type"));
+      const mime = matches[1];
+      const b64 = matches[3];
+      const allowed = ["image/png", "image/jpeg", "image/jpg"];
+      if (!allowed.includes(mime))
+        return res.status(400).json(errorResponse("Invalid file type"));
 
-  const MAX_BYTES = 1 * 1024 * 1024;
-  const buffer = Buffer.from(b64, "base64");
-  if (buffer.length > MAX_BYTES) return res.status(400).json(errorResponse("File too large"));
+      const MAX_BYTES = 1 * 1024 * 1024;
+      const buffer = Buffer.from(b64, "base64");
+      if (buffer.length > MAX_BYTES)
+        return res.status(400).json(errorResponse("File too large"));
 
-  // Hand off base64 to service which will upload to Cloudinary
-  const uploadResult = await this.service.uploadPaymentProof(id, b64, mime);
+      // Hand off base64 to service which will upload to Cloudinary and return
+      // proof URL plus the updated payment and order status so the frontend
+      // can update UI without an immediate refetch.
+      const uploadResult = await this.service.uploadPaymentProof(id, b64, mime);
 
-  return res.status(200).json(successResponse(uploadResult, "Upload saved"));
+      const { proofUrl, payment, orderStatus } = uploadResult || ({} as any);
+
+      return res
+        .status(200)
+        .json(
+          successResponse({ proofUrl, payment, orderStatus }, "Upload saved")
+        );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return res.status(500).json(errorResponse("Upload failed", msg));

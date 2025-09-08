@@ -157,7 +157,7 @@ export default async function OrderPage({ params }: OrderPageProps) {
                         {it.product?.name ? it.product.name : `Product #${it.productId}`}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Qty: {it.qty}
+                        Quantity: {it.qty}
                       </div>
                     </div>
                     <div className="font-semibold">

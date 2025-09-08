@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
 type Props = {
@@ -8,6 +9,7 @@ type Props = {
 };
 
 export default function PaymentUpload({ orderId, apiBase }: Props) {
+  const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -49,12 +51,29 @@ export default function PaymentUpload({ orderId, apiBase }: Props) {
         const txt = await res.text();
         setMessage(`Upload failed: ${res.status} ${txt}`);
       } else {
-        setMessage("Upload berhasil. Mohon tunggu konfirmasi admin.");
+        const json = await res.json();
+        // successResponse wraps data in { success: true, data: ... }
+        const payload = json?.data ?? json;
+        const { proofUrl, orderStatus } = payload ?? {};
+
+        setMessage(
+          proofUrl
+            ? `Upload berhasil. Status order: ${orderStatus}. Preview: ${proofUrl}`
+            : "Upload berhasil. Mohon tunggu konfirmasi admin."
+        );
         setFile(null);
+
+        // refresh the current route so server components (order page) re-fetch
+        // and reflect the updated order/payment status without manual refresh
+        try {
+          router.refresh();
+        } catch {
+          // ignore: router.refresh may not be available in some test envs
+        }
       }
     } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        setMessage(`Error: ${msg}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      setMessage(`Error: ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -62,7 +81,9 @@ export default function PaymentUpload({ orderId, apiBase }: Props) {
 
   return (
     <div className="space-y-3">
-      <label className="text-sm text-muted-foreground">Upload bukti bayar</label>
+      <label className="text-sm text-muted-foreground">
+        Upload bukti bayar
+      </label>
       <input type="file" accept="image/*" onChange={onChange} />
       <div className="flex items-center gap-2">
         <Button onClick={onSubmit} disabled={loading}>
