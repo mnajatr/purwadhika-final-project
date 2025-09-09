@@ -9,6 +9,8 @@ import { CreateUserSchema } from "@repo/schemas";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 import { apiRateLimit } from "./middleware/rateLimit.middleware.js";
+// Boot background workers/queues
+import "./workers/orderCancelWorker.js";
 
 export class App {
   public app: express.Application;

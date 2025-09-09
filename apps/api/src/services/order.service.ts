@@ -1,6 +1,7 @@
 import { prisma } from "@repo/database";
 import { ERROR_MESSAGES } from "../utils/helpers.js";
 import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
+import { orderCancelQueue } from "../queues/orderCancelQueue.js";
 type OrderItemInput = { productId: number; qty: number };
 
 type PaymentMinimal = {
@@ -33,6 +34,8 @@ export class OrderService {
     userLon?: number,
     addressId?: number
   ): Promise<any> {
+    console.log(`🚨 ORDER SERVICE - createOrder called with userId=${userId}, storeId=${storeId}`);
+    
     if (idempotencyKey) {
       const entry = idempotencyStore.get(idempotencyKey);
       if (entry) {
@@ -174,12 +177,15 @@ export class OrderService {
     items: OrderItemInput[],
     addressId?: number
   ) {
+    console.log(`🔥 _createOrderImpl called for userId=${userId}, storeId=${storeId}`);
+    
     if (!items || items.length === 0) throw new Error("No items provided");
 
     // Basic product existence check and gather inventory rows
     const productIds = items.map((i) => i.productId);
 
     // Run a transaction: re-check inventory and create order atomically
+    console.log(`🔥 Starting transaction for order creation...`);
     const result = await prisma.$transaction(async (tx) => {
       // lock inventories for update by reading them
       const inventories = await tx.storeInventory.findMany({
@@ -317,6 +323,38 @@ export class OrderService {
 
       return full;
     });
+
+    console.log(`🔥 Transaction completed, result:`, result ? `order_id=${result.id}` : 'null');
+
+    // Enqueue a cancellation job OUTSIDE the transaction to avoid long transactions holding locks. 
+    // The queue worker will re-verify order status before cancelling.
+    console.log(`🔍 DEBUG: About to enqueue job for order ${result?.id}`);
+    console.log(`🔍 DEBUG: orderCancelQueue object:`, typeof orderCancelQueue);
+    
+    if (!result || !result.id) {
+      console.error(`❌ No result or result.id found for enqueue`);
+      return result;
+    }
+    
+    try {
+      console.log(`🔄 Attempting to enqueue INSTANT cancel job for order=${result.id}`);
+      const job = await orderCancelQueue.add(
+        "cancel-order", 
+        { orderId: result.id }
+        // NO DELAY - should run immediately
+      );
+      console.log(`✅ Job successfully enqueued: jobId=${job.id}, orderId=${result.id}`);
+      
+      // VERIFY job is actually in Redis
+      const waiting = await orderCancelQueue.getWaiting();
+      console.log(`🔍 REDIS DEBUG: Queue has ${waiting.length} waiting jobs`);
+      const active = await orderCancelQueue.getActive();  
+      console.log(`🔍 REDIS DEBUG: Queue has ${active.length} active jobs`);
+    } catch (err) {
+      console.error(`❌ Failed to enqueue cancel job for order=${result.id}:`, err);
+      console.error(`❌ Error details:`, err);
+      // Don't fail the order creation, just log the error
+    }
 
     return result;
   }
