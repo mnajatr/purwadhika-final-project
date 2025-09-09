@@ -1,6 +1,12 @@
 import { prisma } from "@repo/database";
 import { ERROR_MESSAGES } from "../utils/helpers.js";
 import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
+import { orderCancelQueue } from "../queues/orderCancelQueue.js";
+import { createConflictError } from "../errors/app.error.js";
+// Default auto-cancel delay: 1 hour in production. Tests can override via
+// ORDER_CANCEL_DELAY_MS environment variable (value in milliseconds).
+const ORDER_CANCEL_DELAY_MS =
+  Number(process.env.ORDER_CANCEL_DELAY_MS) || 60 * 60 * 1000;
 type OrderItemInput = { productId: number; qty: number };
 
 type PaymentMinimal = {
@@ -24,6 +30,76 @@ const IDEMPOTENCY_TTL_MS = 60 * 1000; // keep resolved results for 60s
 const idempotencyStore = new Map<string, IdempotencyEntry>();
 
 export class OrderService {
+  // Manual cancellation endpoint: only owner may cancel and only when still pending payment.
+  async cancelOrder(orderId: number, requesterUserId: number) {
+    // Re-validate and perform rollback inside a transaction
+    const logger = (await import("../utils/logger.js")).default;
+
+    const result = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { items: true, payment: true },
+      });
+
+      if (!order) throw new Error("Order not found");
+
+      if (order.userId !== requesterUserId)
+        throw new Error("Cannot cancel: not order owner");
+
+      if (order.status !== "PENDING_PAYMENT")
+        throw createConflictError(
+          `Cannot cancel order: current status is ${order.status}`
+        );
+
+      // Restore stock and create stock journal entries
+      for (const item of order.items) {
+        await tx.storeInventory.updateMany({
+          where: { storeId: order.storeId, productId: item.productId },
+          data: { stockQty: { increment: item.qty } },
+        });
+
+        await tx.stockJournal.create({
+          data: {
+            storeId: order.storeId,
+            productId: item.productId,
+            qtyChange: item.qty,
+            reason: "ADD",
+            adminId: order.userId,
+          },
+        });
+      }
+
+      // TODO: rollback vouchers/coupons if your schema tracks them here
+
+      const updated = await tx.order.update({
+        where: { id: orderId },
+        data: { status: "CANCELLED" },
+      });
+
+      return updated;
+    });
+
+    // Remove any scheduled auto-cancel job for this order
+    try {
+      const job = await orderCancelQueue.getJob(String(orderId));
+      if (job) await job.remove();
+    } catch (err) {
+      try {
+        const logger2 = (await import("../utils/logger.js")).default;
+        logger2.error(
+          `Failed to remove cancel job for order=${orderId}: %o`,
+          err
+        );
+      } catch (e) {
+        // swallow
+      }
+    }
+
+    logger.info(
+      `Order ${orderId} cancelled manually by user=${requesterUserId}`
+    );
+    return result;
+  }
   async createOrder(
     userId: number,
     storeId: number | undefined,
@@ -33,6 +109,8 @@ export class OrderService {
     userLon?: number,
     addressId?: number
   ): Promise<any> {
+    // entry logged at controller level; avoid noisy console output in service
+
     if (idempotencyKey) {
       const entry = idempotencyStore.get(idempotencyKey);
       if (entry) {
@@ -47,7 +125,7 @@ export class OrderService {
       }
     }
 
-  const work: Promise<any> = (async () => {
+    const work: Promise<any> = (async () => {
       // if storeId is not provided, attempt to compute nearest store.
       // Resolution priority:
       // 1) Explicit coordinates passed in request (userLat/userLon).
@@ -100,8 +178,13 @@ export class OrderService {
         }
       }
 
-  // resolvedStoreId is guaranteed to exist here, cast to number for clarity
-  return this._createOrderImpl(userId, resolvedStoreId as number, items, addressId);
+      // resolvedStoreId is guaranteed to exist here, cast to number for clarity
+      return this._createOrderImpl(
+        userId,
+        resolvedStoreId as number,
+        items,
+        addressId
+      );
     })();
 
     if (idempotencyKey) {
@@ -175,6 +258,7 @@ export class OrderService {
     const productIds = items.map((i) => i.productId);
 
     // Run a transaction: re-check inventory and create order atomically
+
     const result = await prisma.$transaction(async (tx) => {
       // lock inventories for update by reading them
       const inventories = await tx.storeInventory.findMany({
@@ -313,6 +397,38 @@ export class OrderService {
       return full;
     });
 
+    // Enqueue a cancellation job OUTSIDE the transaction to avoid long transactions holding locks.
+    // The queue worker will re-verify order status before cancelling.
+    if (!result || !result.id) {
+      return result;
+    }
+
+    try {
+      // attempt enqueue
+      // Use a stable jobId (stringified order id) so the job can be
+      // retrieved/removed later with queue.getJob(jobId) / job.remove().
+      const job = await orderCancelQueue.add(
+        "cancel-order",
+        { orderId: result.id },
+        { jobId: String(result.id), delay: ORDER_CANCEL_DELAY_MS }
+      );
+      // success (logged via logger in calling context if needed)
+    } catch (err) {
+      // don't fail order creation due to queue issues; log error
+      // use logger to keep consistent structured logs
+      try {
+        const logger = (await import("../utils/logger.js")).default;
+        logger.error(
+          `Failed to enqueue cancel job for order=${result.id}: %o`,
+          err
+        );
+      } catch (e) {
+        // swallow: enqueue failure should not surface to client and
+        // logger import already attempted above. Avoid noisy console output.
+      }
+      // Don't fail the order creation, just log the error
+    }
+
     return result;
   }
 
@@ -320,54 +436,97 @@ export class OrderService {
 
   async uploadPaymentProof(
     orderId: number,
-    base64Data: string,
+    fileBuffer: Buffer | Uint8Array,
     mime: string
-  ): Promise<{ proofUrl: string; payment: PaymentMinimal | null; orderStatus: string }> {
-    // Upload base64 image to Cloudinary and persist proofImageUrl
+  ): Promise<{
+    proofUrl: string;
+    payment: PaymentMinimal | null;
+    orderStatus: string;
+  }> {
+    // Upload binary image buffer to Cloudinary and persist proofImageUrl
     // Cloudinary should already be configured at app startup
-    
+
     // Sanity check: ensure cloudinary has credentials available before upload
     const config = cloudinary.config();
     if (!config.cloud_name || !config.api_key) {
-      throw new Error("Cloudinary not configured: missing cloud_name or api_key");
+      throw new Error(
+        "Cloudinary not configured: missing cloud_name or api_key"
+      );
     }
 
-    const order = await prisma.order.findUnique({ where: { id: orderId }, include: { payment: true } });
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { payment: true },
+    });
     if (!order) throw new Error("Order not found");
 
-  // upload via upload_stream wrapped as promise
-  const uploadRes = (await new Promise<UploadApiResponse>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        { folder: `orders/${orderId}` },
-        (error: Error | undefined, result: UploadApiResponse | undefined) => {
-          if (error) return reject(error);
-          if (!result) return reject(new Error("Empty upload result"));
-          resolve(result);
-        }
+    // Only allow uploading payment proof when order is awaiting payment
+    if (order.status !== "PENDING_PAYMENT") {
+      throw createConflictError(
+        `Cannot upload payment proof: order is already ${order.status}`
       );
-      // write buffer
-      const buffer = Buffer.from(base64Data, "base64");
-      stream.end(buffer);
-    })) as UploadApiResponse;
+    }
+
+    // upload via upload_stream wrapped as promise
+    const uploadRes = (await new Promise<UploadApiResponse>(
+      (resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: `orders/${orderId}`, resource_type: "image" },
+          (error: Error | undefined, result: UploadApiResponse | undefined) => {
+            if (error) return reject(error);
+            if (!result) return reject(new Error("Empty upload result"));
+            resolve(result);
+          }
+        );
+        // write buffer
+        stream.end(Buffer.from(fileBuffer));
+      }
+    )) as UploadApiResponse;
 
     const proofUrl = uploadRes.secure_url ?? uploadRes.url;
 
     let paymentRecord: PaymentMinimal | null = null;
 
     if (order.payment) {
-      paymentRecord = await prisma.payment.update({
+      paymentRecord = (await prisma.payment.update({
         where: { id: order.payment.id },
         data: { proofImageUrl: proofUrl, status: "PENDING" },
-      }) as unknown as PaymentMinimal;
+      })) as unknown as PaymentMinimal;
     } else {
-      paymentRecord = await prisma.payment.create({
+      paymentRecord = (await prisma.payment.create({
         data: {
           orderId: order.id,
           status: "PENDING",
           amount: Math.round(Number(order.grandTotal ?? 0)),
           proofImageUrl: proofUrl,
         },
-      }) as unknown as PaymentMinimal;
+      })) as unknown as PaymentMinimal;
+    }
+
+    // If a cancel job was previously scheduled for this order, remove it
+    // because the user has provided payment proof and auto-cancel is no longer desired.
+    try {
+      const job = await orderCancelQueue.getJob(String(order.id));
+      if (job) {
+        await job.remove();
+        try {
+          const logger = (await import("../utils/logger.js")).default;
+          logger.info(`Removed cancel job for order=${order.id}`);
+        } catch (e) {
+          // swallow logging errors
+        }
+      }
+    } catch (err) {
+      // Log failure to remove job but don't fail the upload flow
+      try {
+        const logger = (await import("../utils/logger.js")).default;
+        logger.error(
+          `Failed to remove cancel job for order=${order.id}: %o`,
+          err
+        );
+      } catch (e) {
+        // swallow
+      }
     }
 
     const updatedOrder = await prisma.order.update({
@@ -376,6 +535,10 @@ export class OrderService {
       select: { status: true },
     });
 
-    return { proofUrl, payment: paymentRecord, orderStatus: updatedOrder.status };
+    return {
+      proofUrl,
+      payment: paymentRecord,
+      orderStatus: updatedOrder.status,
+    };
   }
 }

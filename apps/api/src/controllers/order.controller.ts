@@ -147,36 +147,32 @@ export class OrderController {
     try {
       const id = Number(req.params.id);
       if (!id) return res.status(400).json(errorResponse("Invalid order id"));
-
-      // Expect JSON body: { proofBase64: 'data:image/png;base64,...' }
-      const bodyProof = (req as any).body?.proofBase64;
-      if (!bodyProof || typeof bodyProof !== "string")
+      // Expect multipart/form-data with a single file field named 'proof'
+      const f = (req as any).file as
+        | { buffer?: Buffer; mimetype?: string }
+        | undefined;
+      if (!f || !f.buffer)
         return res
           .status(400)
-          .json(errorResponse("Missing proofBase64 in request body"));
+          .json(errorResponse("Missing file 'proof' in request"));
 
-      // data URL format: data:<mime>;base64,<data>
-      const matches = bodyProof.match(
-        /^data:(image\/(png|jpeg|jpg));base64,(.+)$/
-      );
-      if (!matches)
-        return res.status(400).json(errorResponse("Invalid proof format"));
-
-      const mime = matches[1];
-      const b64 = matches[3];
       const allowed = ["image/png", "image/jpeg", "image/jpg"];
+      const mime = f.mimetype ?? "application/octet-stream";
       if (!allowed.includes(mime))
         return res.status(400).json(errorResponse("Invalid file type"));
 
       const MAX_BYTES = 1 * 1024 * 1024;
-      const buffer = Buffer.from(b64, "base64");
-      if (buffer.length > MAX_BYTES)
+      if (f.buffer.length > MAX_BYTES)
         return res.status(400).json(errorResponse("File too large"));
 
-      // Hand off base64 to service which will upload to Cloudinary and return
+      // Hand off buffer and mime to service which will upload to Cloudinary and return
       // proof URL plus the updated payment and order status so the frontend
       // can update UI without an immediate refetch.
-      const uploadResult = await this.service.uploadPaymentProof(id, b64, mime);
+      const uploadResult = await this.service.uploadPaymentProof(
+        id,
+        f.buffer,
+        mime
+      );
 
       const { proofUrl, payment, orderStatus } = uploadResult || ({} as any);
 
@@ -188,6 +184,31 @@ export class OrderController {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return res.status(500).json(errorResponse("Upload failed", msg));
+    }
+  };
+
+  cancelOrder = async (req: Request, res: Response) => {
+    try {
+      const id = Number(req.params.id);
+      if (!id) return res.status(400).json(errorResponse("Invalid order id"));
+
+      const userId = pickUserId(req);
+      if (!userId)
+        return res.status(400).json(errorResponse("Missing userId in request"));
+
+      // Delegate to service which will perform ownership/status checks
+      const result = await this.service.cancelOrder(id, userId);
+
+      return res.status(200).json(successResponse(result, "Order cancelled"));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("not found")) {
+        return res.status(404).json(errorResponse("Order not found", msg));
+      }
+      if (msg.includes("Cannot cancel") || msg.includes("already")) {
+        return res.status(409).json(errorResponse("Cannot cancel order", msg));
+      }
+      return res.status(500).json(errorResponse("Failed to cancel order", msg));
     }
   };
 }
