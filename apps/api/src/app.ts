@@ -4,6 +4,7 @@ import cartRouter from "./routes/cart.routes.js";
 import ordersRouter from "./routes/orders.routes.js";
 import productRoutes from "./routes/product.routes.js";
 import { v2 as cloudinary } from "cloudinary";
+import logger from "./utils/logger.js";
 import { prisma } from "@repo/database";
 import { CreateUserSchema } from "@repo/schemas";
 import { errorMiddleware } from "./middleware/error.middleware.js";
@@ -34,14 +35,14 @@ export class App {
               api_secret: apiSecret,
               secure: true,
             });
-            console.info("Cloudinary configured from CLOUDINARY_URL");
+            logger.info("Cloudinary configured from CLOUDINARY_URL");
           } else {
             cloudinary.config({ secure: true });
-            console.warn("CLOUDINARY_URL present but parsing failed");
+            logger.warn("CLOUDINARY_URL present but parsing failed");
           }
         } catch (err) {
           cloudinary.config({ secure: true });
-          console.warn("Failed to parse CLOUDINARY_URL:", String(err));
+          logger.warn("Failed to parse CLOUDINARY_URL:", String(err));
         }
       } else if (process.env.CLOUDINARY_CLOUD_NAME) {
         cloudinary.config({
@@ -50,12 +51,10 @@ export class App {
           api_secret: process.env.CLOUDINARY_API_SECRET,
           secure: true,
         });
-        console.info(
-          "Cloudinary configured from CLOUDINARY_CLOUD_NAME/API_KEY"
-        );
+        logger.info("Cloudinary configured from CLOUDINARY_CLOUD_NAME/API_KEY");
       }
     } catch (err) {
-      console.warn("Cloudinary configuration error:", String(err));
+      logger.warn("Cloudinary configuration error:", String(err));
     }
 
     this.app.use(cors({ origin: "http://localhost:3000", credentials: true }));
@@ -114,6 +113,7 @@ export class App {
           has_key_env: !!process.env.CLOUDINARY_API_KEY,
         });
       } catch (err) {
+        logger.error(String(err));
         res.status(500).json({ error: String(err) });
       }
     });
@@ -179,7 +179,7 @@ export class App {
 
   listen(port: number | string) {
     this.app.listen(port, () => {
-      console.info(`Server is listening on port: ${port}`);
+      logger.info(`Server is listening on port: ${port}`);
     });
   }
 }

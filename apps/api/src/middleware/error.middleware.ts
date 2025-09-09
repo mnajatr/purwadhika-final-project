@@ -3,6 +3,7 @@ import z, { ZodError } from "zod";
 import { Prisma } from "@repo/database/generated/prisma";
 import { AppError } from "../errors/app.error.js";
 import { MulterError } from "multer";
+import logger from "../utils/logger.js";
 
 export function errorMiddleware(
   error: Error,
@@ -10,12 +11,12 @@ export function errorMiddleware(
   response: Response,
   next: NextFunction
 ) {
-  console.error("Error:", error.message);
+  logger.error("Error: %s", error.message);
 
   if (error instanceof Error) {
-    console.error(error.stack || error);
+    logger.error(error.stack || String(error));
   } else {
-    console.error("Non-error thrown:", error);
+    logger.error("Non-error thrown: %o", error);
   }
 
   if (error instanceof AppError)

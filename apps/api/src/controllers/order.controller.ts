@@ -186,4 +186,29 @@ export class OrderController {
       return res.status(500).json(errorResponse("Upload failed", msg));
     }
   };
+
+  cancelOrder = async (req: Request, res: Response) => {
+    try {
+      const id = Number(req.params.id);
+      if (!id) return res.status(400).json(errorResponse("Invalid order id"));
+
+      const userId = pickUserId(req);
+      if (!userId)
+        return res.status(400).json(errorResponse("Missing userId in request"));
+
+      // Delegate to service which will perform ownership/status checks
+      const result = await this.service.cancelOrder(id, userId);
+
+      return res.status(200).json(successResponse(result, "Order cancelled"));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("not found")) {
+        return res.status(404).json(errorResponse("Order not found", msg));
+      }
+      if (msg.includes("Cannot cancel") || msg.includes("already")) {
+        return res.status(409).json(errorResponse("Cannot cancel order", msg));
+      }
+      return res.status(500).json(errorResponse("Failed to cancel order", msg));
+    }
+  };
 }

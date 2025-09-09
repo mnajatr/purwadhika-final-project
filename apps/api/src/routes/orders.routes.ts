@@ -20,6 +20,7 @@ if (process.env.NODE_ENV !== "production") {
     upload.single("proof"),
     controller.uploadPaymentProof
   );
+  router.patch("/:id/cancel", controller.cancelOrder);
   router.get("/:id", controller.getOrderById);
 } else {
   // Production: require auth middleware
@@ -30,6 +31,7 @@ if (process.env.NODE_ENV !== "production") {
     upload.single("proof"),
     controller.uploadPaymentProof
   );
+  router.patch("/:id/cancel", authMiddleware, controller.cancelOrder);
   router.get("/:id", authMiddleware, controller.getOrderById);
 }
 

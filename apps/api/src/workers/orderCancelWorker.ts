@@ -1,7 +1,10 @@
 import { Worker, Job } from "bullmq";
 import { prisma } from "@repo/database";
 import logger from "../utils/logger.js";
-import { ORDER_CANCEL_QUEUE_NAME, type CancelOrderJobData } from "../queues/orderCancelQueue.js";
+import {
+  ORDER_CANCEL_QUEUE_NAME,
+  type CancelOrderJobData,
+} from "../queues/orderCancelQueue.js";
 import { redis } from "../configs/redis.config.js";
 
 logger.info("✅ Order cancel worker is running...");
@@ -33,13 +36,17 @@ const worker = new Worker<CancelOrderJobData>(
 
         logger.info(`[TX] Restoring stock for ${order.items.length} items...`);
         for (const item of order.items) {
-          logger.info(`[TX] Restoring productId=${item.productId}, qty=${item.qty}`);
+          logger.info(
+            `[TX] Restoring productId=${item.productId}, qty=${item.qty}`
+          );
 
           const updateRes = await tx.storeInventory.updateMany({
             where: { storeId: order.storeId, productId: item.productId },
             data: { stockQty: { increment: item.qty } },
           });
-          logger.info(`[TX] Updated inventory for productId=${item.productId}, count=${updateRes.count}`);
+          logger.info(
+            `[TX] Updated inventory for productId=${item.productId}, count=${updateRes.count}`
+          );
 
           await tx.stockJournal.create({
             data: {
@@ -50,7 +57,9 @@ const worker = new Worker<CancelOrderJobData>(
               adminId: order.userId,
             },
           });
-          logger.info(`[TX] Stock journal created for productId=${item.productId}`);
+          logger.info(
+            `[TX] Stock journal created for productId=${item.productId}`
+          );
         }
 
         logger.info(`[TX] Updating order ${orderId} status to CANCELLED...`);
@@ -59,11 +68,15 @@ const worker = new Worker<CancelOrderJobData>(
           data: { status: "CANCELLED" },
         });
 
-        logger.info(`[TX] Order ${orderId} status updated to ${updated.status}`);
+        logger.info(
+          `[TX] Order ${orderId} status updated to ${updated.status}`
+        );
         return { skipped: false, updated };
       });
 
-      logger.info(`✅ Cancel job done for order=${orderId}: ${JSON.stringify(result)}`);
+      logger.info(
+        `✅ Cancel job done for order=${orderId}: ${JSON.stringify(result)}`
+      );
       return result;
     } catch (err) {
       logger.error(`❌ Failed cancel job for order=${orderId}: ${String(err)}`);
