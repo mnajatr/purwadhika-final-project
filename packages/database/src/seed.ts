@@ -17,9 +17,7 @@ const categories = [
 ];
 
 // Store definitions - only seed Store Bandung for radius testing (no Jakarta store)
-const stores = [
-  { name: "Store Bandung", isActive: true },
-];
+const stores = [{ name: "Store Bandung", isActive: true }];
 
 // Sample products for each category
 const productsData = {
@@ -29,18 +27,24 @@ const productsData = {
       slug: "fresh-bananas",
       description: "Sweet ripe bananas",
       basePrice: 15000,
+      imageUrl:
+        "https://plus.unsplash.com/premium_photo-1724250081106-4bb1be9bf950?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTN8fGJhbmFuYXxlbnwwfHwwfHx8MA%3D%3D",
     },
     {
       name: "Red Apples",
       slug: "red-apples",
       description: "Crispy red apples",
       basePrice: 25000,
+      imageUrl:
+        "https://plus.unsplash.com/premium_photo-1724249989963-9286e126af81?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OXx8YXBwbGV8ZW58MHx8MHx8fDA%3D",
     },
     {
       name: "Potato",
       slug: "potato",
       description: "Fresh potatoes",
       basePrice: 12000,
+      imageUrl:
+        "https://plus.unsplash.com/premium_photo-1675365779531-031dfdcdf947?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8cG90YXRvfGVufDB8MHwwfHx8MA%3D%3D",
     },
   ],
   "Dairy & Eggs": [
@@ -49,12 +53,16 @@ const productsData = {
       slug: "fresh-milk-1l",
       description: "Fresh cow milk",
       basePrice: 18000,
+      imageUrl:
+        "https://images.unsplash.com/photo-1588710929895-6ee7a0a4d155?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8bWlsa3xlbnwwfDB8MHx8fDA%3D",
     },
     {
       name: "Chicken Eggs (10pcs)",
       slug: "chicken-eggs-10pcs",
       description: "Fresh chicken eggs",
       basePrice: 25000,
+      imageUrl:
+        "https://images.unsplash.com/photo-1498654077810-12c21d4d6dc3?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8ZWdnfGVufDB8MHwwfHx8MA%3D%3D",
     },
   ],
   "Meat & Poultry": [
@@ -63,6 +71,8 @@ const productsData = {
       slug: "chicken-breast",
       description: "Boneless chicken breast",
       basePrice: 35000,
+      imageUrl:
+        "https://images.unsplash.com/photo-1642497394469-188b0f4bcae6?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8Y2hpY2tlbiUyMG1lYXR8ZW58MHwwfDB8fHww",
     },
   ],
   Seafood: [
@@ -71,6 +81,8 @@ const productsData = {
       slug: "fresh-salmon",
       description: "Atlantic salmon fillet",
       basePrice: 85000,
+      imageUrl:
+        "https://images.unsplash.com/photo-1499125562588-29fb8a56b5d5?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8c2FsbW9ufGVufDB8MHwwfHx8MA%3D%3D",
     },
   ],
   Bakery: [
@@ -79,6 +91,8 @@ const productsData = {
       slug: "white-bread",
       description: "Fresh white bread loaf",
       basePrice: 12000,
+      imageUrl:
+        "https://images.unsplash.com/photo-1592029780368-c1fff15bcfd5?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8d2hpdGUlMjBicmVhZHxlbnwwfDB8MHx8fDA%3D",
     },
   ],
   "Pantry Essentials": [
@@ -87,6 +101,8 @@ const productsData = {
       slug: "jasmine-rice-5kg",
       description: "Premium jasmine rice",
       basePrice: 65000,
+      imageUrl:
+        "https://images.unsplash.com/photo-1686820740687-426a7b9b2043?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8cmljZXxlbnwwfDB8MHx8fDA%3D",
     },
   ],
   Beverages: [
@@ -95,6 +111,8 @@ const productsData = {
       slug: "mineral-water-1-5l",
       description: "Natural mineral water",
       basePrice: 5000,
+      imageUrl:
+        "https://images.unsplash.com/photo-1612134678926-7592c521aa52?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8bWluZXJhbCUyMHdhdGVyfGVufDB8MHwwfHx8MA%3D%3D",
     },
   ],
   Snacks: [
@@ -103,6 +121,8 @@ const productsData = {
       slug: "potato-chips",
       description: "Crispy potato chips",
       basePrice: 12000,
+      imageUrl:
+        "https://images.unsplash.com/photo-1576642589592-7d9778a1c9e4?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8Y2hpcHN8ZW58MHwwfDB8fHww",
     },
   ],
 };
@@ -263,6 +283,13 @@ async function seedProducts(categories: any[]) {
           weight: 0,
           volume: 0,
           isActive: true,
+          images: {
+            create: [
+              {
+                imageUrl: productData.imageUrl,
+              },
+            ],
+          },
         },
       });
 
@@ -344,7 +371,9 @@ async function seedCarts(users: any[], products: any[], stores: any[]) {
 async function seedUserAddresses(users: any[]) {
   // Prefer user with id=4 for testing, fallback to first seeded user
   const user = users.find((u) => u.id === 4) ?? users[0];
-  console.log(`📫 Seeding user addresses for userId=${user?.id ?? "(none)"}...`);
+  console.log(
+    `📫 Seeding user addresses for userId=${user?.id ?? "(none)"}...`
+  );
   if (!user) {
     console.log("No users available to seed addresses");
     return;
@@ -402,8 +431,8 @@ async function seed() {
     await seedCarts(users, products, stores);
 
     const regularUsers = users.filter((user) => user.role === "USER");
-  // Seed specific user addresses for testing (userId = 1)
-  await seedUserAddresses(users);
+    // Seed specific user addresses for testing (userId = 1)
+    await seedUserAddresses(users);
 
     console.log("\n� Database seeding completed successfully!");
     console.log(`

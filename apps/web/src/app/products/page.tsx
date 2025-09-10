@@ -1,5 +1,5 @@
 "use client";
-import ProductList from "@/components/product/productList";
+import ProductList from "@/components/products/productList";
 
 export default function ProductsPage() {
   return (
