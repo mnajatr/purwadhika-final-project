@@ -1,16 +1,16 @@
-export type ProductResponse = {
-  id: string;
-  slug: string;
+export type CreateProduct = {
   name: string;
+  slug: string;
   description?: string;
   price: number;
-  category: { name: string };
+  categoryId: number;
   weight: number;
   width?: number;
   height?: number;
   length?: number;
-  inventories?: {
-    store?: { name: string };
-  }[];
   images?: { imageUrl: string }[];
+  inventories?: {
+    stockQty: number;
+    storeId: number;
+  }[];
 };

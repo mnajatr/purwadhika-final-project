@@ -18,12 +18,12 @@ export class ProductController {
     res.json(product);
   }
 
-  //   static async create(req: Request, res: Response) {
-  //     try {
-  //       const product = await service.create(req.body);
-  //       res.status(201).json(product);
-  //     } catch (e) {
-  //       res.status(400).json({ message: "Failed to create product" });
-  //     }
-  //   }
+  static async create(req: Request, res: Response) {
+    try {
+      const product = await service.createProduct(req.body);
+      res.status(201).json(product);
+    } catch (e) {
+      res.status(400).json({ message: "Failed to create product" });
+    }
+  }
 }
