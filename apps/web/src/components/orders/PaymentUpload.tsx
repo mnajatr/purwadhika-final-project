@@ -2,6 +2,8 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
+import type { OrderDetail } from "@/hooks/useOrder";
 
 type Props = {
   orderId: number;
@@ -10,6 +12,7 @@ type Props = {
 
 export default function PaymentUpload({ orderId, apiBase }: Props) {
   const router = useRouter();
+  const qc = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -44,23 +47,77 @@ export default function PaymentUpload({ orderId, apiBase }: Props) {
         setMessage(`Upload failed: ${res.status} ${txt}`);
       } else {
         const json = await res.json();
-        // successResponse wraps data in { success: true, data: ... }
-        const payload = json?.data ?? json;
-        const { proofUrl, orderStatus } = payload ?? {};
+
+        // API may return either { data: { ... } } or payload directly
+        type UploadResponseShape =
+          | {
+              proofUrl?: string;
+              order?: Partial<OrderDetail>;
+              orderStatus?: string;
+            }
+          | Partial<OrderDetail>;
+
+        const payload = (json?.data ?? json) as UploadResponseShape;
+        const proofUrl = (
+          payload as UploadResponseShape & Record<string, unknown>
+        )?.proofUrl as string | undefined;
+        const orderStatusFromPayload = (
+          payload as UploadResponseShape & Record<string, unknown>
+        )?.orderStatus as string | undefined;
 
         setMessage(
           proofUrl
-            ? `Upload berhasil. Status order: ${orderStatus}. Preview: ${proofUrl}`
+            ? `Upload berhasil. Status order: ${
+                orderStatusFromPayload ?? "updated"
+              }. Preview: ${proofUrl}`
             : "Upload berhasil. Mohon tunggu konfirmasi admin."
         );
         setFile(null);
 
-        // refresh the current route so server components (order page) re-fetch
-        // and reflect the updated order/payment status without manual refresh
+        // Try to update cached order so UI shows new status immediately.
         try {
-          router.refresh();
+          const returnedOrder =
+            (payload as { order?: Partial<OrderDetail> }).order ??
+            (payload as Partial<OrderDetail>);
+
+          if (returnedOrder && typeof returnedOrder === "object") {
+            // Normalize possible `orderStatus` -> `status` and merge with existing cached order
+            const normalizedOrder: Partial<OrderDetail> & {
+              orderStatus?: string;
+            } = {
+              ...returnedOrder,
+            } as Partial<OrderDetail> & { orderStatus?: string };
+
+            if (
+              "orderStatus" in normalizedOrder &&
+              !("status" in normalizedOrder)
+            ) {
+              (normalizedOrder as Record<string, unknown>).status = (
+                normalizedOrder as Record<string, unknown>
+              ).orderStatus as string;
+              delete (normalizedOrder as Record<string, unknown>).orderStatus;
+            }
+
+            qc.setQueryData<OrderDetail | undefined>(
+              ["order", orderId],
+              (prev) => {
+                // merge previous full order with partial update
+                return {
+                  ...(prev ?? {}),
+                  ...(normalizedOrder as Partial<OrderDetail>),
+                } as OrderDetail;
+              }
+            );
+          } else {
+            qc.invalidateQueries({ queryKey: ["order", orderId] });
+          }
         } catch {
-          // ignore: router.refresh may not be available in some test envs
+          // if anything fails, fallback to server revalidation
+          try {
+            router.refresh();
+          } catch {
+            // no-op
+          }
         }
       }
     } catch (err: unknown) {

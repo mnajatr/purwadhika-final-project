@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import type { Query } from "@tanstack/react-query";
 import { orderService } from "@/services/order.service";
 import type { ApiResponse } from "@/types/api";
 
@@ -84,7 +83,9 @@ export function useCreateOrder(userId: number, storeId?: number) {
         return !!obj && typeof obj === "object" && "data" in obj;
       }
 
-      const created: CreatedOrderShape = isWrapped(data) ? data.data : (data as CreatedOrderShape);
+      const created: CreatedOrderShape = isWrapped(data)
+        ? data.data
+        : (data as CreatedOrderShape);
 
       // determine resolved storeId from created order (backend selected store)
       const resolvedStoreId: number | undefined =
@@ -97,8 +98,14 @@ export function useCreateOrder(userId: number, storeId?: number) {
 
         if (createdItems.length > 0 && typeof resolvedStoreId === "number") {
           // read current cart from cache to find item ids to remove
-          type CartCache = { items?: Array<{ id: number; productId: number }> } | null;
-          const cartCache = qc.getQueryData<CartCache>(["cart", userId, resolvedStoreId]);
+          type CartCache = {
+            items?: Array<{ id: number; productId: number }>;
+          } | null;
+          const cartCache = qc.getQueryData<CartCache>([
+            "cart",
+            userId,
+            resolvedStoreId,
+          ]);
           const cartItems = cartCache?.items ?? [];
 
           const toRemove = cartItems.filter((ci) =>
@@ -116,7 +123,9 @@ export function useCreateOrder(userId: number, storeId?: number) {
           }
 
           qc.invalidateQueries({ queryKey: ["cart", userId, resolvedStoreId] });
-          qc.invalidateQueries({ queryKey: ["cart", "totals", userId, resolvedStoreId] });
+          qc.invalidateQueries({
+            queryKey: ["cart", "totals", userId, resolvedStoreId],
+          });
         }
       } catch (err) {
         console.warn("Failed to sync cart after order creation", err);
@@ -154,10 +163,6 @@ export default useCreateOrder;
 
 // Hook: get single order by id
 export function useGetOrder(id?: number | null) {
-  // Poll interval configuration (ms) for pending orders; can be overridden by
-  // NEXT_PUBLIC_ORDER_POLL_MS at build time.
-  const POLL_MS = Number(process.env.NEXT_PUBLIC_ORDER_POLL_MS ?? 2000);
-
   return useQuery<OrderDetail | null, Error>({
     queryKey: ["order", id],
     enabled: typeof id === "number" && !Number.isNaN(id),
@@ -172,12 +177,5 @@ export function useGetOrder(id?: number | null) {
     },
     // keep default staleTime behavior from provider; retry once on failure
     retry: 1,
-    // When an order is awaiting payment, poll periodically so the UI reflects
-    // backend-driven transitions (e.g., auto-cancel by a worker) without manual refresh.
-    refetchInterval: (query: Query<OrderDetail | null, Error>) => {
-      const latest = query.state.data as OrderDetail | null;
-      if (!latest) return false;
-      return latest.status === "PENDING_PAYMENT" ? POLL_MS : false;
-    },
   });
 }
