@@ -69,7 +69,48 @@ export class OrderService {
         });
       }
 
-      // TODO: rollback vouchers/coupons if your schema tracks them here
+      // Rollback vouchers/coupons if schema tracks them: attempt to find
+      // vouchers that were marked used by this user around the order creation
+      // time and mark them unused again. This is best-effort and scoped to a
+      // small time window to avoid affecting unrelated voucher usage.
+      try {
+        if (order.createdAt) {
+          const windowMs = 10 * 60 * 1000; // 10 minutes window
+          const from = new Date(order.createdAt.getTime() - windowMs);
+          const to = new Date(order.createdAt.getTime() + windowMs);
+
+          const usedVouchers = await tx.voucher.findMany({
+            where: {
+              userId: order.userId,
+              isUsed: true,
+              usedAt: { gte: from, lte: to },
+            },
+          });
+
+          if (usedVouchers.length > 0) {
+            await tx.voucher.updateMany({
+              where: { id: { in: usedVouchers.map((v) => v.id) } },
+              data: { isUsed: false, usedAt: null },
+            });
+            try {
+              logger.info(
+                `\[TX\] Rolled back ${usedVouchers.length} voucher(s) for order=${orderId}`
+              );
+            } catch (ee) {
+              // swallow logging errors
+            }
+          }
+        }
+      } catch (e) {
+        // swallow voucher rollback errors to avoid failing the whole TX for
+        // unexpected schema differences; log the error for later debugging.
+        try {
+          const loggerV = (await import("../utils/logger.js")).default;
+          loggerV.warn(`Voucher rollback skipped for order=${orderId}: %o`, e);
+        } catch (ee) {
+          // swallow
+        }
+      }
 
       const updated = await tx.order.update({
         where: { id: orderId },

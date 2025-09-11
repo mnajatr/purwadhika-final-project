@@ -23,6 +23,10 @@ export class OrderService {
     if (typeof addressId === "number") body.addressId = addressId;
     return apiClient.post<ApiResponse<unknown>>(this.base, body);
   }
+
+  async getOrder(id: number): Promise<ApiResponse<unknown>> {
+    return apiClient.get<ApiResponse<unknown>>(`${this.base}/${id}`);
+  }
 }
 
 export const orderService = new OrderService();

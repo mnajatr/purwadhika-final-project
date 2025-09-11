@@ -1,7 +1,32 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import type { Query } from "@tanstack/react-query";
 import { orderService } from "@/services/order.service";
+import type { ApiResponse } from "@/types/api";
+
+// Lightweight order shape used by client hooks
+export type OrderDetail = {
+  id: number;
+  status: string;
+  grandTotal?: number;
+  items: Array<{
+    id: number;
+    productId: number;
+    qty: number;
+    totalAmount?: number;
+    product?: { id: number; name?: string; price?: number } | null;
+  }>;
+  payment?: { status?: string; amount?: number } | null;
+  paymentMethod?: string | null;
+  address?: {
+    recipientName: string;
+    addressLine: string;
+    city: string;
+    province: string;
+    postalCode: string;
+  } | null;
+};
 import { cartService } from "@/services/cart.service";
 
 // Tiny UUIDv4 generator (no deps) for idempotency keys in the client
@@ -126,3 +151,33 @@ export function useCreateOrder(userId: number, storeId?: number) {
 }
 
 export default useCreateOrder;
+
+// Hook: get single order by id
+export function useGetOrder(id?: number | null) {
+  // Poll interval configuration (ms) for pending orders; can be overridden by
+  // NEXT_PUBLIC_ORDER_POLL_MS at build time.
+  const POLL_MS = Number(process.env.NEXT_PUBLIC_ORDER_POLL_MS ?? 2000);
+
+  return useQuery<OrderDetail | null, Error>({
+    queryKey: ["order", id],
+    enabled: typeof id === "number" && !Number.isNaN(id),
+    queryFn: async () => {
+      if (typeof id !== "number" || Number.isNaN(id)) {
+        throw new Error("Invalid order id");
+      }
+      const raw = await orderService.getOrder(id);
+      const res = raw as ApiResponse<OrderDetail>;
+      // normalized payload under .data per API convention
+      return (res && (res.data ?? null)) as OrderDetail | null;
+    },
+    // keep default staleTime behavior from provider; retry once on failure
+    retry: 1,
+    // When an order is awaiting payment, poll periodically so the UI reflects
+    // backend-driven transitions (e.g., auto-cancel by a worker) without manual refresh.
+    refetchInterval: (query: Query<OrderDetail | null, Error>) => {
+      const latest = query.state.data as OrderDetail | null;
+      if (!latest) return false;
+      return latest.status === "PENDING_PAYMENT" ? POLL_MS : false;
+    },
+  });
+}
