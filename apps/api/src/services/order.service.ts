@@ -93,7 +93,9 @@ export class OrderService {
               data: { isUsed: false, usedAt: null },
             });
             try {
-              logger.info(`\[TX\] Rolled back ${usedVouchers.length} voucher(s) for order=${orderId}`);
+              logger.info(
+                `\[TX\] Rolled back ${usedVouchers.length} voucher(s) for order=${orderId}`
+              );
             } catch (ee) {
               // swallow logging errors
             }

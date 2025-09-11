@@ -34,7 +34,7 @@ const worker = new Worker<CancelOrderJobData>(
           return { skipped: true };
         }
 
-  logger.info(`[TX] Restoring stock for ${order.items.length} items...`);
+        logger.info(`[TX] Restoring stock for ${order.items.length} items...`);
         for (const item of order.items) {
           logger.info(
             `[TX] Restoring productId=${item.productId}, qty=${item.qty}`
@@ -85,7 +85,9 @@ const worker = new Worker<CancelOrderJobData>(
                 where: { id: { in: usedVouchers.map((v) => v.id) } },
                 data: { isUsed: false, usedAt: null },
               });
-              logger.info(`[TX] Rolled back ${usedVouchers.length} voucher(s) for order=${orderId}`);
+              logger.info(
+                `[TX] Rolled back ${usedVouchers.length} voucher(s) for order=${orderId}`
+              );
             }
           }
         } catch (e) {
