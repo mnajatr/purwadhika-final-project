@@ -34,7 +34,7 @@ const worker = new Worker<CancelOrderJobData>(
           return { skipped: true };
         }
 
-        logger.info(`[TX] Restoring stock for ${order.items.length} items...`);
+  logger.info(`[TX] Restoring stock for ${order.items.length} items...`);
         for (const item of order.items) {
           logger.info(
             `[TX] Restoring productId=${item.productId}, qty=${item.qty}`
@@ -60,6 +60,42 @@ const worker = new Worker<CancelOrderJobData>(
           logger.info(
             `[TX] Stock journal created for productId=${item.productId}`
           );
+        }
+
+        // Best-effort voucher rollback: try to find vouchers used by this user
+        // around the order creation time and mark them unused again. This is
+        // best-effort and should not abort the cancel TX if voucher table
+        // is missing or query fails.
+        try {
+          if (order.createdAt) {
+            const windowMs = 10 * 60 * 1000; // 10 minutes window
+            const from = new Date(order.createdAt.getTime() - windowMs);
+            const to = new Date(order.createdAt.getTime() + windowMs);
+
+            const usedVouchers = await tx.voucher.findMany({
+              where: {
+                userId: order.userId,
+                isUsed: true,
+                usedAt: { gte: from, lte: to },
+              },
+            });
+
+            if (usedVouchers.length > 0) {
+              await tx.voucher.updateMany({
+                where: { id: { in: usedVouchers.map((v) => v.id) } },
+                data: { isUsed: false, usedAt: null },
+              });
+              logger.info(`[TX] Rolled back ${usedVouchers.length} voucher(s) for order=${orderId}`);
+            }
+          }
+        } catch (e) {
+          // swallow voucher rollback errors to avoid failing the whole TX for
+          // unexpected schema differences; log the error for later debugging.
+          try {
+            logger.warn(`Voucher rollback skipped for order=${orderId}: %o`, e);
+          } catch (ee) {
+            // swallow
+          }
         }
 
         logger.info(`[TX] Updating order ${orderId} status to CANCELLED...`);

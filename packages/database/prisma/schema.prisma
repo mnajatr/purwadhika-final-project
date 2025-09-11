@@ -22,7 +22,7 @@ enum UserRole {
 }
 
 enum OrderStatus {
-  PENDING_PAYMENT // Menunggu Pembayaran
+  PENDING_PAYMENT // aMenunggu Pembayaran
   PAYMENT_REVIEW // Menunggu Konfirmasi Pembayaran
   PROCESSING // Diproses
   SHIPPED // Dikirim
@@ -188,7 +188,9 @@ model Product {
   description String?
   price       Decimal
   weight      Int
-  volume      Int
+  width       Int?
+  height      Int?
+  length      Int?
   isActive    Boolean         @default(true)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
@@ -256,12 +258,16 @@ model Discount {
   minPurchase Int?
   maxDiscount Int?
   expiredAt   DateTime
+
+  vouchers Voucher[]
 }
 
 model Voucher {
   id     Int       @id @default(autoincrement())
   user   User      @relation(fields: [userId], references: [id])
   userId Int
+  discount Discount @relation(fields: [discountId], references: [id])
+  discountId Int
   isUsed Boolean   @default(false)
   usedAt DateTime?
 }
