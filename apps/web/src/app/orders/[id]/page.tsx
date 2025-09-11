@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+// ...existing imports
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -9,7 +10,34 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft } from "lucide-react";
 import PaymentUpload from "@/components/orders/PaymentUpload";
-import { useGetOrder, OrderDetail } from "@/hooks/useOrder";
+import { useGetOrder, OrderDetail, useCancelOrder } from "@/hooks/useOrder";
+
+function CancelButton({ orderId, userId }: { orderId: number; userId?: number }) {
+  const cancel = useCancelOrder();
+  const [loading, setLoading] = React.useState(false);
+  const [errMsg, setErrMsg] = React.useState<string | null>(null);
+
+  const handle = async () => {
+    setErrMsg(null);
+    setLoading(true);
+    try {
+      await cancel.mutateAsync({ orderId, userId });
+    } catch (e) {
+      setErrMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <Button onClick={handle} disabled={loading} variant="destructive">
+        {loading ? "Cancelling..." : "Cancel Order"}
+      </Button>
+      {errMsg && <div className="text-sm text-red-600 mt-2">{errMsg}</div>}
+    </div>
+  );
+}
 
 interface OrderPageProps {
   params: { id: string };
@@ -264,8 +292,9 @@ export default function OrderPage({ params }: OrderPageProps) {
               (order.payment?.status === undefined ||
                 order.payment?.status === "PENDING") &&
               order.paymentMethod === "MANUAL_TRANSFER" && (
-                <div className="mt-4">
+                <div className="mt-4 space-y-3">
                   <PaymentUpload orderId={order.id} apiBase={apiBase} />
+                  <CancelButton orderId={order.id} userId={(order as { userId?: number }).userId} />
                 </div>
               )}
           </CardContent>

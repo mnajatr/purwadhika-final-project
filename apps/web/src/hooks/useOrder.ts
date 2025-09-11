@@ -179,3 +179,33 @@ export function useGetOrder(id?: number | null) {
     retry: 1,
   });
 }
+
+// Hook: cancel an order (manual cancel)
+export function useCancelOrder() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (opts: { orderId: number; userId?: number }) => {
+      const { orderId, userId } = opts;
+      const res = await orderService.cancelOrder(orderId, userId);
+      return res.data;
+    },
+    onSuccess: (_data, vars) => {
+      const orderId = (vars as { orderId: number }).orderId;
+      try {
+        // update cache immediately so UI reflects cancellation without waiting
+        qc.setQueryData<OrderDetail | null>(["order", orderId], (prev) =>
+          prev ? { ...prev, status: "CANCELLED" } : ({ id: orderId, status: "CANCELLED", items: [] } as OrderDetail)
+        );
+      } catch (err) {
+        console.warn("Failed to set order cache after cancel", err);
+      }
+
+      try {
+        qc.invalidateQueries({ queryKey: ["order", orderId] });
+      } catch (err) {
+        console.warn("Failed to invalidate order cache", err);
+      }
+    },
+  });
+}
