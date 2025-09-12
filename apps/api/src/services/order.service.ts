@@ -30,6 +30,84 @@ const IDEMPOTENCY_TTL_MS = 60 * 1000; // keep resolved results for 60s
 const idempotencyStore = new Map<string, IdempotencyEntry>();
 
 export class OrderService {
+  // Admin/worker: mark order as shipped and schedule auto-confirm job
+  async shipOrder(orderId: number, actorUserId?: number) {
+    const logger = (await import("../utils/logger.js")).default;
+    const allowedPrev = ["PAYMENT_REVIEW", "PROCESSING"];
+
+    const result = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order) throw new Error("Order not found");
+
+      if (!allowedPrev.includes(order.status))
+        throw new Error(`Cannot ship order: current status is ${order.status}`);
+
+      const updated = await tx.order.update({
+        where: { id: orderId },
+        data: { status: "SHIPPED" },
+      });
+
+      return updated;
+    });
+
+    // Enqueue confirm job with delay (default 48 hours)
+    try {
+      const { orderConfirmQueue } = await import("../queues/orderConfirmQueue.js");
+      const DELAY_MS = Number(process.env.ORDER_CONFIRM_DELAY_MS) || 48 * 60 * 60 * 1000;
+      await orderConfirmQueue.add(
+        "confirm-order",
+        { orderId },
+        { jobId: String(orderId), delay: DELAY_MS }
+      );
+    } catch (e) {
+      try {
+        logger.error(`Failed to enqueue confirm job for order=${orderId}: %o`, e);
+      } catch (ee) {
+        // swallow
+      }
+    }
+
+    logger.info(`Order ${orderId} marked SHIPPED by user=${actorUserId ?? 'system'}`);
+    return result;
+  }
+  // Manual confirmation: only owner may confirm receipt when status is SHIPPED
+  async confirmOrder(orderId: number, requesterUserId?: number) {
+    const logger = (await import("../utils/logger.js")).default;
+
+    const result = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order) throw new Error("Order not found");
+
+      // If requesterUserId provided, enforce ownership in production
+      if (requesterUserId && order.userId !== requesterUserId)
+        throw new Error("Cannot confirm: not order owner");
+
+      if (order.status !== "SHIPPED")
+        throw new Error(`Cannot confirm order: current status is ${order.status}`);
+
+      const updated = await tx.order.update({
+        where: { id: orderId },
+        data: { status: "CONFIRMED" },
+      });
+      return updated;
+    });
+
+    // If there was a scheduled confirm job, remove it
+    try {
+      const { orderConfirmQueue } = await import("../queues/orderConfirmQueue.js");
+      const job = await orderConfirmQueue.getJob(String(orderId));
+      if (job) await job.remove();
+    } catch (e) {
+      try {
+        logger.error(`Failed to remove confirm job for order=${orderId}: %o`, e);
+      } catch (ee) {
+        // swallow
+      }
+    }
+
+    logger.info(`Order ${orderId} confirmed by user=${requesterUserId ?? 'system'}`);
+    return result;
+  }
   // Manual cancellation endpoint: only owner may cancel and only when still pending payment.
   async cancelOrder(orderId: number, requesterUserId: number) {
     // Re-validate and perform rollback inside a transaction
@@ -475,6 +553,100 @@ export class OrderService {
 
   // ...existing methods above are preserved
 
+  // List orders with optional filters (userId, status, q (order id), dateFrom/dateTo, pagination)
+  async listOrders(opts: {
+    userId?: number;
+    status?: string;
+    q?: string | number;
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const {
+      userId,
+      status,
+      q,
+      dateFrom,
+      dateTo,
+      page = 1,
+      pageSize = 20,
+    } = opts || {};
+
+    const where: any = {};
+
+    // Filter by userId if provided
+    if (typeof userId === "number") where.userId = userId;
+
+    // Filter by status if provided
+    if (status && status.trim() !== "") where.status = status.trim();
+
+    // Filter by order ID or search in order items if provided
+    if (q) {
+      const qTrimmed = String(q).trim();
+      const qn = Number(qTrimmed);
+
+      if (!Number.isNaN(qn) && qn > 0) {
+        // If it's a valid number, search by order ID
+        where.id = qn;
+      } else if (qTrimmed !== "") {
+        // If it's text, search in product names within order items
+        where.items = {
+          some: {
+            product: {
+              name: {
+                contains: qTrimmed,
+                mode: "insensitive",
+              },
+            },
+          },
+        };
+      }
+    }
+
+    // Filter by date range if provided
+    if (dateFrom || dateTo) {
+      where.createdAt = {};
+      if (dateFrom) {
+        try {
+          where.createdAt.gte = new Date(dateFrom);
+        } catch (e) {
+          // ignore invalid dateFrom
+        }
+      }
+      if (dateTo) {
+        try {
+          where.createdAt.lte = new Date(dateTo);
+        } catch (e) {
+          // ignore invalid dateTo
+        }
+      }
+    }
+
+    const take = Math.min(100, Math.max(1, pageSize));
+    const skip = Math.max(0, (Math.max(1, page) - 1) * take);
+
+    const [items, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        include: {
+          items: {
+            include: {
+              product: { select: { id: true, name: true, price: true } },
+            },
+          },
+          payment: true,
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+      }),
+      prisma.order.count({ where }),
+    ]);
+
+    return { items, total, page, pageSize: take };
+  }
+
   async uploadPaymentProof(
     orderId: number,
     fileBuffer: Buffer | Uint8Array,
@@ -581,5 +753,37 @@ export class OrderService {
       payment: paymentRecord,
       orderStatus: updatedOrder.status,
     };
+  }
+
+  async getOrderCountsByStatus(userId: number) {
+    const logger = (await import("../utils/logger.js")).default;
+    logger.info(`Getting order counts by status for userId: ${userId}`);
+
+    // Get all orders for the user
+    const orders = await prisma.order.findMany({
+      where: { userId },
+      select: { status: true },
+    });
+
+    // Count by status
+    const counts: Record<string, number> = {
+      ALL: orders.length,
+      PENDING_PAYMENT: 0,
+      PAYMENT_REVIEW: 0,
+      PROCESSING: 0,
+      SHIPPED: 0,
+      CONFIRMED: 0,
+      CANCELLED: 0,
+    };
+
+    // Count each status
+    for (const order of orders) {
+      if (counts[order.status] !== undefined) {
+        counts[order.status]++;
+      }
+    }
+
+    logger.info(`Order counts calculated:`, counts);
+    return counts;
   }
 }

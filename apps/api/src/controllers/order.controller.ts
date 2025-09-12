@@ -42,6 +42,46 @@ function pickUserId(req: Request): number | undefined {
 export class OrderController {
   private service = new OrderService();
 
+  // GET /orders - list with filters
+  listOrders = async (req: Request, res: Response) => {
+    try {
+      const userId = pickUserId(req);
+      const status = req.query.status as string | undefined;
+      const q = req.query.q as string | undefined;
+      const dateFrom = req.query.dateFrom as string | undefined;
+      const dateTo = req.query.dateTo as string | undefined;
+      const page = Number(req.query.page ?? 1);
+      const pageSize = Number(req.query.pageSize ?? 20);
+
+      // Log the received parameters for debugging
+      console.log("Order list filters:", {
+        userId,
+        status,
+        q,
+        dateFrom,
+        dateTo,
+        page,
+        pageSize,
+      });
+
+      const result = await this.service.listOrders({
+        userId,
+        status,
+        q,
+        dateFrom,
+        dateTo,
+        page,
+        pageSize,
+      });
+
+      return res.status(200).json(successResponse(result));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("Error listing orders:", msg);
+      return res.status(500).json(errorResponse("Failed to list orders", msg));
+    }
+  };
+
   createOrder = async (req: Request, res: Response) => {
     try {
       const userId = pickUserId(req);
@@ -209,6 +249,71 @@ export class OrderController {
         return res.status(409).json(errorResponse("Cannot cancel order", msg));
       }
       return res.status(500).json(errorResponse("Failed to cancel order", msg));
+    }
+  };
+
+  confirmOrder = async (req: Request, res: Response) => {
+    try {
+      const id = Number(req.params.id);
+      if (!id) return res.status(400).json(errorResponse("Invalid order id"));
+
+      const userId = pickUserId(req);
+      if (!userId)
+        return res.status(400).json(errorResponse("Missing userId in request"));
+
+      const result = await this.service.confirmOrder(id, userId);
+      return res.status(200).json(successResponse(result, "Order confirmed"));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("not found"))
+        return res.status(404).json(errorResponse("Order not found", msg));
+      if (msg.includes("Cannot confirm") || msg.includes("already"))
+        return res.status(409).json(errorResponse("Cannot confirm order", msg));
+      return res.status(500).json(errorResponse("Failed to confirm order", msg));
+    }
+  };
+
+  shipOrder = async (req: Request, res: Response) => {
+    try {
+      const id = Number(req.params.id);
+      if (!id) return res.status(400).json(errorResponse("Invalid order id"));
+
+      const userId = pickUserId(req);
+      // allow worker/admin calls without userId in dev but prefer one when present
+      const result = await this.service.shipOrder(id, userId);
+      return res.status(200).json(successResponse(result, "Order shipped"));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("not found"))
+        return res.status(404).json(errorResponse("Order not found", msg));
+      if (msg.includes("Cannot ship") || msg.includes("already"))
+        return res.status(409).json(errorResponse("Cannot ship order", msg));
+      return res.status(500).json(errorResponse("Failed to ship order", msg));
+    }
+  };
+
+  getOrderCounts = async (req: Request, res: Response) => {
+    try {
+      const userId = pickUserId(req);
+      if (!userId)
+        return res.status(400).json(errorResponse("Missing userId in request"));
+
+      console.log("Getting order counts for userId:", userId);
+
+      // Get counts for each status
+      const counts = await this.service.getOrderCountsByStatus(userId);
+
+      console.log("Order counts:", counts);
+
+      return res
+        .status(200)
+        .json(successResponse(counts, "Order counts retrieved"));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("Error getting order counts:", msg);
+      return res
+        .status(500)
+        .json(errorResponse("Failed to get order counts", msg));
     }
   };
 }
