@@ -28,16 +28,15 @@ export class OrderService {
     return apiClient.get<ApiResponse<unknown>>(`${this.base}/${id}`);
   }
 
-  async list(
-    params?: {
-      q?: string | number;
-      status?: string;
-      dateFrom?: string;
-      dateTo?: string;
-      page?: number;
-      pageSize?: number;
-    }
-  ): Promise<ApiResponse<unknown>> {
+  async list(params?: {
+    q?: string | number;
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<ApiResponse<unknown>> {
+    console.log('OrderService.list called with params:', params);
     return apiClient.get<ApiResponse<unknown>>(this.base, { params });
   }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { orderService } from "@/services/order.service";
 import type { ApiResponse } from "@/types/api";
@@ -222,24 +223,48 @@ export type OrdersFilter = {
 
 // Hook: list orders with simple filters
 export function useGetOrders(filters?: OrdersFilter, extraKey?: number) {
+  const queryKey = React.useMemo(() => {
+    return ["orders", filters?.q || null, filters?.status || null, filters?.date || null, extraKey || 0];
+  }, [filters?.q, filters?.status, filters?.date, extraKey]);
+
   return useQuery<Array<OrderDetail>, Error>({
-    queryKey: ["orders", filters ?? {}, extraKey ?? 0] as const,
+    queryKey,
     queryFn: async () => {
       const params: Record<string, unknown> = {};
       if (filters?.q) params.q = filters.q;
       if (filters?.status) params.status = filters.status;
       if (filters?.date) {
-        params.dateFrom = filters.date;
-        params.dateTo = filters.date;
+        // For date filtering, set dateFrom to start of day and dateTo to end of day
+        const selectedDate = new Date(filters.date);
+        const dateFrom = new Date(selectedDate);
+        dateFrom.setHours(0, 0, 0, 0);
+        
+        const dateTo = new Date(selectedDate);
+        dateTo.setHours(23, 59, 59, 999);
+        
+        params.dateFrom = dateFrom.toISOString();
+        params.dateTo = dateTo.toISOString();
       }
+      
+      // Debug logging
+      console.log('Order filter params:', params);
+      console.log('Query key:', queryKey);
+      
       const res = await orderService.list(params);
-  const maybeBody = (res as ApiResponse<unknown>) || null;
-  const payloadCandidate = maybeBody?.data ?? (res as unknown);
-  const payloadObj = payloadCandidate as { items?: Array<OrderDetail> } | Array<OrderDetail> | null;
-  if (!payloadObj) return [];
-  if (Array.isArray(payloadObj)) return payloadObj;
-  return payloadObj.items ?? [];
+      console.log('Order service response:', res);
+      
+      const maybeBody = (res as ApiResponse<unknown>) || null;
+      const payloadCandidate = maybeBody?.data ?? (res as unknown);
+      const payloadObj = payloadCandidate as
+        | { items?: Array<OrderDetail> }
+        | Array<OrderDetail>
+        | null;
+      if (!payloadObj) return [];
+      if (Array.isArray(payloadObj)) return payloadObj;
+      return payloadObj.items ?? [];
     },
     retry: 1,
+    staleTime: 0, // Always refetch when query key changes
+    gcTime: 0, // Don't cache results
   });
 }

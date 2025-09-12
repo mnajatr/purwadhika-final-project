@@ -496,16 +496,53 @@ export class OrderService {
     } = opts || {};
 
     const where: any = {};
+    
+    // Filter by userId if provided
     if (typeof userId === "number") where.userId = userId;
-    if (status) where.status = status;
+    
+    // Filter by status if provided
+    if (status && status.trim() !== '') where.status = status.trim();
+    
+    // Filter by order ID or search in order items if provided
     if (q) {
-      const qn = Number(q);
-      if (!Number.isNaN(qn) && qn > 0) where.id = qn;
+      const qTrimmed = String(q).trim();
+      const qn = Number(qTrimmed);
+      
+      if (!Number.isNaN(qn) && qn > 0) {
+        // If it's a valid number, search by order ID
+        where.id = qn;
+      } else if (qTrimmed !== '') {
+        // If it's text, search in product names within order items
+        where.items = {
+          some: {
+            product: {
+              name: {
+                contains: qTrimmed,
+                mode: 'insensitive'
+              }
+            }
+          }
+        };
+      }
     }
+    
+    // Filter by date range if provided
     if (dateFrom || dateTo) {
       where.createdAt = {};
-      if (dateFrom) where.createdAt.gte = new Date(dateFrom);
-      if (dateTo) where.createdAt.lte = new Date(dateTo);
+      if (dateFrom) {
+        try {
+          where.createdAt.gte = new Date(dateFrom);
+        } catch (e) {
+          // ignore invalid dateFrom
+        }
+      }
+      if (dateTo) {
+        try {
+          where.createdAt.lte = new Date(dateTo);
+        } catch (e) {
+          // ignore invalid dateTo
+        }
+      }
     }
 
     const take = Math.min(100, Math.max(1, pageSize));
@@ -514,7 +551,14 @@ export class OrderService {
     const [items, total] = await Promise.all([
       prisma.order.findMany({
         where,
-        include: { items: { include: { product: { select: { id: true, name: true, price: true } } } }, payment: true },
+        include: {
+          items: {
+            include: {
+              product: { select: { id: true, name: true, price: true } },
+            },
+          },
+          payment: true,
+        },
         orderBy: { createdAt: "desc" },
         skip,
         take,
@@ -631,5 +675,37 @@ export class OrderService {
       payment: paymentRecord,
       orderStatus: updatedOrder.status,
     };
+  }
+
+  async getOrderCountsByStatus(userId: number) {
+    const logger = (await import("../utils/logger.js")).default;
+    logger.info(`Getting order counts by status for userId: ${userId}`);
+
+    // Get all orders for the user
+    const orders = await prisma.order.findMany({
+      where: { userId },
+      select: { status: true },
+    });
+
+    // Count by status
+    const counts: Record<string, number> = {
+      ALL: orders.length,
+      PENDING_PAYMENT: 0,
+      PAYMENT_REVIEW: 0,
+      PROCESSING: 0,
+      SHIPPED: 0,
+      CONFIRMED: 0,
+      CANCELLED: 0,
+    };
+
+    // Count each status
+    for (const order of orders) {
+      if (counts[order.status] !== undefined) {
+        counts[order.status]++;
+      }
+    }
+
+    logger.info(`Order counts calculated:`, counts);
+    return counts;
   }
 }

@@ -23,11 +23,25 @@ class ApiClient {
       withCredentials: true,
     });
 
+    // Add development user ID for testing
+    this.client.interceptors.request.use((config) => {
+      // Add devUserId header for development testing
+      if (process.env.NODE_ENV !== "production") {
+        config.headers["x-dev-user-id"] = "4"; // Default test user ID
+      }
+      console.log('API Request:', config.method?.toUpperCase(), config.url, config.params);
+      return config;
+    });
+
     // Normalize errors in one place so callers get Error.message and can access the Axios response
     // via the ApiError.response property when available.
     this.client.interceptors.response.use(
-      (resp: AxiosResponse) => resp,
+      (resp: AxiosResponse) => {
+        console.log('API Response:', resp.status, resp.config.url, resp.data);
+        return resp;
+      },
       (error: AxiosError) => {
+        console.error('API Error:', error.response?.status, error.config?.url, error.response?.data);
         const responseData = error.response?.data;
         let message = error.message ?? "Request failed";
         if (

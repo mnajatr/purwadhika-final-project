@@ -17,6 +17,9 @@ router.post("/", ...maybeAuth, controller.createOrder);
 // GET /orders - list orders with optional filters
 router.get("/", ...maybeAuth, controller.listOrders);
 
+// GET /orders/counts - get order counts by status
+router.get("/counts", ...maybeAuth, controller.getOrderCounts);
+
 // POST /orders/:id/payment-proof - upload single file field 'proof'
 router.post(
   "/:id/payment-proof",

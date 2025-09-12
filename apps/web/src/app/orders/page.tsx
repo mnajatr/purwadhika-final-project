@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useGetOrders, OrderDetail, OrdersFilter } from "../../hooks/useOrder";
 import {
   Card,
   CardHeader,
@@ -11,23 +10,130 @@ import {
 } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 
+interface Order {
+  id: number;
+  status: string;
+  invoiceId: string;
+  createdAt: string;
+  total: number;
+  grandTotal?: number;
+  items?: { id: number; quantity: number }[];
+  orderDetails?: {
+    quantity: number;
+    product: {
+      name: string;
+    };
+  }[];
+}
+
+// Simple fetch function
+async function fetchOrders(filters: { status?: string; q?: string; date?: string } = {}) {
+  const params = new URLSearchParams();
+  if (filters.status) params.append("status", filters.status);
+  if (filters.q) params.append("q", filters.q);
+  if (filters.date) {
+    const selectedDate = new Date(filters.date);
+    const dateFrom = new Date(selectedDate);
+    dateFrom.setHours(0, 0, 0, 0);
+    
+    const dateTo = new Date(selectedDate);
+    dateTo.setHours(23, 59, 59, 999);
+    
+    params.append("dateFrom", dateFrom.toISOString());
+    params.append("dateTo", dateTo.toISOString());
+  }
+  
+  const url = `http://localhost:8000/api/orders?${params.toString()}`;
+  console.log('Fetching orders from:', url);
+  
+  const response = await fetch(url, {
+    headers: {
+      "x-dev-user-id": "4",
+      "Content-Type": "application/json"
+    }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  
+  const data = await response.json();
+  console.log('API Response:', data);
+  
+  if (data.success && data.data) {
+    return data.data.items || [];
+  }
+  
+  return [];
+}
+
+// Fetch counts function
+async function fetchOrderCounts() {
+  const url = `http://localhost:8000/api/orders/counts`;
+  console.log('Fetching counts from:', url);
+  
+  const response = await fetch(url, {
+    headers: {
+      "x-dev-user-id": "4",
+      "Content-Type": "application/json"
+    }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  
+  const data = await response.json();
+  console.log('Counts response:', data);
+  return data.data || {};
+}
+
 export default function OrdersPage() {
+  const [orders, setOrders] = React.useState<Order[]>([]);
+  const [counts, setCounts] = React.useState<Record<string, number>>({});
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  
   const [q, setQ] = React.useState<string | null>(null);
   const [date, setDate] = React.useState<string | null>(null);
-  const [status, setStatus] = React.useState<string | null>("PENDING_PAYMENT");
-  // searchToken allows explicit refetch when user hits Enter
-  const [searchToken, setSearchToken] = React.useState(0);
+  const [status, setStatus] = React.useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = React.useState(0);
+  
+  const [searchTimeoutId, setSearchTimeoutId] = React.useState<NodeJS.Timeout | null>(null);
 
-  // pass undefined instead of null/empty to omit params from request
-  const filters: OrdersFilter = {
-    q: q && q.length > 0 ? q : undefined,
-    date: date && date.length > 0 ? date : undefined,
-    status: status && status.length > 0 ? status : undefined,
-  };
-
-  const { data: orders, isLoading, error } = useGetOrders(filters, searchToken);
-  // fetch unfiltered list to compute counters per status (client-side counts)
-  const { data: allOrders } = useGetOrders(undefined, /* extraKey: */ 0);
+  // Load orders when filters change
+  React.useEffect(() => {
+    const loadData = async () => {
+      console.log('🔄 Loading data with filters:', { status, q, date, refreshKey });
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const filters: Record<string, string> = {};
+        if (status) filters.status = status;
+        if (q) filters.q = q;
+        if (date) filters.date = date;
+        
+        console.log('📡 Fetching orders and counts...');
+        const [ordersData, countsData] = await Promise.all([
+          fetchOrders(filters),
+          fetchOrderCounts()
+        ]);
+        
+        console.log('✅ Orders loaded:', ordersData.length, 'orders');
+        console.log('✅ Counts loaded:', countsData);
+        setOrders(ordersData);
+        setCounts(countsData);
+      } catch (err) {
+        console.error('❌ Error loading orders:', err);
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [status, q, date, refreshKey]);
 
   const statusColor: Record<string, string> = {
     PENDING_PAYMENT: "bg-yellow-100 text-yellow-800",
@@ -37,28 +143,28 @@ export default function OrdersPage() {
     CONFIRMED: "bg-blue-100 text-blue-800",
     CANCELLED: "bg-red-100 text-red-800",
   };
+  
   const statuses = React.useMemo(
     () => [
-      "PENDING_PAYMENT",
-      "PAYMENT_REVIEW",
-      "PROCESSING",
-      "SHIPPED",
-      "CONFIRMED",
-      "CANCELLED",
+      { key: null, label: "ALL" },
+      { key: "PENDING_PAYMENT", label: "PENDING PAYMENT" },
+      { key: "PAYMENT_REVIEW", label: "PAYMENT REVIEW" },
+      { key: "PROCESSING", label: "PROCESSING" },
+      { key: "SHIPPED", label: "SHIPPED" },
+      { key: "CONFIRMED", label: "CONFIRMED" },
+      { key: "CANCELLED", label: "CANCELLED" },
     ],
     []
   );
 
-  const counts = React.useMemo(() => {
-    const map: Record<string, number> = {};
-    statuses.forEach((s) => (map[s] = 0));
-    if (!allOrders) return map;
-    for (const o of allOrders) {
-      const st = o?.status ?? "";
-      if (map[st] !== undefined) map[st] = map[st] + 1;
-    }
-    return map;
-  }, [allOrders, statuses]);
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (searchTimeoutId) {
+        clearTimeout(searchTimeoutId);
+      }
+    };
+  }, [searchTimeoutId]);
 
   if (isLoading) {
     return (
@@ -77,7 +183,7 @@ export default function OrdersPage() {
     return (
       <div className="max-w-5xl mx-auto p-6 text-center">
         <div className="text-xl font-semibold text-red-600">
-          {error.message}
+          {error}
         </div>
         <p className="text-sm text-muted-foreground">Failed to load orders.</p>
       </div>
@@ -103,13 +209,33 @@ export default function OrdersPage() {
         <div className="flex-1">
           <input
             value={q ?? ""}
-            placeholder="Search by Order ID"
+            placeholder="Search by Order ID or Product Name"
             className="w-full border rounded-lg px-4 py-3 text-sm"
-            onChange={(e) => setQ(e.target.value ? e.target.value : null)}
+            onChange={(e) => {
+              const value = e.target.value ? e.target.value : null;
+              console.log('🔍 Search input changed:', value);
+              setQ(value);
+              
+              // Clear existing timeout
+              if (searchTimeoutId) {
+                clearTimeout(searchTimeoutId);
+              }
+              
+              // Set new timeout for debounced search
+              const newTimeoutId = setTimeout(() => {
+                console.log('⏰ Debounced search triggered for:', value);
+                setRefreshKey(prev => prev + 1);
+              }, 500);
+              setSearchTimeoutId(newTimeoutId);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                // bump token to force refetch in case query key didn't change
-                setSearchToken((s) => s + 1);
+                // Clear timeout and immediately trigger search
+                if (searchTimeoutId) {
+                  clearTimeout(searchTimeoutId);
+                  setSearchTimeoutId(null);
+                }
+                setRefreshKey(prev => prev + 1);
               }
             }}
           />
@@ -119,7 +245,12 @@ export default function OrdersPage() {
             type="date"
             value={date ?? ""}
             className="border rounded-lg px-3 py-2 text-sm"
-            onChange={(e) => setDate(e.target.value ? e.target.value : null)}
+            onChange={(e) => {
+              const value = e.target.value ? e.target.value : null;
+              setDate(value);
+              // Auto-trigger search when date changes
+              setRefreshKey(prev => prev + 1);
+            }}
           />
         </div>
       </div>
@@ -127,11 +258,18 @@ export default function OrdersPage() {
       <div className="bg-muted/40 rounded-lg p-2 mb-4 overflow-auto">
         <div className="flex gap-2">
           {statuses.map((s) => {
-            const active = status === s;
+            const active = status === s.key;
+            const countKey = s.key || "ALL";
             return (
               <button
-                key={s}
-                onClick={() => setStatus(s)}
+                key={s.key || "all"}
+                onClick={() => {
+                  console.log('🔘 Status button clicked:', s.key);
+                  console.log('🔄 Setting status from', status, 'to', s.key);
+                  setStatus(s.key);
+                  // Force refetch immediately
+                  setRefreshKey(prev => prev + 1);
+                }}
                 className={`px-4 py-2 rounded-md text-sm flex items-center gap-2 transition-colors ${
                   active
                     ? "bg-white shadow-md text-slate-900 border-b-2 border-primary"
@@ -139,10 +277,10 @@ export default function OrdersPage() {
                 }`}
               >
                 <span className="whitespace-nowrap">
-                  {s.replace(/_/g, " ")}
+                  {s.label}
                 </span>
                 <span className="ml-1 inline-flex items-center justify-center min-w-[26px] px-2 py-0.5 text-xs font-medium rounded-full bg-muted text-muted-foreground">
-                  {counts[s] ?? 0}
+                  {counts[countKey] ?? 0}
                 </span>
               </button>
             );
@@ -151,13 +289,13 @@ export default function OrdersPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-  {orders.map((o: OrderDetail & { createdAt?: string | Date | null }) => (
+        {orders.map((o: Order) => (
           <Card key={o.id}>
             <CardHeader className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-sm">Order #{o.id}</CardTitle>
                 <div className="text-xs text-muted-foreground">
-                  {o.items.length} item{o.items.length !== 1 ? "s" : ""}
+                  {o.items?.length || 0} item{(o.items?.length || 0) !== 1 ? "s" : ""}
                 </div>
               </div>
 
