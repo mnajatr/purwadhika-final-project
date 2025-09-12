@@ -475,6 +475,56 @@ export class OrderService {
 
   // ...existing methods above are preserved
 
+  // List orders with optional filters (userId, status, q (order id), dateFrom/dateTo, pagination)
+  async listOrders(opts: {
+    userId?: number;
+    status?: string;
+    q?: string | number;
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const {
+      userId,
+      status,
+      q,
+      dateFrom,
+      dateTo,
+      page = 1,
+      pageSize = 20,
+    } = opts || {};
+
+    const where: any = {};
+    if (typeof userId === "number") where.userId = userId;
+    if (status) where.status = status;
+    if (q) {
+      const qn = Number(q);
+      if (!Number.isNaN(qn) && qn > 0) where.id = qn;
+    }
+    if (dateFrom || dateTo) {
+      where.createdAt = {};
+      if (dateFrom) where.createdAt.gte = new Date(dateFrom);
+      if (dateTo) where.createdAt.lte = new Date(dateTo);
+    }
+
+    const take = Math.min(100, Math.max(1, pageSize));
+    const skip = Math.max(0, (Math.max(1, page) - 1) * take);
+
+    const [items, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        include: { items: { include: { product: { select: { id: true, name: true, price: true } } } }, payment: true },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+      }),
+      prisma.order.count({ where }),
+    ]);
+
+    return { items, total, page, pageSize: take };
+  }
+
   async uploadPaymentProof(
     orderId: number,
     fileBuffer: Buffer | Uint8Array,

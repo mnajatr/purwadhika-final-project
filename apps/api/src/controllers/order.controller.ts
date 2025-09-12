@@ -42,6 +42,34 @@ function pickUserId(req: Request): number | undefined {
 export class OrderController {
   private service = new OrderService();
 
+  // GET /orders - list with filters
+  listOrders = async (req: Request, res: Response) => {
+    try {
+      const userId = pickUserId(req);
+      const status = req.query.status as string | undefined;
+      const q = req.query.q as string | undefined;
+      const dateFrom = req.query.dateFrom as string | undefined;
+      const dateTo = req.query.dateTo as string | undefined;
+      const page = Number(req.query.page ?? 1);
+      const pageSize = Number(req.query.pageSize ?? 20);
+
+      const result = await this.service.listOrders({
+        userId,
+        status,
+        q,
+        dateFrom,
+        dateTo,
+        page,
+        pageSize,
+      });
+
+      return res.status(200).json(successResponse(result));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return res.status(500).json(errorResponse("Failed to list orders", msg));
+    }
+  };
+
   createOrder = async (req: Request, res: Response) => {
     try {
       const userId = pickUserId(req);

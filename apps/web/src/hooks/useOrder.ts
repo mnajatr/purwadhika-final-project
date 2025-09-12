@@ -9,6 +9,7 @@ export type OrderDetail = {
   id: number;
   status: string;
   grandTotal?: number;
+  createdAt?: string | Date | null;
   items: Array<{
     id: number;
     productId: number;
@@ -209,5 +210,36 @@ export function useCancelOrder() {
         console.warn("Failed to invalidate order cache", err);
       }
     },
+  });
+}
+
+// Types for list hook
+export type OrdersFilter = {
+  q?: string | number | undefined;
+  date?: string | undefined; // single-date filter for simplicity
+  status?: string | undefined;
+};
+
+// Hook: list orders with simple filters
+export function useGetOrders(filters?: OrdersFilter, extraKey?: number) {
+  return useQuery<Array<OrderDetail>, Error>({
+    queryKey: ["orders", filters ?? {}, extraKey ?? 0] as const,
+    queryFn: async () => {
+      const params: Record<string, unknown> = {};
+      if (filters?.q) params.q = filters.q;
+      if (filters?.status) params.status = filters.status;
+      if (filters?.date) {
+        params.dateFrom = filters.date;
+        params.dateTo = filters.date;
+      }
+      const res = await orderService.list(params);
+  const maybeBody = (res as ApiResponse<unknown>) || null;
+  const payloadCandidate = maybeBody?.data ?? (res as unknown);
+  const payloadObj = payloadCandidate as { items?: Array<OrderDetail> } | Array<OrderDetail> | null;
+  if (!payloadObj) return [];
+  if (Array.isArray(payloadObj)) return payloadObj;
+  return payloadObj.items ?? [];
+    },
+    retry: 1,
   });
 }

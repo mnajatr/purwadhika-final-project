@@ -14,6 +14,9 @@ const maybeAuth = requireAuth ? [authMiddleware] : [];
 // POST /orders - create new order
 router.post("/", ...maybeAuth, controller.createOrder);
 
+// GET /orders - list orders with optional filters
+router.get("/", ...maybeAuth, controller.listOrders);
+
 // POST /orders/:id/payment-proof - upload single file field 'proof'
 router.post(
   "/:id/payment-proof",
