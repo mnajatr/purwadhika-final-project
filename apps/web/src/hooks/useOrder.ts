@@ -151,11 +151,12 @@ export function useCreateOrder(userId: number, storeId?: number) {
       };
       const message =
         e?.response?.data?.message || e?.message || "Failed to place order";
-      // option: invalidate cart to refresh latest inventory state (only when storeId is known)
+      // Option: invalidate cart to refresh latest inventory state (only when storeId is known)
       if (typeof storeId === "number") {
         qc.invalidateQueries({ queryKey: ["cart", userId, storeId] });
         qc.invalidateQueries({ queryKey: ["cart", "totals", userId, storeId] });
       }
+      // rethrow so callers (pages/components) can show toast once
       throw new Error(message);
     },
   });

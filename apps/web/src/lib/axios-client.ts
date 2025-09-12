@@ -46,7 +46,8 @@ class ApiClient {
         return resp;
       },
       (error: AxiosError) => {
-        console.error(
+        // log as a warning to avoid noisy dev-console errors being treated as runtime exceptions
+        console.warn(
           "API Error:",
           error.response?.status,
           error.config?.url,

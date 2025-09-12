@@ -52,8 +52,11 @@ export class OrderService {
 
     // Enqueue confirm job with delay (default 48 hours)
     try {
-      const { orderConfirmQueue } = await import("../queues/orderConfirmQueue.js");
-      const DELAY_MS = Number(process.env.ORDER_CONFIRM_DELAY_MS) || 48 * 60 * 60 * 1000;
+      const { orderConfirmQueue } = await import(
+        "../queues/orderConfirmQueue.js"
+      );
+      const DELAY_MS =
+        Number(process.env.ORDER_CONFIRM_DELAY_MS) || 48 * 60 * 60 * 1000;
       await orderConfirmQueue.add(
         "confirm-order",
         { orderId },
@@ -61,13 +64,18 @@ export class OrderService {
       );
     } catch (e) {
       try {
-        logger.error(`Failed to enqueue confirm job for order=${orderId}: %o`, e);
+        logger.error(
+          `Failed to enqueue confirm job for order=${orderId}: %o`,
+          e
+        );
       } catch (ee) {
         // swallow
       }
     }
 
-    logger.info(`Order ${orderId} marked SHIPPED by user=${actorUserId ?? 'system'}`);
+    logger.info(
+      `Order ${orderId} marked SHIPPED by user=${actorUserId ?? "system"}`
+    );
     return result;
   }
   // Manual confirmation: only owner may confirm receipt when status is SHIPPED
@@ -83,7 +91,9 @@ export class OrderService {
         throw new Error("Cannot confirm: not order owner");
 
       if (order.status !== "SHIPPED")
-        throw new Error(`Cannot confirm order: current status is ${order.status}`);
+        throw new Error(
+          `Cannot confirm order: current status is ${order.status}`
+        );
 
       const updated = await tx.order.update({
         where: { id: orderId },
@@ -94,18 +104,25 @@ export class OrderService {
 
     // If there was a scheduled confirm job, remove it
     try {
-      const { orderConfirmQueue } = await import("../queues/orderConfirmQueue.js");
+      const { orderConfirmQueue } = await import(
+        "../queues/orderConfirmQueue.js"
+      );
       const job = await orderConfirmQueue.getJob(String(orderId));
       if (job) await job.remove();
     } catch (e) {
       try {
-        logger.error(`Failed to remove confirm job for order=${orderId}: %o`, e);
+        logger.error(
+          `Failed to remove confirm job for order=${orderId}: %o`,
+          e
+        );
       } catch (ee) {
         // swallow
       }
     }
 
-    logger.info(`Order ${orderId} confirmed by user=${requesterUserId ?? 'system'}`);
+    logger.info(
+      `Order ${orderId} confirmed by user=${requesterUserId ?? "system"}`
+    );
     return result;
   }
   // Manual cancellation endpoint: only owner may cancel and only when still pending payment.
@@ -656,103 +673,9 @@ export class OrderService {
     payment: PaymentMinimal | null;
     orderStatus: string;
   }> {
-    // Upload binary image buffer to Cloudinary and persist proofImageUrl
-    // Cloudinary should already be configured at app startup
-
-    // Sanity check: ensure cloudinary has credentials available before upload
-    const config = cloudinary.config();
-    if (!config.cloud_name || !config.api_key) {
-      throw new Error(
-        "Cloudinary not configured: missing cloud_name or api_key"
-      );
-    }
-
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { payment: true },
-    });
-    if (!order) throw new Error("Order not found");
-
-    // Only allow uploading payment proof when order is awaiting payment
-    if (order.status !== "PENDING_PAYMENT") {
-      throw createConflictError(
-        `Cannot upload payment proof: order is already ${order.status}`
-      );
-    }
-
-    // upload via upload_stream wrapped as promise
-    const uploadRes = (await new Promise<UploadApiResponse>(
-      (resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { folder: `orders/${orderId}`, resource_type: "image" },
-          (error: Error | undefined, result: UploadApiResponse | undefined) => {
-            if (error) return reject(error);
-            if (!result) return reject(new Error("Empty upload result"));
-            resolve(result);
-          }
-        );
-        // write buffer
-        stream.end(Buffer.from(fileBuffer));
-      }
-    )) as UploadApiResponse;
-
-    const proofUrl = uploadRes.secure_url ?? uploadRes.url;
-
-    let paymentRecord: PaymentMinimal | null = null;
-
-    if (order.payment) {
-      paymentRecord = (await prisma.payment.update({
-        where: { id: order.payment.id },
-        data: { proofImageUrl: proofUrl, status: "PENDING" },
-      })) as unknown as PaymentMinimal;
-    } else {
-      paymentRecord = (await prisma.payment.create({
-        data: {
-          orderId: order.id,
-          status: "PENDING",
-          amount: Math.round(Number(order.grandTotal ?? 0)),
-          proofImageUrl: proofUrl,
-        },
-      })) as unknown as PaymentMinimal;
-    }
-
-    // If a cancel job was previously scheduled for this order, remove it
-    // because the user has provided payment proof and auto-cancel is no longer desired.
-    try {
-      const job = await orderCancelQueue.getJob(String(order.id));
-      if (job) {
-        await job.remove();
-        try {
-          const logger = (await import("../utils/logger.js")).default;
-          logger.info(`Removed cancel job for order=${order.id}`);
-        } catch (e) {
-          // swallow logging errors
-        }
-      }
-    } catch (err) {
-      // Log failure to remove job but don't fail the upload flow
-      try {
-        const logger = (await import("../utils/logger.js")).default;
-        logger.error(
-          `Failed to remove cancel job for order=${order.id}: %o`,
-          err
-        );
-      } catch (e) {
-        // swallow
-      }
-    }
-
-    const updatedOrder = await prisma.order.update({
-      where: { id: order.id },
-      data: { status: "PAYMENT_REVIEW" },
-      select: { status: true },
-    });
-
-    return {
-      proofUrl,
-      payment: paymentRecord,
-      orderStatus: updatedOrder.status,
-    };
+    // Delegate to payment service to keep single responsibility
+    const { paymentService } = await import("./payment.service.js");
+    return paymentService.uploadPaymentProof(orderId, fileBuffer, mime);
   }
 
   async getOrderCountsByStatus(userId: number) {
