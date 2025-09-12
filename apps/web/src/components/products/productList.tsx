@@ -41,12 +41,6 @@ export default function ProductsList() {
         <h2 className="text-3xl md:text-4xl font-bold text-center md:text-left">
           Our Products
         </h2>
-        <Link
-          href="/products/create"
-          className="bg-indigo-500 text-white px-5 py-2 rounded-lg shadow hover:bg-indigo-700 transition text-center"
-        >
-          + Tambah Produk
-        </Link>
       </div>
 
       {/* Search */}
