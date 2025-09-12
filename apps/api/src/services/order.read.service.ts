@@ -17,16 +17,8 @@ export interface OrderListResult {
   pageSize: number;
 }
 
-/**
- * Order Read Service - Handles read-only order operations
- * Responsible for: listing, filtering, pagination, counts, and queries
- */
 export class OrderReadService {
-  /**
-   * List orders with optional filters and pagination
-   * @param options - Filter and pagination options
-   * @returns Paginated order list with totals
-   */
+
   async listOrders(options: OrderListOptions): Promise<OrderListResult> {
     const {
       userId,
@@ -112,11 +104,6 @@ export class OrderReadService {
     return { items, total, page, pageSize: take };
   }
 
-  /**
-   * Get order by ID with full details
-   * @param orderId - Order ID to retrieve
-   * @returns Order with items, payment, and shipment details
-   */
   async getOrderById(orderId: number) {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -136,11 +123,6 @@ export class OrderReadService {
     return order;
   }
 
-  /**
-   * Get order counts by status for a user
-   * @param userId - User ID to get counts for
-   * @returns Object with counts for each status
-   */
   async getOrderCountsByStatus(userId: number): Promise<Record<string, number>> {
     const logger = (await import("../utils/logger.js")).default;
     logger.info(`Getting order counts by status for userId: ${userId}`);
@@ -173,12 +155,6 @@ export class OrderReadService {
     return counts;
   }
 
-  /**
-   * Check if user owns the order
-   * @param orderId - Order ID to check
-   * @param userId - User ID to verify ownership
-   * @returns True if user owns the order, false otherwise
-   */
   async checkOrderOwnership(orderId: number, userId: number): Promise<boolean> {
     const order = await prisma.order.findUnique({
       where: { id: orderId },

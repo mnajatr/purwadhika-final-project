@@ -1,14 +1,6 @@
 import { prisma } from "@repo/database";
 
 export class AddressService {
-  /**
-   * Resolve address ID for order creation
-   * If no addressId provided, finds user's primary or first address
-   * If no address exists, creates a default one
-   * @param userId - User ID
-   * @param addressId - Optional specific address ID to use
-   * @returns Resolved address ID
-   */
   async resolveAddressId(userId: number, addressId?: number): Promise<number> {
     let chosenAddressId = addressId;
 
@@ -52,11 +44,6 @@ export class AddressService {
     return chosenAddressId;
   }
 
-  /**
-   * Get address coordinates for location-based operations
-   * @param addressId - Address ID to get coordinates for
-   * @returns Coordinates object or null if not found/no coordinates
-   */
   async getAddressCoordinates(addressId: number): Promise<{ lat: number; lon: number } | null> {
     const addr = await prisma.userAddress.findUnique({
       where: { id: addressId },
@@ -73,11 +60,6 @@ export class AddressService {
     return null;
   }
 
-  /**
-   * Get user's primary address coordinates
-   * @param userId - User ID to get primary address for
-   * @returns Coordinates object or null if not found/no coordinates
-   */
   async getUserPrimaryAddressCoordinates(userId: number): Promise<{ lat: number; lon: number } | null> {
     const addr = await prisma.userAddress.findFirst({
       where: { userId },

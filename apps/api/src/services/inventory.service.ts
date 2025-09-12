@@ -5,12 +5,6 @@ import type { Prisma } from "@repo/database/generated/prisma/index.js";
 type OrderItemInput = { productId: number; qty: number };
 
 export class InventoryService {
-  /**
-   * Validate inventory availability for order items
-   * @param storeId - Store ID to check inventory for
-   * @param items - Array of order items to validate
-   * @returns Promise that resolves if inventory is sufficient, throws otherwise
-   */
   async validateInventoryAvailability(
     storeId: number,
     items: OrderItemInput[]
@@ -35,14 +29,6 @@ export class InventoryService {
     }
   }
 
-  /**
-   * Reserve inventory for order items (decrement stock and create journal entries)
-   * @param storeId - Store ID
-   * @param orderId - Order ID for journal reference
-   * @param items - Array of order items
-   * @param userId - User ID for journal entries
-   * @param tx - Prisma transaction client
-   */
   async reserveInventory(
     storeId: number,
     orderId: number,
@@ -88,13 +74,6 @@ export class InventoryService {
     }
   }
 
-  /**
-   * Restore inventory when order is cancelled
-   * @param storeId - Store ID
-   * @param items - Array of order items to restore
-   * @param userId - User ID for journal entries
-   * @param tx - Prisma transaction client
-   */
   async restoreInventory(
     storeId: number,
     items: Array<{ productId: number; qty: number }>,

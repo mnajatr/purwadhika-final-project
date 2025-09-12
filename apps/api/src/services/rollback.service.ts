@@ -2,18 +2,10 @@ import { prisma } from "@repo/database";
 import { inventoryService } from "./inventory.service.js";
 import type { Prisma } from "@repo/database/generated/prisma/index.js";
 
-/**
- * Rollback Service - Handles order cancellation compensation
- * Responsible for: inventory restoration, voucher rollback, audit logging
- */
 export class RollbackService {
-  /**
-   * Rollback order within a transaction
-   * @param order - Order with items to rollback
-   * @param tx - Prisma transaction client
-   */
+
   async rollbackOrderInTransaction(
-    order: any, // Order with items included
+    order: any,
     tx: Prisma.TransactionClient
   ): Promise<void> {
     // Restore inventory
@@ -28,12 +20,6 @@ export class RollbackService {
     await this._rollbackVouchers(order.userId, order.createdAt, tx);
   }
 
-  /**
-   * Rollback an order (public interface)
-   * @param orderId - Order ID to rollback
-   * @param opts - Options with actor and reason
-   * @returns Rollback result
-   */
   async rollbackOrder(
     orderId: number,
     opts?: { actorId?: number; reason?: string }
@@ -81,10 +67,6 @@ export class RollbackService {
     }
   }
 
-  /**
-   * Handle voucher rollback when cancelling orders
-   * @private
-   */
   private async _rollbackVouchers(
     userId: number,
     orderCreatedAt: Date | null,

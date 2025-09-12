@@ -6,34 +6,16 @@ import { addressService } from "./address.service.js";
 
 type OrderItemInput = { productId: number; qty: number };
 
-// Idempotency store - replace with DB-backed solution in production
 type IdempotencyEntry =
   | { type: "pending"; promise: Promise<any> }
   | { type: "done"; result: any; expiresAt: number };
 
-const IDEMPOTENCY_TTL_MS = 60 * 1000; // keep resolved results for 60s
+const IDEMPOTENCY_TTL_MS = 60 * 1000;
 const idempotencyStore = new Map<string, IdempotencyEntry>();
-
-// Default auto-cancel delay: 1 hour in production
 const ORDER_CANCEL_DELAY_MS = Number(process.env.ORDER_CANCEL_DELAY_MS) || 60 * 60 * 1000;
 
-/**
- * Checkout Service - Handles order creation and checkout orchestration
- * Responsible for: idempotency, location resolution, inventory validation,
- * order creation, totals calculation, and auto-cancel scheduling
- */
 export class CheckoutService {
-  /**
-   * Create a new order through checkout process
-   * @param userId - User creating the order
-   * @param storeId - Optional explicit store ID
-   * @param items - Order items array
-   * @param idempotencyKey - Optional idempotency key for duplicate prevention
-   * @param userLat - Optional user latitude
-   * @param userLon - Optional user longitude
-   * @param addressId - Optional address ID
-   * @returns Created order with items
-   */
+
   async createCheckout(
     userId: number,
     storeId: number | undefined,
@@ -43,17 +25,14 @@ export class CheckoutService {
     userLon?: number,
     addressId?: number
   ): Promise<any> {
-    // Handle idempotency
     if (idempotencyKey) {
       const entry = idempotencyStore.get(idempotencyKey);
       if (entry) {
         if (entry.type === "pending") return entry.promise;
         if (entry.type === "done") {
-          // If result still fresh, return it
           if (Date.now() < entry.expiresAt) {
             return Promise.resolve(entry.result);
           }
-          // Expired -> delete and continue
           idempotencyStore.delete(idempotencyKey);
         }
       }
@@ -89,10 +68,6 @@ export class CheckoutService {
     return work;
   }
 
-  /**
-   * Internal order creation implementation
-   * @private
-   */
   private async _createOrderImpl(
     userId: number,
     storeId: number | undefined,
@@ -201,10 +176,6 @@ export class CheckoutService {
     return result;
   }
 
-  /**
-   * Schedule automatic order cancellation
-   * @private
-   */
   private async _scheduleAutoCancellation(orderId: number, delayMs: number): Promise<void> {
     try {
       const { orderCancelQueue } = await import("../queues/orderCancelQueue.js");

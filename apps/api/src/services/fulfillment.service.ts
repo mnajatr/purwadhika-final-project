@@ -1,19 +1,10 @@
 import { prisma } from "@repo/database";
 import { createConflictError } from "../errors/app.error.js";
 import { inventoryService } from "./inventory.service.js";
-import { rollbackService } from "./index.js";
+import { rollbackService } from "./rollback.service.js";
 
-/**
- * Fulfillment Service - Handles order lifecycle and status transitions
- * Responsible for: shipping, confirmation, cancellation, and job scheduling
- */
 export class FulfillmentService {
-  /**
-   * Ship an order and schedule auto-confirmation
-   * @param orderId - Order ID to ship
-   * @param actorUserId - User performing the action
-   * @returns Updated order
-   */
+
   async shipOrder(orderId: number, actorUserId?: number) {
     const logger = (await import("../utils/logger.js")).default;
     const allowedPrev = ["PAYMENT_REVIEW", "PROCESSING"];
@@ -56,12 +47,6 @@ export class FulfillmentService {
     return result;
   }
 
-  /**
-   * Confirm order delivery manually
-   * @param orderId - Order ID to confirm
-   * @param requesterUserId - User requesting confirmation (must be order owner)
-   * @returns Updated order
-   */
   async confirmOrder(orderId: number, requesterUserId?: number) {
     const logger = (await import("../utils/logger.js")).default;
 
@@ -102,12 +87,6 @@ export class FulfillmentService {
     return result;
   }
 
-  /**
-   * Cancel an order and trigger rollback
-   * @param orderId - Order ID to cancel
-   * @param requesterUserId - User requesting cancellation (must be order owner)
-   * @returns Updated order
-   */
   async cancelOrder(orderId: number, requesterUserId: number) {
     const logger = (await import("../utils/logger.js")).default;
 
@@ -147,10 +126,6 @@ export class FulfillmentService {
     return result;
   }
 
-  /**
-   * Remove scheduled auto-cancellation job
-   * @private
-   */
   private async _removeScheduledCancellation(orderId: number): Promise<void> {
     try {
       const { orderCancelQueue } = await import("../queues/orderCancelQueue.js");

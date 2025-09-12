@@ -1,16 +1,10 @@
 import { prisma } from "@repo/database";
 
 export class LocationService {
-  /**
-   * Find the nearest store ID based on latitude and longitude coordinates
-   * @param lat - Latitude coordinate
-   * @param lon - Longitude coordinate
-   * @returns Store ID if found within service radius, undefined otherwise
-   */
+
   async findNearestStoreId(lat: number, lon: number): Promise<number | undefined> {
-    // Haversine formula constants
     const toRad = (deg: number) => (deg * Math.PI) / 180;
-    const R = 6371; // Earth radius in km
+    const R = 6371;
 
     // Load all store locations (small number expected) and compute distance
     const locations = await prisma.storeLocation.findMany({
@@ -44,15 +38,6 @@ export class LocationService {
     return undefined;
   }
 
-  /**
-   * Resolve store ID based on coordinates and address preferences
-   * @param storeId - Explicit store ID if provided
-   * @param userId - User ID for fallback address lookup
-   * @param userLat - Explicit latitude coordinate
-   * @param userLon - Explicit longitude coordinate
-   * @param addressId - Address ID for coordinate lookup
-   * @returns Resolved store ID
-   */
   async resolveStoreId(
     storeId: number | undefined,
     userId: number,
