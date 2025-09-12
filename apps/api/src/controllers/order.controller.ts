@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import type { Request as ExpressRequest } from "express";
 import { OrderService } from "../services/order.service.js";
-import { orderQueryService } from "../services/order-query.service.js";
+import { orderReadService } from "../services/order.read.service.js";
 import { prisma } from "@repo/database";
 import {
   successResponse,
@@ -152,7 +152,7 @@ export class OrderController {
         return res.status(400).json(errorResponse("Invalid order id"));
       }
 
-      const order = await orderQueryService.getOrderById(id);
+      const order = await orderReadService.getOrderById(id);
       if (!order) {
         return res.status(404).json(errorResponse("Order not found"));
       }

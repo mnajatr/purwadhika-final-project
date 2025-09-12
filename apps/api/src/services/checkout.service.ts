@@ -3,7 +3,6 @@ import { ERROR_MESSAGES } from "../utils/helpers.js";
 import { locationService } from "./location.service.js";
 import { inventoryService } from "./inventory.service.js";
 import { addressService } from "./address.service.js";
-import { orderStatusService } from "./order-status.service.js";
 
 type OrderItemInput = { productId: number; qty: number };
 
@@ -18,9 +17,14 @@ const idempotencyStore = new Map<string, IdempotencyEntry>();
 // Default auto-cancel delay: 1 hour in production
 const ORDER_CANCEL_DELAY_MS = Number(process.env.ORDER_CANCEL_DELAY_MS) || 60 * 60 * 1000;
 
-export class OrderCreationService {
+/**
+ * Checkout Service - Handles order creation and checkout orchestration
+ * Responsible for: idempotency, location resolution, inventory validation,
+ * order creation, totals calculation, and auto-cancel scheduling
+ */
+export class CheckoutService {
   /**
-   * Create a new order with inventory validation and location resolution
+   * Create a new order through checkout process
    * @param userId - User creating the order
    * @param storeId - Optional explicit store ID
    * @param items - Order items array
@@ -30,7 +34,7 @@ export class OrderCreationService {
    * @param addressId - Optional address ID
    * @returns Created order with items
    */
-  async createOrder(
+  async createCheckout(
     userId: number,
     storeId: number | undefined,
     items: OrderItemInput[],
@@ -191,11 +195,35 @@ export class OrderCreationService {
 
     // Schedule auto-cancellation outside the transaction
     if (result?.id) {
-      await orderStatusService.scheduleAutoCancellation(result.id, ORDER_CANCEL_DELAY_MS);
+      await this._scheduleAutoCancellation(result.id, ORDER_CANCEL_DELAY_MS);
     }
 
     return result;
   }
+
+  /**
+   * Schedule automatic order cancellation
+   * @private
+   */
+  private async _scheduleAutoCancellation(orderId: number, delayMs: number): Promise<void> {
+    try {
+      const { orderCancelQueue } = await import("../queues/orderCancelQueue.js");
+      
+      await orderCancelQueue.add(
+        "cancel-order",
+        { orderId },
+        { jobId: String(orderId), delay: delayMs }
+      );
+    } catch (err) {
+      // Don't fail order creation due to queue issues; log error
+      try {
+        const logger = (await import("../utils/logger.js")).default;
+        logger.error(`Failed to enqueue cancel job for order=${orderId}: %o`, err);
+      } catch (e) {
+        // swallow logging errors
+      }
+    }
+  }
 }
 
-export const orderCreationService = new OrderCreationService();
+export const checkoutService = new CheckoutService();

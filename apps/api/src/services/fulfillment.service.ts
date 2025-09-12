@@ -1,8 +1,13 @@
 import { prisma } from "@repo/database";
 import { createConflictError } from "../errors/app.error.js";
 import { inventoryService } from "./inventory.service.js";
+import { rollbackService } from "./index.js";
 
-export class OrderStatusService {
+/**
+ * Fulfillment Service - Handles order lifecycle and status transitions
+ * Responsible for: shipping, confirmation, cancellation, and job scheduling
+ */
+export class FulfillmentService {
   /**
    * Ship an order and schedule auto-confirmation
    * @param orderId - Order ID to ship
@@ -98,7 +103,7 @@ export class OrderStatusService {
   }
 
   /**
-   * Cancel an order and restore inventory
+   * Cancel an order and trigger rollback
    * @param orderId - Order ID to cancel
    * @param requesterUserId - User requesting cancellation (must be order owner)
    * @returns Updated order
@@ -124,16 +129,8 @@ export class OrderStatusService {
         );
       }
 
-      // Restore stock and create stock journal entries
-      await inventoryService.restoreInventory(
-        order.storeId,
-        order.items,
-        order.userId,
-        tx
-      );
-
-      // Rollback vouchers/coupons if schema tracks them
-      await this._rollbackVouchers(order.userId, order.createdAt, tx, logger);
+      // Use rollback service for compensation
+      await rollbackService.rollbackOrderInTransaction(order, tx);
 
       const updated = await tx.order.update({
         where: { id: orderId },
@@ -144,99 +141,21 @@ export class OrderStatusService {
     });
 
     // Remove any scheduled auto-cancel job for this order
-    try {
-      const { orderCancelQueue } = await import("../queues/orderCancelQueue.js");
-      const job = await orderCancelQueue.getJob(String(orderId));
-      if (job) await job.remove();
-    } catch (err) {
-      try {
-        logger.error(`Failed to remove cancel job for order=${orderId}: %o`, err);
-      } catch (e) {
-        // swallow
-      }
-    }
+    await this._removeScheduledCancellation(orderId);
 
     logger.info(`Order ${orderId} cancelled manually by user=${requesterUserId}`);
     return result;
   }
 
   /**
-   * Handle voucher rollback when cancelling orders
+   * Remove scheduled auto-cancellation job
    * @private
    */
-  private async _rollbackVouchers(
-    userId: number,
-    orderCreatedAt: Date | null,
-    tx: any,
-    logger: any
-  ): Promise<void> {
-    try {
-      if (orderCreatedAt) {
-        const windowMs = 10 * 60 * 1000; // 10 minutes window
-        const from = new Date(orderCreatedAt.getTime() - windowMs);
-        const to = new Date(orderCreatedAt.getTime() + windowMs);
-
-        const usedVouchers = await tx.voucher.findMany({
-          where: {
-            userId: userId,
-            isUsed: true,
-            usedAt: { gte: from, lte: to },
-          },
-        });
-
-        if (usedVouchers.length > 0) {
-          await tx.voucher.updateMany({
-            where: { id: { in: usedVouchers.map((v: any) => v.id) } },
-            data: { isUsed: false, usedAt: null },
-          });
-          
-          logger.info(`[TX] Rolled back ${usedVouchers.length} voucher(s) for user=${userId}`);
-        }
-      }
-    } catch (e) {
-      // Swallow voucher rollback errors to avoid failing the whole transaction
-      logger.warn(`Voucher rollback skipped for user=${userId}: %o`, e);
-    }
-  }
-
-  /**
-   * Schedule automatic order cancellation
-   * @param orderId - Order ID to schedule cancellation for
-   * @param delayMs - Delay in milliseconds before cancellation
-   */
-  async scheduleAutoCancellation(orderId: number, delayMs: number): Promise<void> {
-    try {
-      const { orderCancelQueue } = await import("../queues/orderCancelQueue.js");
-      
-      await orderCancelQueue.add(
-        "cancel-order",
-        { orderId },
-        { jobId: String(orderId), delay: delayMs }
-      );
-    } catch (err) {
-      // Don't fail order creation due to queue issues; log error
-      try {
-        const logger = (await import("../utils/logger.js")).default;
-        logger.error(`Failed to enqueue cancel job for order=${orderId}: %o`, err);
-      } catch (e) {
-        // swallow logging errors
-      }
-    }
-  }
-
-  /**
-   * Remove scheduled auto-cancellation job
-   * @param orderId - Order ID to remove cancellation job for
-   */
-  async removeScheduledCancellation(orderId: number): Promise<void> {
+  private async _removeScheduledCancellation(orderId: number): Promise<void> {
     try {
       const { orderCancelQueue } = await import("../queues/orderCancelQueue.js");
       const job = await orderCancelQueue.getJob(String(orderId));
-      if (job) {
-        await job.remove();
-        const logger = (await import("../utils/logger.js")).default;
-        logger.info(`Removed cancel job for order=${orderId}`);
-      }
+      if (job) await job.remove();
     } catch (err) {
       try {
         const logger = (await import("../utils/logger.js")).default;
@@ -248,4 +167,4 @@ export class OrderStatusService {
   }
 }
 
-export const orderStatusService = new OrderStatusService();
+export const fulfillmentService = new FulfillmentService();

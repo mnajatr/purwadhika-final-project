@@ -1,6 +1,6 @@
-import { orderCreationService } from "./order-creation.service.js";
-import { orderStatusService } from "./order-status.service.js";
-import { orderQueryService } from "./order-query.service.js";
+import { checkoutService } from "./checkout.service.js";
+import { fulfillmentService } from "./fulfillment.service.js";
+import { orderReadService } from "./order.read.service.js";
 import { paymentService } from "./payment.service.js";
 
 type OrderItemInput = { productId: number; qty: number };
@@ -14,16 +14,16 @@ type PaymentMinimal = {
 };
 
 /**
- * Main Order Service - Orchestrates order operations using specialized services
- * This service delegates to specialized services for better separation of concerns:
- * - OrderCreationService: Handles order creation logic
- * - OrderStatusService: Manages order status transitions
- * - OrderQueryService: Handles order listing and retrieval
+ * Order Service - Main facade for order operations
+ * Orchestrates order operations using specialized services:
+ * - CheckoutService: Handles order creation and checkout logic
+ * - FulfillmentService: Manages order status transitions
+ * - OrderReadService: Handles order listing and retrieval
  * - PaymentService: Manages payment-related operations
  */
 export class OrderService {
   /**
-   * Create a new order
+   * Create a new order through checkout
    * @param userId - User creating the order
    * @param storeId - Optional explicit store ID
    * @param items - Order items array
@@ -42,7 +42,7 @@ export class OrderService {
     userLon?: number,
     addressId?: number
   ): Promise<any> {
-    return orderCreationService.createOrder(
+    return checkoutService.createCheckout(
       userId,
       storeId,
       items,
@@ -60,7 +60,7 @@ export class OrderService {
    * @returns Updated order
    */
   async shipOrder(orderId: number, actorUserId?: number) {
-    return orderStatusService.shipOrder(orderId, actorUserId);
+    return fulfillmentService.shipOrder(orderId, actorUserId);
   }
 
   /**
@@ -70,7 +70,7 @@ export class OrderService {
    * @returns Updated order
    */
   async confirmOrder(orderId: number, requesterUserId?: number) {
-    return orderStatusService.confirmOrder(orderId, requesterUserId);
+    return fulfillmentService.confirmOrder(orderId, requesterUserId);
   }
 
   /**
@@ -80,7 +80,7 @@ export class OrderService {
    * @returns Updated order
    */
   async cancelOrder(orderId: number, requesterUserId: number) {
-    return orderStatusService.cancelOrder(orderId, requesterUserId);
+    return fulfillmentService.cancelOrder(orderId, requesterUserId);
   }
 
   /**
@@ -97,7 +97,7 @@ export class OrderService {
     page?: number;
     pageSize?: number;
   }) {
-    return orderQueryService.listOrders(opts);
+    return orderReadService.listOrders(opts);
   }
 
   /**
@@ -125,6 +125,6 @@ export class OrderService {
    * @returns Object with counts for each status
    */
   async getOrderCountsByStatus(userId: number) {
-    return orderQueryService.getOrderCountsByStatus(userId);
+    return orderReadService.getOrderCountsByStatus(userId);
   }
 }

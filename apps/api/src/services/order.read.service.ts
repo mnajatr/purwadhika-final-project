@@ -17,7 +17,11 @@ export interface OrderListResult {
   pageSize: number;
 }
 
-export class OrderQueryService {
+/**
+ * Order Read Service - Handles read-only order operations
+ * Responsible for: listing, filtering, pagination, counts, and queries
+ */
+export class OrderReadService {
   /**
    * List orders with optional filters and pagination
    * @param options - Filter and pagination options
@@ -185,4 +189,4 @@ export class OrderQueryService {
   }
 }
 
-export const orderQueryService = new OrderQueryService();
+export const orderReadService = new OrderReadService();
