@@ -136,6 +136,7 @@ async function cleanDatabase() {
   await prisma.cartItem.deleteMany();
   await prisma.cart.deleteMany();
   // StockJournal references storeInventory via composite FK; delete journals first
+  await prisma.productImage.deleteMany();
   await prisma.stockJournal.deleteMany();
   await prisma.storeInventory.deleteMany();
   await prisma.product.deleteMany();
@@ -281,7 +282,9 @@ async function seedProducts(categories: any[]) {
           description: productData.description,
           price: productData.basePrice,
           weight: 0,
-          volume: 0,
+          width: 0,
+          height: 0,
+          length: 0,
           isActive: true,
           images: {
             create: [

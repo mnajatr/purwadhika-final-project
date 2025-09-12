@@ -37,7 +37,24 @@ class ProductsService {
       category: product.category?.name,
       store: inventory?.store?.name || "Unknown",
       weight: product.weight,
-      volume: product.volume,
+      width: product.width,
+      height: product.height,
+      length: product.length,
+      imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
+    };
+  }
+
+  async createProduct(data: ProductResponse) {
+    const product = await apiClient.post<ProductResponse>(this.basePath, data);
+
+    return {
+      id: product.id,
+      slug: product.slug,
+      name: product.name,
+      description: product.description,
+      price: Number(product.price),
+      category: product.category?.name,
+      store: product.inventories?.[0]?.store?.name || "Unknown",
       imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
     };
   }
