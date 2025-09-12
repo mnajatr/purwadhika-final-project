@@ -12,6 +12,7 @@ import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 import { apiRateLimit } from "./middleware/rateLimit.middleware.js";
 // Boot background workers/queues
 import "./workers/orderCancelWorker.js";
+import "./workers/orderConfirmWorker.js";
 
 export class App {
   public app: express.Application;

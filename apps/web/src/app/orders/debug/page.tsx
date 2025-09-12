@@ -12,29 +12,29 @@ export default function OrdersDebugPage() {
   const fetchOrders = async (filters: any = {}) => {
     setLoading(true);
     setError("");
-    
+
     try {
       const params = new URLSearchParams();
       if (filters.status) params.append("status", filters.status);
       if (filters.q) params.append("q", filters.q);
-      
+
       const url = `http://localhost:8000/api/orders?${params.toString()}`;
       console.log("Fetching:", url);
-      
+
       const response = await fetch(url, {
         headers: {
           "x-dev-user-id": "4",
-          "Content-Type": "application/json"
-        }
+          "Content-Type": "application/json",
+        },
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-      
+
       const data = await response.json();
       console.log("Response:", data);
-      
+
       if (data.success && data.data) {
         setOrders(data.data.items || []);
       } else {
@@ -62,11 +62,11 @@ export default function OrdersDebugPage() {
   return (
     <div className="max-w-5xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Orders Debug Page</h1>
-      
+
       <div className="mb-4 space-y-4">
         <div className="flex gap-4">
-          <select 
-            value={status} 
+          <select
+            value={status}
             onChange={(e) => setStatus(e.target.value)}
             className="border rounded px-3 py-2"
           >
@@ -75,7 +75,7 @@ export default function OrdersDebugPage() {
             <option value="PAYMENT_REVIEW">PAYMENT_REVIEW</option>
             <option value="CANCELLED">CANCELLED</option>
           </select>
-          
+
           <input
             type="text"
             value={search}
@@ -83,8 +83,8 @@ export default function OrdersDebugPage() {
             placeholder="Search by ID or product name"
             className="border rounded px-3 py-2 flex-1"
           />
-          
-          <button 
+
+          <button
             onClick={handleFilter}
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
           >
@@ -94,7 +94,7 @@ export default function OrdersDebugPage() {
       </div>
 
       {loading && <div className="text-center py-4">Loading...</div>}
-      
+
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           Error: {error}
@@ -109,7 +109,8 @@ export default function OrdersDebugPage() {
                 <h3 className="font-semibold">Order #{order.id}</h3>
                 <p className="text-sm text-gray-600">Status: {order.status}</p>
                 <p className="text-sm text-gray-600">
-                  Total: {new Intl.NumberFormat("id-ID", {
+                  Total:{" "}
+                  {new Intl.NumberFormat("id-ID", {
                     style: "currency",
                     currency: "IDR",
                     maximumFractionDigits: 0,
@@ -120,23 +121,28 @@ export default function OrdersDebugPage() {
                 </p>
               </div>
               <div className="text-right">
-                <span className={`px-2 py-1 rounded text-xs ${
-                  order.status === 'PENDING_PAYMENT' ? 'bg-yellow-100 text-yellow-800' :
-                  order.status === 'PAYMENT_REVIEW' ? 'bg-blue-100 text-blue-800' :
-                  order.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
+                <span
+                  className={`px-2 py-1 rounded text-xs ${
+                    order.status === "PENDING_PAYMENT"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : order.status === "PAYMENT_REVIEW"
+                      ? "bg-blue-100 text-blue-800"
+                      : order.status === "CANCELLED"
+                      ? "bg-red-100 text-red-800"
+                      : "bg-gray-100 text-gray-800"
+                  }`}
+                >
                   {order.status}
                 </span>
               </div>
             </div>
-            
+
             <div className="mt-2">
               <p className="text-sm font-medium">Items:</p>
               <ul className="text-sm text-gray-600">
                 {order.items?.map((item: any, idx: number) => (
                   <li key={idx}>
-                    {item.product?.name || 'Unknown Product'} x{item.qty}
+                    {item.product?.name || "Unknown Product"} x{item.qty}
                   </li>
                 ))}
               </ul>
@@ -146,9 +152,7 @@ export default function OrdersDebugPage() {
       </div>
 
       {orders.length === 0 && !loading && !error && (
-        <div className="text-center py-8 text-gray-500">
-          No orders found
-        </div>
+        <div className="text-center py-8 text-gray-500">No orders found</div>
       )}
     </div>
   );

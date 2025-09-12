@@ -7,15 +7,15 @@ async function updateOrderStatus() {
     // Update order 12 to PAYMENT_REVIEW
     await prisma.order.update({
       where: { id: 12 },
-      data: { status: "PAYMENT_REVIEW" }
+      data: { status: "PAYMENT_REVIEW" },
     });
-    
-    // Update order 11 to PROCESSING  
+
+    // Update order 11 to PROCESSING
     await prisma.order.update({
       where: { id: 11 },
-      data: { status: "PROCESSING" }
+      data: { status: "PROCESSING" },
     });
-    
+
     console.log("Order statuses updated successfully");
   } catch (error) {
     console.error("Error updating order status:", error);

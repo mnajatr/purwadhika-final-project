@@ -29,7 +29,12 @@ class ApiClient {
       if (process.env.NODE_ENV !== "production") {
         config.headers["x-dev-user-id"] = "4"; // Default test user ID
       }
-      console.log('API Request:', config.method?.toUpperCase(), config.url, config.params);
+      console.log(
+        "API Request:",
+        config.method?.toUpperCase(),
+        config.url,
+        config.params
+      );
       return config;
     });
 
@@ -37,11 +42,16 @@ class ApiClient {
     // via the ApiError.response property when available.
     this.client.interceptors.response.use(
       (resp: AxiosResponse) => {
-        console.log('API Response:', resp.status, resp.config.url, resp.data);
+        console.log("API Response:", resp.status, resp.config.url, resp.data);
         return resp;
       },
       (error: AxiosError) => {
-        console.error('API Error:', error.response?.status, error.config?.url, error.response?.data);
+        console.error(
+          "API Error:",
+          error.response?.status,
+          error.config?.url,
+          error.response?.data
+        );
         const responseData = error.response?.data;
         let message = error.message ?? "Request failed";
         if (

@@ -214,6 +214,37 @@ export function useCancelOrder() {
   });
 }
 
+// Hook: confirm an order (manual confirmation by user)
+export function useConfirmOrder() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (opts: { orderId: number; userId?: number }) => {
+      const { orderId, userId } = opts;
+      const res = await orderService.confirmOrder(orderId, userId);
+      return res.data;
+    },
+    onSuccess: (_data, vars) => {
+      const orderId = (vars as { orderId: number }).orderId;
+      try {
+        qc.setQueryData<OrderDetail | null>(["order", orderId], (prev) =>
+          prev
+            ? { ...prev, status: "CONFIRMED" }
+            : ({ id: orderId, status: "CONFIRMED", items: [] } as OrderDetail)
+        );
+      } catch (err) {
+        console.warn("Failed to set order cache after confirm", err);
+      }
+
+      try {
+        qc.invalidateQueries({ queryKey: ["order", orderId] });
+      } catch (err) {
+        console.warn("Failed to invalidate order cache", err);
+      }
+    },
+  });
+}
+
 // Types for list hook
 export type OrdersFilter = {
   q?: string | number | undefined;
@@ -224,7 +255,13 @@ export type OrdersFilter = {
 // Hook: list orders with simple filters
 export function useGetOrders(filters?: OrdersFilter, extraKey?: number) {
   const queryKey = React.useMemo(() => {
-    return ["orders", filters?.q || null, filters?.status || null, filters?.date || null, extraKey || 0];
+    return [
+      "orders",
+      filters?.q || null,
+      filters?.status || null,
+      filters?.date || null,
+      extraKey || 0,
+    ];
   }, [filters?.q, filters?.status, filters?.date, extraKey]);
 
   return useQuery<Array<OrderDetail>, Error>({
@@ -238,21 +275,21 @@ export function useGetOrders(filters?: OrdersFilter, extraKey?: number) {
         const selectedDate = new Date(filters.date);
         const dateFrom = new Date(selectedDate);
         dateFrom.setHours(0, 0, 0, 0);
-        
+
         const dateTo = new Date(selectedDate);
         dateTo.setHours(23, 59, 59, 999);
-        
+
         params.dateFrom = dateFrom.toISOString();
         params.dateTo = dateTo.toISOString();
       }
-      
+
       // Debug logging
-      console.log('Order filter params:', params);
-      console.log('Query key:', queryKey);
-      
+      console.log("Order filter params:", params);
+      console.log("Query key:", queryKey);
+
       const res = await orderService.list(params);
-      console.log('Order service response:', res);
-      
+      console.log("Order service response:", res);
+
       const maybeBody = (res as ApiResponse<unknown>) || null;
       const payloadCandidate = maybeBody?.data ?? (res as unknown);
       const payloadObj = payloadCandidate as

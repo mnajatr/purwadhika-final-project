@@ -30,6 +30,84 @@ const IDEMPOTENCY_TTL_MS = 60 * 1000; // keep resolved results for 60s
 const idempotencyStore = new Map<string, IdempotencyEntry>();
 
 export class OrderService {
+  // Admin/worker: mark order as shipped and schedule auto-confirm job
+  async shipOrder(orderId: number, actorUserId?: number) {
+    const logger = (await import("../utils/logger.js")).default;
+    const allowedPrev = ["PAYMENT_REVIEW", "PROCESSING"];
+
+    const result = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order) throw new Error("Order not found");
+
+      if (!allowedPrev.includes(order.status))
+        throw new Error(`Cannot ship order: current status is ${order.status}`);
+
+      const updated = await tx.order.update({
+        where: { id: orderId },
+        data: { status: "SHIPPED" },
+      });
+
+      return updated;
+    });
+
+    // Enqueue confirm job with delay (default 48 hours)
+    try {
+      const { orderConfirmQueue } = await import("../queues/orderConfirmQueue.js");
+      const DELAY_MS = Number(process.env.ORDER_CONFIRM_DELAY_MS) || 48 * 60 * 60 * 1000;
+      await orderConfirmQueue.add(
+        "confirm-order",
+        { orderId },
+        { jobId: String(orderId), delay: DELAY_MS }
+      );
+    } catch (e) {
+      try {
+        logger.error(`Failed to enqueue confirm job for order=${orderId}: %o`, e);
+      } catch (ee) {
+        // swallow
+      }
+    }
+
+    logger.info(`Order ${orderId} marked SHIPPED by user=${actorUserId ?? 'system'}`);
+    return result;
+  }
+  // Manual confirmation: only owner may confirm receipt when status is SHIPPED
+  async confirmOrder(orderId: number, requesterUserId?: number) {
+    const logger = (await import("../utils/logger.js")).default;
+
+    const result = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order) throw new Error("Order not found");
+
+      // If requesterUserId provided, enforce ownership in production
+      if (requesterUserId && order.userId !== requesterUserId)
+        throw new Error("Cannot confirm: not order owner");
+
+      if (order.status !== "SHIPPED")
+        throw new Error(`Cannot confirm order: current status is ${order.status}`);
+
+      const updated = await tx.order.update({
+        where: { id: orderId },
+        data: { status: "CONFIRMED" },
+      });
+      return updated;
+    });
+
+    // If there was a scheduled confirm job, remove it
+    try {
+      const { orderConfirmQueue } = await import("../queues/orderConfirmQueue.js");
+      const job = await orderConfirmQueue.getJob(String(orderId));
+      if (job) await job.remove();
+    } catch (e) {
+      try {
+        logger.error(`Failed to remove confirm job for order=${orderId}: %o`, e);
+      } catch (ee) {
+        // swallow
+      }
+    }
+
+    logger.info(`Order ${orderId} confirmed by user=${requesterUserId ?? 'system'}`);
+    return result;
+  }
   // Manual cancellation endpoint: only owner may cancel and only when still pending payment.
   async cancelOrder(orderId: number, requesterUserId: number) {
     // Re-validate and perform rollback inside a transaction
@@ -496,36 +574,36 @@ export class OrderService {
     } = opts || {};
 
     const where: any = {};
-    
+
     // Filter by userId if provided
     if (typeof userId === "number") where.userId = userId;
-    
+
     // Filter by status if provided
-    if (status && status.trim() !== '') where.status = status.trim();
-    
+    if (status && status.trim() !== "") where.status = status.trim();
+
     // Filter by order ID or search in order items if provided
     if (q) {
       const qTrimmed = String(q).trim();
       const qn = Number(qTrimmed);
-      
+
       if (!Number.isNaN(qn) && qn > 0) {
         // If it's a valid number, search by order ID
         where.id = qn;
-      } else if (qTrimmed !== '') {
+      } else if (qTrimmed !== "") {
         // If it's text, search in product names within order items
         where.items = {
           some: {
             product: {
               name: {
                 contains: qTrimmed,
-                mode: 'insensitive'
-              }
-            }
-          }
+                mode: "insensitive",
+              },
+            },
+          },
         };
       }
     }
-    
+
     // Filter by date range if provided
     if (dateFrom || dateTo) {
       where.createdAt = {};

@@ -17,8 +17,8 @@ interface Order {
   createdAt: string;
   total: number;
   grandTotal?: number;
-  items?: { 
-    id: number; 
+  items?: {
+    id: number;
     quantity: number;
     product?: {
       name: string;
@@ -33,7 +33,9 @@ interface Order {
 }
 
 // Simple fetch function
-async function fetchOrders(filters: { status?: string; q?: string; date?: string } = {}) {
+async function fetchOrders(
+  filters: { status?: string; q?: string; date?: string } = {}
+) {
   const params = new URLSearchParams();
   if (filters.status) params.append("status", filters.status);
   if (filters.q) params.append("q", filters.q);
@@ -41,35 +43,35 @@ async function fetchOrders(filters: { status?: string; q?: string; date?: string
     const selectedDate = new Date(filters.date);
     const dateFrom = new Date(selectedDate);
     dateFrom.setHours(0, 0, 0, 0);
-    
+
     const dateTo = new Date(selectedDate);
     dateTo.setHours(23, 59, 59, 999);
-    
+
     params.append("dateFrom", dateFrom.toISOString());
     params.append("dateTo", dateTo.toISOString());
   }
-  
+
   const url = `http://localhost:8000/api/orders?${params.toString()}`;
-  console.log('Fetching orders from:', url);
-  
+  console.log("Fetching orders from:", url);
+
   const response = await fetch(url, {
     headers: {
       "x-dev-user-id": "4",
-      "Content-Type": "application/json"
-    }
+      "Content-Type": "application/json",
+    },
   });
-  
+
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
-  
+
   const data = await response.json();
-  console.log('API Response:', data);
-  
+  console.log("API Response:", data);
+
   if (data.success && data.data) {
     return data.data.items || [];
   }
-  
+
   return [];
 }
 
@@ -79,89 +81,97 @@ export default function OrdersPage() {
   const [counts, setCounts] = React.useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  
+
   const [q, setQ] = React.useState<string | null>(null);
   const [date, setDate] = React.useState<string | null>(null);
   const [status, setStatus] = React.useState<string | null>(null);
-  
-  const [searchTimeoutId, setSearchTimeoutId] = React.useState<NodeJS.Timeout | null>(null);
+
+  const [searchTimeoutId, setSearchTimeoutId] =
+    React.useState<NodeJS.Timeout | null>(null);
 
   // Load orders when filters change
   // Load all orders once at startup
   React.useEffect(() => {
     const loadAllOrders = async () => {
-      console.log('🔄 Loading all orders (once)...');
+      console.log("🔄 Loading all orders (once)...");
       setIsLoading(true);
       setError(null);
-      
+
       try {
         // Fetch all orders without filters
         const ordersData = await fetchOrders({});
-        console.log('✅ All orders loaded:', ordersData.length, 'orders');
+        console.log("✅ All orders loaded:", ordersData.length, "orders");
         setAllOrders(ordersData);
       } catch (err) {
-        console.error('❌ Error loading orders:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        console.error("❌ Error loading orders:", err);
+        setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     loadAllOrders();
   }, []); // Only run once
 
   // Filter orders and calculate counts whenever filters or data change
   React.useEffect(() => {
-    console.log('🔍 Filtering orders with:', { status, q, date });
-    
+    console.log("🔍 Filtering orders with:", { status, q, date });
+
     let filtered = allOrders;
-    
+
     // Filter by status
     if (status) {
-      filtered = filtered.filter(order => order.status === status);
-      console.log(`📊 After status filter (${status}):`, filtered.length, 'orders');
+      filtered = filtered.filter((order) => order.status === status);
+      console.log(
+        `📊 After status filter (${status}):`,
+        filtered.length,
+        "orders"
+      );
     }
-    
+
     // Filter by search query (order ID or product name)
     if (q) {
       const searchTerm = q.toLowerCase();
-      filtered = filtered.filter(order => {
+      filtered = filtered.filter((order) => {
         // Search in numeric order ID (convert to string for partial matching)
         const orderIdString = order.id.toString();
         if (orderIdString.includes(searchTerm)) return true;
-        
+
         // Search in invoiceId if it exists
         if (order.invoiceId?.toLowerCase().includes(searchTerm)) return true;
-        
+
         // Search in product names
-        const hasMatchingProduct = order.items?.some(item => 
+        const hasMatchingProduct = order.items?.some((item) =>
           item.product?.name?.toLowerCase().includes(searchTerm)
         );
-        
+
         return hasMatchingProduct;
       });
-      console.log(`🔍 After search filter (${q}):`, filtered.length, 'orders');
-      console.log('🔍 Search matched orders:', filtered.map(o => ({ id: o.id, invoiceId: o.invoiceId })));
+      console.log(`🔍 After search filter (${q}):`, filtered.length, "orders");
+      console.log(
+        "🔍 Search matched orders:",
+        filtered.map((o) => ({ id: o.id, invoiceId: o.invoiceId }))
+      );
     }
-    
+
     // Filter by date
     if (date) {
       const selectedDate = new Date(date);
       const dateFrom = new Date(selectedDate);
       dateFrom.setHours(0, 0, 0, 0);
-      
+
       const dateTo = new Date(selectedDate);
       dateTo.setHours(23, 59, 59, 999);
-      
-      filtered = filtered.filter(order => {
+
+      filtered = filtered.filter((order) => {
         const orderDate = new Date(order.createdAt);
         return orderDate >= dateFrom && orderDate <= dateTo;
       });
-      console.log(`📅 After date filter (${date}):`, filtered.length, 'orders');
+      console.log(`📅 After date filter (${date}):`, filtered.length, "orders");
     }
-    
+
     setFilteredOrders(filtered);
-    
+
     // Calculate counts from all orders
     const newCounts: Record<string, number> = {
       ALL: allOrders.length,
@@ -172,16 +182,15 @@ export default function OrdersPage() {
       CONFIRMED: 0,
       CANCELLED: 0,
     };
-    
+
     for (const order of allOrders) {
       if (newCounts[order.status] !== undefined) {
         newCounts[order.status]++;
       }
     }
-    
+
     setCounts(newCounts);
-    console.log('📊 Counts calculated:', newCounts);
-    
+    console.log("📊 Counts calculated:", newCounts);
   }, [allOrders, status, q, date]);
 
   const statusColor: Record<string, string> = {
@@ -192,7 +201,7 @@ export default function OrdersPage() {
     CONFIRMED: "bg-blue-100 text-blue-800",
     CANCELLED: "bg-red-100 text-red-800",
   };
-  
+
   const statuses = React.useMemo(
     () => [
       { key: null, label: "ALL" },
@@ -237,9 +246,7 @@ export default function OrdersPage() {
   if (error) {
     return (
       <div className="max-w-5xl mx-auto p-6 text-center">
-        <div className="text-xl font-semibold text-red-600">
-          {error}
-        </div>
+        <div className="text-xl font-semibold text-red-600">{error}</div>
         <p className="text-sm text-muted-foreground">Failed to load orders.</p>
       </div>
     );
@@ -251,7 +258,7 @@ export default function OrdersPage() {
       return (
         <div className="max-w-5xl mx-auto p-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">Orders</h1>
-          
+
           {/* Search and Filter UI */}
           <div className="mb-6 flex flex-col md:flex-row gap-4">
             <div className="flex-1">
@@ -261,17 +268,17 @@ export default function OrdersPage() {
                 className="w-full border rounded-lg px-4 py-3 text-sm"
                 onChange={(e) => {
                   const value = e.target.value ? e.target.value : null;
-                  console.log('🔍 Search input changed:', value);
+                  console.log("🔍 Search input changed:", value);
                   setQ(value);
-                  
+
                   // Clear existing timeout
                   if (searchTimeoutId) {
                     clearTimeout(searchTimeoutId);
                   }
-                  
+
                   // Set new timeout for debounced search
                   const newTimeoutId = setTimeout(() => {
-                    console.log('⏰ Debounced search triggered for:', value);
+                    console.log("⏰ Debounced search triggered for:", value);
                     // Filter will happen automatically via useEffect
                   }, 500);
                   setSearchTimeoutId(newTimeoutId);
@@ -312,8 +319,13 @@ export default function OrdersPage() {
                   <button
                     key={s.key || "all"}
                     onClick={() => {
-                      console.log('🔘 Status button clicked:', s.key);
-                      console.log('🔄 Setting status from', status, 'to', s.key);
+                      console.log("🔘 Status button clicked:", s.key);
+                      console.log(
+                        "🔄 Setting status from",
+                        status,
+                        "to",
+                        s.key
+                      );
                       setStatus(s.key);
                       // Force refetch immediately - filter will happen automatically via useEffect
                     }}
@@ -323,9 +335,7 @@ export default function OrdersPage() {
                         : "text-muted-foreground hover:bg-white/30"
                     }`}
                   >
-                    <span className="whitespace-nowrap">
-                      {s.label}
-                    </span>
+                    <span className="whitespace-nowrap">{s.label}</span>
                     <span className="ml-1 inline-flex items-center justify-center min-w-[26px] px-2 py-0.5 text-xs font-medium rounded-full bg-muted text-muted-foreground">
                       {counts[countKey] ?? 0}
                     </span>
@@ -338,15 +348,29 @@ export default function OrdersPage() {
           {/* No Results Message with Clear Filter Options */}
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <div className="mb-4">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No orders match your current filters</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No orders match your current filters
+              </h3>
               <div className="text-sm text-gray-600 mb-4">
                 <span className="mr-2">Active filters:</span>
-                {status && <span className="mx-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Status: {status}</span>}
-                {q && <span className="mx-1 px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Search: &quot;{q}&quot;</span>}
-                {date && <span className="mx-1 px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">Date: {date}</span>}
+                {status && (
+                  <span className="mx-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                    Status: {status}
+                  </span>
+                )}
+                {q && (
+                  <span className="mx-1 px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
+                    Search: &quot;{q}&quot;
+                  </span>
+                )}
+                {date && (
+                  <span className="mx-1 px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">
+                    Date: {date}
+                  </span>
+                )}
               </div>
               <div className="flex gap-2 justify-center flex-wrap">
-                <button 
+                <button
                   onClick={() => {
                     setStatus(null);
                     setQ(null);
@@ -357,7 +381,7 @@ export default function OrdersPage() {
                   Clear All Filters
                 </button>
                 {status && (
-                  <button 
+                  <button
                     onClick={() => setStatus(null)}
                     className="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm"
                   >
@@ -365,7 +389,7 @@ export default function OrdersPage() {
                   </button>
                 )}
                 {q && (
-                  <button 
+                  <button
                     onClick={() => setQ(null)}
                     className="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm"
                   >
@@ -373,7 +397,7 @@ export default function OrdersPage() {
                   </button>
                 )}
                 {date && (
-                  <button 
+                  <button
                     onClick={() => setDate(null)}
                     className="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm"
                   >
@@ -383,7 +407,8 @@ export default function OrdersPage() {
               </div>
             </div>
             <p className="text-gray-500 text-sm">
-              <span className="font-medium">{allOrders.length}</span> total orders available
+              <span className="font-medium">{allOrders.length}</span> total
+              orders available
             </p>
           </div>
         </div>
@@ -405,20 +430,34 @@ export default function OrdersPage() {
   return (
     <div className="max-w-5xl mx-auto p-6">
       <h1 className="text-3xl font-bold tracking-tight mb-2">Your Orders</h1>
-      
+
       {/* Filter Status Indicator */}
       {hasActiveFilters && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-center justify-between">
             <div className="text-sm text-blue-700">
-              <span className="font-medium">Showing {filteredOrders.length} of {allOrders.length} orders</span>
+              <span className="font-medium">
+                Showing {filteredOrders.length} of {allOrders.length} orders
+              </span>
               <span className="mx-2">•</span>
               <span>Filtered by:</span>
-              {status && <span className="mx-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Status: {status}</span>}
-              {q && <span className="mx-1 px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Search: &quot;{q}&quot;</span>}
-              {date && <span className="mx-1 px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">Date: {date}</span>}
+              {status && (
+                <span className="mx-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                  Status: {status}
+                </span>
+              )}
+              {q && (
+                <span className="mx-1 px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
+                  Search: &quot;{q}&quot;
+                </span>
+              )}
+              {date && (
+                <span className="mx-1 px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">
+                  Date: {date}
+                </span>
+              )}
             </div>
-            <button 
+            <button
               onClick={() => {
                 setStatus(null);
                 setQ(null);
@@ -440,17 +479,17 @@ export default function OrdersPage() {
             className="w-full border rounded-lg px-4 py-3 text-sm"
             onChange={(e) => {
               const value = e.target.value ? e.target.value : null;
-              console.log('🔍 Search input changed:', value);
+              console.log("🔍 Search input changed:", value);
               setQ(value);
-              
+
               // Clear existing timeout
               if (searchTimeoutId) {
                 clearTimeout(searchTimeoutId);
               }
-              
+
               // Set new timeout for debounced search
               const newTimeoutId = setTimeout(() => {
-                console.log('⏰ Debounced search triggered for:', value);
+                console.log("⏰ Debounced search triggered for:", value);
                 // Filter will happen automatically via useEffect
               }, 500);
               setSearchTimeoutId(newTimeoutId);
@@ -490,8 +529,8 @@ export default function OrdersPage() {
               <button
                 key={s.key || "all"}
                 onClick={() => {
-                  console.log('🔘 Status button clicked:', s.key);
-                  console.log('🔄 Setting status from', status, 'to', s.key);
+                  console.log("🔘 Status button clicked:", s.key);
+                  console.log("🔄 Setting status from", status, "to", s.key);
                   setStatus(s.key);
                   // Force refetch immediately - filter will happen automatically via useEffect
                 }}
@@ -501,9 +540,7 @@ export default function OrdersPage() {
                     : "text-muted-foreground hover:bg-white/30"
                 }`}
               >
-                <span className="whitespace-nowrap">
-                  {s.label}
-                </span>
+                <span className="whitespace-nowrap">{s.label}</span>
                 <span className="ml-1 inline-flex items-center justify-center min-w-[26px] px-2 py-0.5 text-xs font-medium rounded-full bg-muted text-muted-foreground">
                   {counts[countKey] ?? 0}
                 </span>
@@ -520,7 +557,8 @@ export default function OrdersPage() {
               <div>
                 <CardTitle className="text-sm">Order #{o.id}</CardTitle>
                 <div className="text-xs text-muted-foreground">
-                  {o.items?.length || 0} item{(o.items?.length || 0) !== 1 ? "s" : ""}
+                  {o.items?.length || 0} item
+                  {(o.items?.length || 0) !== 1 ? "s" : ""}
                 </div>
               </div>
 

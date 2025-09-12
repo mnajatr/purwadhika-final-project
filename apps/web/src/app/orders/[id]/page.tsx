@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft } from "lucide-react";
 import PaymentUpload from "@/components/orders/PaymentUpload";
+import ConfirmButton from "@/components/orders/ConfirmButton";
 import { useGetOrder, OrderDetail, useCancelOrder } from "@/hooks/useOrder";
 
 function CancelButton({
@@ -165,6 +166,16 @@ export default function OrderPage({ params }: OrderPageProps) {
           </Link>
         </div>
       </div>
+
+        {/* Confirm button for shipped orders (buyer) */}
+        {order.status === "SHIPPED" && (
+          <div>
+            <ConfirmButton
+              orderId={order.id}
+              userId={(order as { userId?: number }).userId}
+            />
+          </div>
+        )}
 
       {/* Order summary */}
       <Card>

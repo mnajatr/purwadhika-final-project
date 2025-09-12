@@ -31,6 +31,12 @@ router.post(
 // PATCH /orders/:id/cancel - cancel order
 router.patch("/:id/cancel", ...maybeAuth, controller.cancelOrder);
 
+// PATCH /orders/:id/confirm - confirm order receipt
+router.patch("/:id/confirm", ...maybeAuth, controller.confirmOrder);
+
+// PATCH /orders/:id/ship - mark order as shipped (admin)
+router.patch("/:id/ship", ...maybeAuth, controller.shipOrder);
+
 // GET /orders/:id - get order by id
 router.get("/:id", ...maybeAuth, controller.getOrderById);
 

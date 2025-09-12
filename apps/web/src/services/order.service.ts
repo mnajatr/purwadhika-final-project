@@ -36,7 +36,7 @@ export class OrderService {
     page?: number;
     pageSize?: number;
   }): Promise<ApiResponse<unknown>> {
-    console.log('OrderService.list called with params:', params);
+    console.log("OrderService.list called with params:", params);
     return apiClient.get<ApiResponse<unknown>>(this.base, { params });
   }
 
@@ -52,6 +52,21 @@ export class OrderService {
       `${this.base}/${id}/cancel`,
       body
     );
+  }
+
+  async confirmOrder(
+    id: number,
+    requesterUserId?: number
+  ): Promise<ApiResponse<unknown>> {
+    const body: Record<string, unknown> = {};
+    if (typeof requesterUserId === "number") body.userId = requesterUserId;
+    return apiClient.patch<ApiResponse<unknown>>(`${this.base}/${id}/confirm`, body);
+  }
+
+  async shipOrder(id: number, actorUserId?: number): Promise<ApiResponse<unknown>> {
+    const body: Record<string, unknown> = {};
+    if (typeof actorUserId === 'number') body.userId = actorUserId;
+    return apiClient.patch<ApiResponse<unknown>>(`${this.base}/${id}/ship`, body);
   }
 }
 
