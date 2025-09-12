@@ -28,12 +28,18 @@ export class OrderService {
     return apiClient.get<ApiResponse<unknown>>(`${this.base}/${id}`);
   }
 
-  async cancelOrder(id: number, requesterUserId?: number): Promise<ApiResponse<unknown>> {
+  async cancelOrder(
+    id: number,
+    requesterUserId?: number
+  ): Promise<ApiResponse<unknown>> {
     // backend exposes PATCH /orders/:id/cancel for manual cancellation
     // include requesterUserId in body for local dev fallback (controller will pick it up)
     const body: Record<string, unknown> = {};
     if (typeof requesterUserId === "number") body.userId = requesterUserId;
-    return apiClient.patch<ApiResponse<unknown>>(`${this.base}/${id}/cancel`, body);
+    return apiClient.patch<ApiResponse<unknown>>(
+      `${this.base}/${id}/cancel`,
+      body
+    );
   }
 }
 

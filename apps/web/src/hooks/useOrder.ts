@@ -195,7 +195,9 @@ export function useCancelOrder() {
       try {
         // update cache immediately so UI reflects cancellation without waiting
         qc.setQueryData<OrderDetail | null>(["order", orderId], (prev) =>
-          prev ? { ...prev, status: "CANCELLED" } : ({ id: orderId, status: "CANCELLED", items: [] } as OrderDetail)
+          prev
+            ? { ...prev, status: "CANCELLED" }
+            : ({ id: orderId, status: "CANCELLED", items: [] } as OrderDetail)
         );
       } catch (err) {
         console.warn("Failed to set order cache after cancel", err);

@@ -12,7 +12,13 @@ import { ArrowLeft } from "lucide-react";
 import PaymentUpload from "@/components/orders/PaymentUpload";
 import { useGetOrder, OrderDetail, useCancelOrder } from "@/hooks/useOrder";
 
-function CancelButton({ orderId, userId }: { orderId: number; userId?: number }) {
+function CancelButton({
+  orderId,
+  userId,
+}: {
+  orderId: number;
+  userId?: number;
+}) {
   const cancel = useCancelOrder();
   const [loading, setLoading] = React.useState(false);
   const [errMsg, setErrMsg] = React.useState<string | null>(null);
@@ -294,7 +300,10 @@ export default function OrderPage({ params }: OrderPageProps) {
               order.paymentMethod === "MANUAL_TRANSFER" && (
                 <div className="mt-4 space-y-3">
                   <PaymentUpload orderId={order.id} apiBase={apiBase} />
-                  <CancelButton orderId={order.id} userId={(order as { userId?: number }).userId} />
+                  <CancelButton
+                    orderId={order.id}
+                    userId={(order as { userId?: number }).userId}
+                  />
                 </div>
               )}
           </CardContent>
