@@ -48,7 +48,11 @@ export default function ProductDetailPage() {
               </div>
               <div className="flex justify-between border-b pb-2">
                 <span className="text-gray-500">Volume</span>
-                <span className="font-medium">{product.volume}</span>
+                <span className="font-medium">
+                  {(product.weight ?? 0) *
+                    (product.length ?? 0) *
+                    (product.height ?? 0)}
+                </span>
               </div>
               <div className="flex justify-between border-b pb-2">
                 <span className="text-gray-500">Toko</span>
