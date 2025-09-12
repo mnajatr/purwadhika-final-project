@@ -132,6 +132,9 @@ async function cleanDatabase() {
 
   // Delete dependent tables first to avoid foreign key constraint errors
   await prisma.orderItem.deleteMany();
+  // Payments and shipments reference orders, delete them before deleting orders
+  await prisma.payment.deleteMany();
+  await prisma.shipment.deleteMany();
   await prisma.order.deleteMany();
   await prisma.cartItem.deleteMany();
   await prisma.cart.deleteMany();
