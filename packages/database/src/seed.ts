@@ -16,8 +16,12 @@ const categories = [
   { name: "Snacks", description: "Chips, crackers, and snacks" },
 ];
 
-// Store definitions - only seed Store Bandung for radius testing (no Jakarta store)
-const stores = [{ name: "Store Bandung", isActive: true }];
+// Store definitions - seed Bandung and Jakarta stores so admin assignment
+// and order routing can be tested across multiple stores.
+const stores = [
+  { name: "Store Bandung", isActive: true },
+  { name: "Store Jakarta", isActive: true },
+];
 
 // Sample products for each category
 const productsData = {
@@ -146,6 +150,8 @@ async function cleanDatabase() {
   await prisma.productCategory.deleteMany();
   // Delete store locations first to avoid FK constraint errors
   await prisma.storeLocation.deleteMany();
+  // Delete store admin assignments before deleting stores to avoid FK constraint
+  await prisma.storeAdminAssignment.deleteMany();
   await prisma.store.deleteMany();
   await prisma.userAddress.deleteMany();
   await prisma.user.deleteMany();
@@ -263,8 +269,49 @@ async function seedStores() {
 
   // No Jakarta store seeded for radius-negative test case
 
+  // Jakarta location (lat: -6.2000, lon: 106.8166)
+  const jakarta = createdStores.find((s) => s.name.toLowerCase().includes("jakarta"));
+  if (jakarta) {
+    await prisma.storeLocation.create({
+      data: {
+        storeId: jakarta.id,
+        addressLine: "Jl. Sudirman No.1",
+        province: "DKI Jakarta",
+        city: "Jakarta",
+        district: "Tanah Abang",
+        postalCode: "10210",
+        latitude: -6.2000,
+        longitude: 106.8166,
+      },
+    });
+  }
+
   console.log(`✅ Created ${createdStores.length} stores`);
   return createdStores;
+}
+
+async function seedStoreAssignments(users: any[], stores: any[]) {
+  console.log("🔐 Seeding store admin assignments...");
+
+  const storeAdmins = users.filter((u) => u.role === "STORE_ADMIN");
+  if (storeAdmins.length === 0 || stores.length === 0) {
+    console.log("No store admins or stores found — skipping assignments");
+    return [];
+  }
+
+  const assignments = [];
+  // Round-robin assign store admins to stores (or assign first store if single)
+  for (let i = 0; i < storeAdmins.length; i++) {
+    const admin = storeAdmins[i];
+    const store = stores[i % stores.length];
+    const a = await prisma.storeAdminAssignment.create({
+      data: { storeId: store.id, userId: admin.id },
+    });
+    assignments.push(a);
+  }
+
+  console.log(`✅ Created ${assignments.length} store assignments`);
+  return assignments;
 }
 
 async function seedProducts(categories: any[]) {
@@ -334,6 +381,112 @@ async function seedInventories(stores: any[], products: any[]) {
   }
 
   console.log(`✅ Created ${inventoryCount} inventory records`);
+}
+async function seedOrders(users: any[], stores: any[], products: any[]) {
+  console.log("📦 Seeding sample orders for Feature 3 testing...");
+
+  // Use a test user that has addresses (seedUserAddresses targets id=4)
+  const testUser = users.find((u) => u.id === 4) ?? users[0];
+  if (!testUser) {
+    console.log("No users available — skipping orders");
+    return [];
+  }
+
+  const store = stores[0];
+  if (!store) {
+    console.log("No stores available — skipping orders");
+    return [];
+  }
+
+  // Ensure the test user has an address
+  const address = await prisma.userAddress.findFirst({ where: { userId: testUser.id } });
+  if (!address) {
+    console.log("No address found for test user — skipping orders");
+    return [];
+  }
+  const addressId = address.id;
+
+  const createdOrders: any[] = [];
+
+  // helper to create a simple order with one item
+  async function createSimpleOrder(status: string, withPayment = false, withShipment = false) {
+    const product = products[0];
+    const qty = 2;
+    const unitPrice = Number(product.price ?? product.basePrice ?? 0);
+    const subtotal = Math.round(unitPrice * qty);
+    const shippingCost = 5000;
+    const discountTotal = 0;
+    const grandTotal = subtotal + shippingCost - discountTotal;
+
+  const order = await prisma.order.create({
+      data: {
+        userId: testUser.id,
+        storeId: store.id,
+    addressId,
+        status: status as any,
+        paymentMethod: "MANUAL_TRANSFER",
+        subtotalAmount: subtotal,
+        shippingCost,
+        discountTotal,
+        grandTotal,
+        totalItems: qty,
+        paymentDeadlineAt: new Date(Date.now() + 60 * 60 * 1000),
+        items: {
+          create: [
+            {
+              productId: product.id,
+              productSnapshot: JSON.stringify({ id: product.id, name: product.name }),
+              unitPriceSnapshot: unitPrice,
+              qty,
+              totalAmount: subtotal,
+            },
+          ],
+        },
+      },
+      include: { items: true },
+    });
+
+    if (withPayment) {
+      // create payment record
+      await prisma.payment.create({
+        data: {
+          orderId: order.id,
+          status: status === "PAYMENT_REVIEW" ? "PENDING" : "PAID",
+          amount: grandTotal,
+          proofImageUrl: status === "PAYMENT_REVIEW" ? "https://example.com/proof.jpg" : null,
+          reviewedAt: status === "PAYMENT_REVIEW" ? null : new Date(),
+          paidAt: status === "CONFIRMED" || status === "SHIPPED" || status === "PROCESSING" ? new Date() : null,
+        },
+      });
+    }
+
+    if (withShipment) {
+      await prisma.shipment.create({
+        data: {
+          orderId: order.id,
+          methodId: 1,
+          trackingNumber: `TRK-${order.id}-${Date.now()}`,
+          cost: shippingCost,
+          status: "in_transit",
+          shippedAt: new Date(),
+        },
+      });
+    }
+
+    createdOrders.push(order);
+    return order;
+  }
+
+  // Create sample orders across statuses
+  await createSimpleOrder("PENDING_PAYMENT", false, false);
+  await createSimpleOrder("PAYMENT_REVIEW", true, false);
+  await createSimpleOrder("PROCESSING", true, false);
+  await createSimpleOrder("SHIPPED", true, true);
+  await createSimpleOrder("CONFIRMED", true, false);
+  await createSimpleOrder("CANCELLED", false, false);
+
+  console.log(`✅ Created ${createdOrders.length} sample orders`);
+  return createdOrders;
 }
 async function seedCarts(users: any[], products: any[], stores: any[]) {
   console.log("🛒 Seeding sample carts...");
@@ -429,16 +582,18 @@ async function seed() {
     await cleanDatabase();
 
     const users = await seedUsers();
+    // Seed user addresses early so seedOrders can find an address for the test user
+    await seedUserAddresses(users);
     const categories = await seedCategories();
-    const stores = await seedStores();
+  const stores = await seedStores();
+  await seedStoreAssignments(users, stores);
     const products = await seedProducts(categories);
 
-    await seedInventories(stores, products);
-    await seedCarts(users, products, stores);
+  await seedInventories(stores, products);
+  await seedOrders(users, stores, products);
+  await seedCarts(users, products, stores);
 
     const regularUsers = users.filter((user) => user.role === "USER");
-    // Seed specific user addresses for testing (userId = 1)
-    await seedUserAddresses(users);
 
     console.log("\n� Database seeding completed successfully!");
     console.log(`

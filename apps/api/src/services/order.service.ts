@@ -48,7 +48,8 @@ export class OrderService {
   }
 
   async listOrders(opts: {
-    userId?: number;
+  storeId?: number;
+  userId?: number;
     status?: string;
     q?: string | number;
     dateFrom?: string;
@@ -56,7 +57,7 @@ export class OrderService {
     page?: number;
     pageSize?: number;
   }) {
-    return orderReadService.listOrders(opts);
+  return orderReadService.listOrders(opts as any);
   }
 
   async uploadPaymentProof(

@@ -41,15 +41,29 @@ export class CheckoutController {
   listOrders = async (req: Request, res: Response) => {
     try {
       const userId = pickUserId(req);
+      // If request has an authenticated admin attached (from adminAuth middleware),
+      // do not scope the listing to a specific user. Admin endpoints should not
+      // be filtered by the requesting user's id.
+      const authReq = req as any;
+      const effectiveUserId = authReq.user && (authReq.user.role === "SUPER_ADMIN" || authReq.user.role === "STORE_ADMIN")
+        ? undefined
+        : userId;
       const status = req.query.status as string | undefined;
       const q = req.query.q as string | undefined;
       const dateFrom = req.query.dateFrom as string | undefined;
       const dateTo = req.query.dateTo as string | undefined;
       const page = Number(req.query.page ?? 1);
       const pageSize = Number(req.query.pageSize ?? 20);
+  // Prefer explicitly-attached store id for admin scoping (set by admin middleware)
+  const storeIdFromMiddleware = authReq.storeScopedId ?? authReq.user?.storeId;
+  const storeId = storeIdFromMiddleware ?? (req.query?.storeId ? Number(req.query.storeId) : undefined);
 
-      const result = await this.service.listOrders({
-        userId,
+  const filters = { userId: effectiveUserId, storeId, status, q, dateFrom, dateTo, page, pageSize };
+  console.log("[DEBUG] listOrders filters:", JSON.stringify(filters));
+
+  const result = await this.service.listOrders({
+        userId: effectiveUserId,
+        storeId,
         status,
         q,
         dateFrom,
@@ -57,6 +71,7 @@ export class CheckoutController {
         page,
         pageSize,
       });
+
 
       return res.status(200).json(successResponse(result));
     } catch (e) {

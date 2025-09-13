@@ -1,6 +1,7 @@
 import { prisma } from "@repo/database";
 
 export interface OrderListOptions {
+  storeId?: number;
   userId?: number;
   status?: string;
   q?: string | number;
@@ -21,6 +22,7 @@ export class OrderReadService {
 
   async listOrders(options: OrderListOptions): Promise<OrderListResult> {
     const {
+      storeId,
       userId,
       status,
       q,
@@ -31,6 +33,9 @@ export class OrderReadService {
     } = options || {};
 
     const where: any = {};
+
+    // Filter by storeId if provided (admin listing)
+    if (typeof storeId === "number") where.storeId = storeId;
 
     // Filter by userId if provided
     if (typeof userId === "number") where.userId = userId;
