@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 export default function Sidebar() {
-    const menus = [
+  const menus = [
     { name: "Home", path: "/products" },
     { name: "Users", path: "/admin/userManagement" },
     { name: "Products", path: "/admin/productManagement" },
@@ -25,7 +25,11 @@ export default function Sidebar() {
           <div className="mt-2 p-2 bg-gray-700 rounded">
             <label className="block text-xs text-gray-300 mb-1">Dev user</label>
             <select
-              defaultValue={typeof window !== "undefined" ? localStorage.getItem("devUserId") || "4" : "4"}
+              defaultValue={
+                typeof window !== "undefined"
+                  ? localStorage.getItem("devUserId") || "4"
+                  : "4"
+              }
               onChange={(e) => {
                 try {
                   localStorage.setItem("devUserId", e.target.value);

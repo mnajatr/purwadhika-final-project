@@ -3,17 +3,39 @@
 import { useQuery } from "@tanstack/react-query";
 import { getAdminOrders } from "@/services/orders.service";
 
-type ListResp = { items: unknown[]; total: number; page: number; pageSize: number };
+type ListResp = {
+  items: unknown[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
 
-export function useOrders(opts?: { page?: number; pageSize?: number; status?: string; q?: string }) {
-  const queryKey = ["admin", "orders", opts?.page ?? 1, opts?.pageSize ?? 20, opts?.status ?? null, opts?.q ?? null];
+export function useOrders(opts?: {
+  page?: number;
+  pageSize?: number;
+  status?: string;
+  q?: string;
+}) {
+  const queryKey = [
+    "admin",
+    "orders",
+    opts?.page ?? 1,
+    opts?.pageSize ?? 20,
+    opts?.status ?? null,
+    opts?.q ?? null,
+  ];
 
   const result = useQuery<ListResp, Error>({
     queryKey,
     queryFn: async () => {
-      console.log('useOrders calling getAdminOrders with opts:', opts);
-      const data = await getAdminOrders({ page: opts?.page ?? 1, pageSize: opts?.pageSize ?? 20, status: opts?.status, q: opts?.q });
-      console.log('useOrders received data:', data);
+      console.log("useOrders calling getAdminOrders with opts:", opts);
+      const data = await getAdminOrders({
+        page: opts?.page ?? 1,
+        pageSize: opts?.pageSize ?? 20,
+        status: opts?.status,
+        q: opts?.q,
+      });
+      console.log("useOrders received data:", data);
       return data;
     },
   });
@@ -23,6 +45,10 @@ export function useOrders(opts?: { page?: number; pageSize?: number; status?: st
     loading: result.isLoading,
     error: result.error?.message ?? null,
     reload: () => result.refetch(),
-    meta: { total: result.data?.total ?? 0, page: result.data?.page ?? 1, pageSize: result.data?.pageSize ?? 20 },
+    meta: {
+      total: result.data?.total ?? 0,
+      page: result.data?.page ?? 1,
+      pageSize: result.data?.pageSize ?? 20,
+    },
   };
 }

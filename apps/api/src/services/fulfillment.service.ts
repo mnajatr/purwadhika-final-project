@@ -22,12 +22,34 @@ export class FulfillmentService {
     });
 
     try {
-      const { orderConfirmQueue } = await import("../queues/orderConfirmQueue.js");
-      const DELAY_MS = Number(process.env.ORDER_CONFIRM_DELAY_MS) || 48 * 60 * 60 * 1000;
-      await orderConfirmQueue.add("confirm-order", { orderId }, { jobId: String(orderId), delay: DELAY_MS });
+      const { orderConfirmQueue } = await import(
+        "../queues/orderConfirmQueue.js"
+      );
+      const DELAY_MS =
+        Number(process.env.ORDER_CONFIRM_DELAY_MS) || 48 * 60 * 60 * 1000;
+      await orderConfirmQueue.add(
+        "confirm-order",
+        { orderId },
+        { jobId: String(orderId), delay: DELAY_MS }
+      );
     } catch (e) {
       const logger = (await import("../utils/logger.js")).default;
       logger.error(`Failed to enqueue confirm job for order=${orderId}: %o`, e);
+    }
+
+    // Schedule auto-confirmation after 7 days
+    try {
+      const { scheduleAutoConfirmation } = await import(
+        "../queues/autoConfirmQueue.js"
+      );
+      const AUTO_CONFIRM_DELAY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+      await scheduleAutoConfirmation(orderId, AUTO_CONFIRM_DELAY_MS);
+      logger.info(`Scheduled auto-confirmation for order ${orderId} in 7 days`);
+    } catch (e) {
+      logger.error(
+        `Failed to schedule auto-confirmation for order=${orderId}: %o`,
+        e
+      );
     }
 
     return result;
@@ -45,7 +67,9 @@ export class FulfillmentService {
       }
 
       if (order.status !== "SHIPPED") {
-        throw new Error(`Cannot confirm order: current status is ${order.status}`);
+        throw new Error(
+          `Cannot confirm order: current status is ${order.status}`
+        );
       }
 
       return tx.order.update({
@@ -55,12 +79,30 @@ export class FulfillmentService {
     });
 
     try {
-      const { orderConfirmQueue } = await import("../queues/orderConfirmQueue.js");
+      const { orderConfirmQueue } = await import(
+        "../queues/orderConfirmQueue.js"
+      );
       const job = await orderConfirmQueue.getJob(String(orderId));
       if (job) await job.remove();
     } catch (e) {
       const logger = (await import("../utils/logger.js")).default;
       logger.error(`Failed to remove confirm job for order=${orderId}: %o`, e);
+    }
+
+    // Cancel auto-confirmation since user manually confirmed
+    try {
+      const { cancelAutoConfirmation } = await import(
+        "../queues/autoConfirmQueue.js"
+      );
+      await cancelAutoConfirmation(orderId);
+      logger.info(
+        `Cancelled auto-confirmation for manually confirmed order ${orderId}`
+      );
+    } catch (e) {
+      logger.error(
+        `Failed to cancel auto-confirmation for order=${orderId}: %o`,
+        e
+      );
     }
 
     return result;
@@ -90,12 +132,16 @@ export class FulfillmentService {
           throw new Error("Cannot cancel: not order owner");
         }
         if (order.status !== "PENDING_PAYMENT") {
-          throw createConflictError(`Cannot cancel order: current status is ${order.status}`);
+          throw createConflictError(
+            `Cannot cancel order: current status is ${order.status}`
+          );
         }
       } else {
         // === ADMIN cancel ===
         if (["SHIPPED", "CONFIRMED"].includes(order.status)) {
-          throw createConflictError(`Admin cannot cancel order in status ${order.status}`);
+          throw createConflictError(
+            `Admin cannot cancel order in status ${order.status}`
+          );
         }
       }
 
@@ -109,13 +155,19 @@ export class FulfillmentService {
     });
 
     await this._removeScheduledCancellation(orderId);
-    logger.info(`Order ${orderId} cancelled by ${requesterUserId ? `user=${requesterUserId}` : "admin"}`);
+    logger.info(
+      `Order ${orderId} cancelled by ${
+        requesterUserId ? `user=${requesterUserId}` : "admin"
+      }`
+    );
     return result;
   }
 
   private async _removeScheduledCancellation(orderId: number): Promise<void> {
     try {
-      const { orderCancelQueue } = await import("../queues/orderCancelQueue.js");
+      const { orderCancelQueue } = await import(
+        "../queues/orderCancelQueue.js"
+      );
       const job = await orderCancelQueue.getJob(String(orderId));
       if (job) await job.remove();
     } catch (err) {
