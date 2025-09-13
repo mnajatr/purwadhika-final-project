@@ -1,10 +1,21 @@
 import { Router } from "express";
 import upload from "../middleware/upload.middleware.js";
-import { OrderController } from "../controllers/order.controller.js";
+import { checkoutController } from "../controllers/checkout.controller.js";
+import { paymentController } from "../controllers/payment.controller.js";
+import { fulfillmentController } from "../controllers/fulfillment.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = Router();
-const controller = new OrderController();
+const controller = {
+  createOrder: checkoutController.createOrder.bind(checkoutController),
+  listOrders: checkoutController.listOrders.bind(checkoutController),
+  getOrderById: checkoutController.getOrderById.bind(checkoutController),
+  uploadPaymentProof: paymentController.uploadPaymentProof.bind(paymentController),
+  cancelOrder: fulfillmentController.cancelOrder.bind(fulfillmentController),
+  confirmOrder: fulfillmentController.confirmOrder.bind(fulfillmentController),
+  shipOrder: fulfillmentController.shipOrder.bind(fulfillmentController),
+  getOrderCounts: fulfillmentController.getOrderCounts.bind(fulfillmentController),
+};
 
 // TODO: Use auth middleware only in production. Define routes once and inject
 // the middleware conditionally to avoid duplicated route definitions.
