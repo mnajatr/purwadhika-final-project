@@ -54,6 +54,7 @@ export class FulfillmentService {
       const order = await tx.order.findUnique({ where: { id: orderId } });
       if (!order) throw new Error("Order not found");
 
+      console.debug('[DEBUG] fulfill.confirmOrder: requesterUserId ->', requesterUserId, 'order.userId ->', order.userId);
       // If requesterUserId provided, enforce ownership in production
       if (requesterUserId && order.userId !== requesterUserId) {
         throw new Error("Cannot confirm: not order owner");
@@ -98,7 +99,8 @@ export class FulfillmentService {
 
       if (!order) throw new Error("Order not found");
 
-      if (order.userId !== requesterUserId) {
+      // Enforce ownership only if a requesterUserId is provided (normal users).
+      if (typeof requesterUserId === "number" && order.userId !== requesterUserId) {
         throw new Error("Cannot cancel: not order owner");
       }
 

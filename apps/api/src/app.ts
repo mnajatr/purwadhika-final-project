@@ -3,6 +3,7 @@ import cors from "cors";
 import cartRouter from "./routes/cart.routes.js";
 import ordersRouter from "./routes/orders.routes.js";
 import productRoutes from "./routes/product.routes.js";
+import adminRouter from "./routes/admin.routes.js";
 import { v2 as cloudinary } from "cloudinary";
 import logger from "./utils/logger.js";
 import { prisma } from "@repo/database";
@@ -65,6 +66,7 @@ export class App {
     this.app.use("/api/cart", cartRouter);
     this.app.use("/api/orders", ordersRouter);
     this.app.use("/api/products", productRoutes);
+  this.app.use("/api/admin", adminRouter);
 
     this.app.get("/api/health", (request, response) =>
       response.status(200).json({ message: "API running!" })

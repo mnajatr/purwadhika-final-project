@@ -32,8 +32,8 @@ export class LocationService {
       }
     }
 
-    // Enforce a max service radius (e.g., 50 km) to avoid assigning very distant store
-    const MAX_KM = Number(process.env.MAX_STORE_RADIUS_KM ?? 50);
+    // Enforce a max service radius (e.g., 10 km) to avoid assigning very distant store
+    const MAX_KM = Number(process.env.MAX_STORE_RADIUS_KM ?? 10);
     if (best && best.distKm <= MAX_KM) return best.storeId;
     return undefined;
   }
