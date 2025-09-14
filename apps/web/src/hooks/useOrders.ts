@@ -15,6 +15,7 @@ export function useOrders(opts?: {
   pageSize?: number;
   status?: string;
   q?: string;
+  storeId?: number;
 }) {
   const queryKey = [
     "admin",
@@ -23,6 +24,7 @@ export function useOrders(opts?: {
     opts?.pageSize ?? 20,
     opts?.status ?? null,
     opts?.q ?? null,
+    opts?.storeId ?? null,
   ];
 
   const result = useQuery<ListResp, Error>({
@@ -33,7 +35,8 @@ export function useOrders(opts?: {
         page: opts?.page ?? 1,
         pageSize: opts?.pageSize ?? 20,
         status: opts?.status,
-        q: opts?.q,
+  q: opts?.q,
+  storeId: opts?.storeId,
       });
       console.log("useOrders received data:", data);
       return data;

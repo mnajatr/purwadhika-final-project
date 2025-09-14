@@ -15,6 +15,7 @@ class OrdersService {
     pageSize?: number;
     status?: string;
     q?: string;
+    storeId?: number;
   }) {
     const params: Record<string, unknown> = {};
     // Always include page and pageSize, don't check for truthy values since page 1 is falsy
@@ -22,6 +23,7 @@ class OrdersService {
     params.pageSize = opts?.pageSize ?? 20;
     if (opts?.status) params.status = opts.status;
     if (opts?.q) params.q = opts.q;
+    if (typeof opts?.storeId === "number") params.storeId = opts.storeId;
 
     console.log(
       "Orders service calling:",
@@ -29,13 +31,12 @@ class OrdersService {
       "with params:",
       params
     );
-    const response = await apiClient.get<{ success: boolean; data: ListResp }>(
+    const envelope = await apiClient.get<{ success: boolean; data: ListResp }>(
       this.basePath,
       params
     );
-    console.log("Orders service received:", response);
-    // Extract the data field from the backend response structure
-    return response.data;
+    console.log("Orders service received envelope:", envelope);
+    return envelope.data;
   }
 
   async updateOrderStatus(
@@ -67,4 +68,5 @@ export const getAdminOrders = (opts?: {
   pageSize?: number;
   status?: string;
   q?: string;
+  storeId?: number;
 }) => ordersService.getOrders(opts);

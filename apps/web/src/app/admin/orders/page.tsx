@@ -4,6 +4,7 @@ import Sidebar from "@/components/admin/sidebar";
 import { useState, useEffect } from "react";
 import { useOrders } from "@/hooks/useOrders";
 import { ordersService } from "@/services/orders.service";
+import { storesService } from "@/services/stores.service";
 import Link from "next/link";
 
 type Order = {
@@ -38,13 +39,17 @@ export default function AdminOrdersPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [storeIdFilter, setStoreIdFilter] = useState<number | undefined>(undefined);
   const pageSize = 20;
   const { items, loading, error, reload, meta } = useOrders({
     page,
     pageSize,
     status: status || undefined,
     q: searchQuery || undefined,
+    storeId: storeIdFilter,
   });
+  const [stores, setStores] = useState<Array<{ id: number; name: string }>>([]);
+  const [profile, setProfile] = useState<{ id: number; role: string; storeId?: number | null } | null>(null);
   const [devUserId, setDevUserId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>(
     {}
@@ -58,6 +63,29 @@ export default function AdminOrdersPage() {
     } catch {
       setDevUserId(null);
     }
+  }, []);
+
+  // Fetch stores for super_admin to filter by
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const [storeList, profileResp] = await Promise.all([storesService.list(), storesService.getProfile().catch(() => null)]);
+        if (mounted) {
+          setStores(storeList);
+          setProfile(profileResp ?? null);
+          // if current profile is store admin, default the store filter to their store
+          if (profileResp && profileResp.role === "STORE_ADMIN" && profileResp.storeId) {
+            setStoreIdFilter(profileResp.storeId);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const isLikelyNonAdmin =
@@ -185,6 +213,25 @@ export default function AdminOrdersPage() {
                 <option value="CANCELLED">Cancelled</option>
               </select>
             </div>
+            {/* Show store selector only when profile is loaded and it's SUPER_ADMIN */}
+            {profile?.role === "SUPER_ADMIN" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Store</label>
+                <select
+                  value={storeIdFilter ?? ""}
+                  onChange={(e) => setStoreIdFilter(e.target.value ? Number(e.target.value) : undefined)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                >
+                  <option value="">All stores</option>
+                  {stores.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
             <div className="flex items-end">
               <button
                 onClick={() => {
