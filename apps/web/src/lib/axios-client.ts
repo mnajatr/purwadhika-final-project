@@ -23,17 +23,36 @@ class ApiClient {
       withCredentials: true,
     });
 
-    // Add development user ID for testing
+    // Add development user ID for testing. Read from localStorage.devUserId when available
     this.client.interceptors.request.use((config) => {
-      // Add devUserId header for development testing
       if (process.env.NODE_ENV !== "production") {
-        config.headers["x-dev-user-id"] = "4"; // Default test user ID
+        try {
+          // Prefer explicit dev id saved in localStorage (set by dev UI)
+          if (typeof window !== "undefined") {
+            const stored = localStorage.getItem("devUserId");
+            console.log('axios-client: devUserId from localStorage:', stored);
+            if (stored && stored !== "none") {
+              config.headers["x-dev-user-id"] = stored;
+              console.log('axios-client: set x-dev-user-id to:', stored);
+            }
+            // if stored is "none" or not present, fall back to default
+          }
+        } catch {
+          // ignore localStorage errors and fall back to default
+        }
+
+        // Default fallback id when none is set
+        if (!config.headers["x-dev-user-id"]) {
+          config.headers["x-dev-user-id"] = "4";
+          console.log('axios-client: using default x-dev-user-id: 4');
+        }
       }
       console.log(
         "API Request:",
         config.method?.toUpperCase(),
         config.url,
-        config.params
+        config.params,
+        'headers x-dev-user-id:', config.headers["x-dev-user-id"]
       );
       return config;
     });
