@@ -53,15 +53,16 @@ export class FulfillmentController {
         return res.status(400).json(errorResponse("Invalid order id"));
       }
 
-      const userId = pickUserId(req);
+    const userId = pickUserId(req);
       if (!userId) {
         return res.status(400).json(errorResponse("Missing userId in request"));
       }
   const authReq = req as any;
   const isAdmin = authReq.user && (authReq.user.role === "SUPER_ADMIN" || authReq.user.role === "STORE_ADMIN");
   const requester = isAdmin ? undefined : userId;
+  const actorId = isAdmin ? Number(authReq.user?.id) : undefined;
 
-  const result = await this.service.cancelOrder(id, requester as any);
+  const result = await this.service.cancelOrder(id, requester as any, actorId as any);
       return res.status(200).json(successResponse(result, "Order cancelled"));
     } catch (e) {
       return this._handleOrderStatusError(e, res, "Failed to cancel order");
@@ -75,15 +76,16 @@ export class FulfillmentController {
         return res.status(400).json(errorResponse("Invalid order id"));
       }
 
-      const userId = pickUserId(req);
+    const userId = pickUserId(req);
       if (!userId) {
         return res.status(400).json(errorResponse("Missing userId in request"));
       }
   const authReq = req as any;
   const isAdmin = authReq.user && (authReq.user.role === "SUPER_ADMIN" || authReq.user.role === "STORE_ADMIN");
   const requester = isAdmin ? undefined : userId;
+  const actorId = isAdmin ? Number(authReq.user?.id) : undefined;
 
-  const result = await this.service.confirmOrder(id, requester as any);
+  const result = await this.service.confirmOrder(id, requester as any, actorId as any);
       return res.status(200).json(successResponse(result, "Order confirmed"));
     } catch (e) {
       return this._handleOrderStatusError(e, res, "Failed to confirm order");

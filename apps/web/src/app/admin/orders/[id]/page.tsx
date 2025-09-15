@@ -131,11 +131,14 @@ export default function OrderDetailPage() {
   };
 
   const canShip = (order: OrderDetail) => {
-    return order.status === "CONFIRMED";
+    // Ship allowed when order is processing (payment accepted by admin)
+    return order.status === "PROCESSING";
   };
 
   const canCancel = (order: OrderDetail) => {
-    return ["PENDING_PAYMENT", "PAYMENT_REVIEW", "CONFIRMED"].includes(
+    // Admin may cancel before shipped/confirmed. Allow cancelling when
+    // pending payment, under review, or processing.
+    return ["PENDING_PAYMENT", "PAYMENT_REVIEW", "PROCESSING"].includes(
       order.status
     );
   };
