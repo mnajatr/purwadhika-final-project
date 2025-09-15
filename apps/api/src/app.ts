@@ -67,7 +67,7 @@ export class App {
     this.app.use("/api/cart", cartRouter);
     this.app.use("/api/orders", ordersRouter);
     this.app.use("/api/products", productRoutes);
-  this.app.use("/api/admin", adminRouter);
+    this.app.use("/api/admin", adminRouter);
 
     this.app.get("/api/health", (request, response) =>
       response.status(200).json({ message: "API running!" })
@@ -175,52 +175,6 @@ export class App {
       if (userRole) userData.role = userRole;
       const user = await prisma.user.create({ data: userData });
       response.status(201).json({ message: "User created", user });
-    });
-
-    this.app.post("/api/products", async (req, res) => {
-      try {
-        const product = await prisma.product.create({
-          data: {
-            name: req.body.name,
-            slug: req.body.slug,
-            description: req.body.description,
-            price: req.body.price,
-            weight: req.body.weight,
-            width: req.body.width,
-            height: req.body.height,
-            length: req.body.length,
-            category: {
-              connect: { id: req.body.categoryId },
-            },
-            images: req.body.images
-              ? {
-                  create: req.body.images.map((img: any) => ({
-                    imageUrl: img.imageUrl,
-                  })),
-                }
-              : undefined,
-            inventories: req.body.inventories
-              ? {
-                  create: req.body.inventories.map((inv: any) => ({
-                    stockQty: inv.stockQty,
-                    store: { connect: { id: inv.storeId } },
-                  })),
-                }
-              : undefined,
-          },
-          include: {
-            category: true,
-            inventories: { include: { store: true } },
-            images: true,
-          },
-        });
-
-        res.status(201).json({ message: "Product created", product });
-      } catch (err) {
-        res
-          .status(500)
-          .json({ message: "Failed to create product", error: String(err) });
-      }
     });
 
     this.app.use(notFoundMiddleware);
