@@ -26,4 +26,32 @@ export class ProductController {
       res.status(400).json({ message: "Failed to create product" });
     }
   }
+  static async update(req: Request, res: Response) {
+    try {
+      const { slug } = req.params;
+      const updated = await service.updateProduct(slug, req.body);
+
+      if (!updated) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      res.json(updated);
+    } catch (e) {
+      res.status(400).json({ message: "Failed to update product" });
+    }
+  }
+  static async delete(req: Request, res: Response) {
+    try {
+      const { slug } = req.params;
+      const deleted = await service.deleteProduct(slug);
+
+      if (!deleted) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      res.json({ message: "Product deleted successfully" });
+    } catch (e) {
+      res.status(400).json({ message: "Failed to delete product" });
+    }
+  }
 }

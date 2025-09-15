@@ -73,4 +73,65 @@ export class ProductService {
       price: Number(product.price),
     };
   }
+  async updateProduct(slug: string, data: Partial<CreateProduct>) {
+    const product = await prisma.product.update({
+      where: { slug },
+      data: {
+        name: data.name,
+        slug: data.slug,
+        description: data.description,
+        price: data.price,
+        weight: data.weight,
+        width: data.width,
+        height: data.height,
+        length: data.length,
+        category: data.categoryId
+          ? { connect: { id: data.categoryId } }
+          : undefined,
+
+        images: data.images
+          ? {
+              deleteMany: {},
+              create: data.images.map((img) => ({
+                imageUrl: img.imageUrl,
+              })),
+            }
+          : undefined,
+
+        inventories: data.inventories
+          ? {
+              deleteMany: {},
+              create: data.inventories.map((inv) => ({
+                stockQty: inv.stockQty,
+                store: { connect: { id: inv.storeId } },
+              })),
+            }
+          : undefined,
+      },
+      include: {
+        category: true,
+        inventories: { include: { store: true } },
+        images: true,
+      },
+    });
+
+    return {
+      ...product,
+      price: Number(product.price),
+    };
+  }
+
+  async deleteProduct(slug: string) {
+    const product = await prisma.product.findUnique({ where: { slug } });
+    if (!product) return null;
+
+    await prisma.storeInventory.deleteMany({
+      where: { productId: product.id },
+    });
+    await prisma.productImage.deleteMany({ where: { productId: product.id } });
+
+    return prisma.product.delete({
+      where: { slug },
+    });
+  }
 }
