@@ -39,10 +39,16 @@ export class FulfillmentService {
 
     // Schedule auto-confirmation after 7 days
     try {
-      const { scheduleAutoConfirmation } = await import(
+      const { scheduleAutoConfirmation, cancelAutoConfirmation } = await import(
         "../queues/autoConfirmQueue.js"
       );
       const AUTO_CONFIRM_DELAY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+      // Remove any previously scheduled auto-confirm job to avoid duplicates
+      try {
+        await cancelAutoConfirmation(orderId);
+      } catch (innerErr) {
+        logger.warn(`Failed to cancel existing auto-confirm for order=${orderId}: %o`, innerErr);
+      }
       await scheduleAutoConfirmation(orderId, AUTO_CONFIRM_DELAY_MS);
       logger.info(`Scheduled auto-confirmation for order ${orderId} in 7 days`);
     } catch (e) {
