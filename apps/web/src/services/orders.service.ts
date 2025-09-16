@@ -24,10 +24,10 @@ class OrdersService {
     if (opts?.status) params.status = opts.status;
     if (opts?.q) params.q = opts.q;
     if (typeof opts?.storeId === "number") params.storeId = opts.storeId;
-
+    
     console.log(
-      "Orders service calling:",
-      this.basePath,
+    "Orders service calling:",
+    this.basePath,
       "with params:",
       params
     );

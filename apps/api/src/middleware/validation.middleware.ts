@@ -34,7 +34,10 @@ export const validateSchema = (schema: {
           });
         }
         // merge validated params into existing req.params to avoid assigning to a getter-only property
-        Object.assign(req.params as Record<string, any>, paramsResult.data as Record<string, any>);
+        Object.assign(
+          req.params as Record<string, any>,
+          paramsResult.data as Record<string, any>
+        );
       }
 
       if (schema.query) {
@@ -49,7 +52,10 @@ export const validateSchema = (schema: {
           });
         }
         // merge validated query into existing req.query to avoid assigning to a getter-only property
-        Object.assign(req.query as Record<string, any>, queryResult.data as Record<string, any>);
+        Object.assign(
+          req.query as Record<string, any>,
+          queryResult.data as Record<string, any>
+        );
       }
 
       next();

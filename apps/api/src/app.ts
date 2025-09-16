@@ -1,27 +1,34 @@
-import express from "express";
+import express, { Application, Request, Response } from "express";
 import cors from "cors";
 import cartRouter from "./routes/cart.routes.js";
 import ordersRouter from "./routes/orders.routes.js";
 import productRoutes from "./routes/product.routes.js";
 import adminRouter from "./routes/admin.routes.js";
+import usersRouter from "./routes/users.routes.js";
+import storesRouter from "./routes/stores.routes.js";
+import debugRouter from "./routes/debug.routes.js";
 import { v2 as cloudinary } from "cloudinary";
 import logger from "./utils/logger.js";
-import { prisma } from "@repo/database";
-import { CreateUserSchema } from "@repo/schemas";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 import { apiRateLimit } from "./middleware/rateLimit.middleware.js";
-// Boot background workers/queues
+// Boot background workers/queues (side-effects)
 import "./workers/orderCancelWorker.js";
 import "./workers/orderConfirmWorker.js";
 import "./workers/autoConfirmWorker.js";
 
 export class App {
-  public app: express.Application;
+  app: Application;
 
   constructor() {
     this.app = express();
+    this.setupCloudinary();
+    this.setupMiddleware();
+    this.setupRoutes();
+    this.setupErrorHandling();
+  }
 
+  setupCloudinary() {
     // Configure Cloudinary at startup from env to ensure SDK has credentials
     try {
       if (process.env.CLOUDINARY_URL) {
@@ -59,178 +66,34 @@ export class App {
     } catch (err) {
       logger.warn("Cloudinary configuration error:", String(err));
     }
+  }
 
-    this.app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+  setupMiddleware() {
+    this.app.use(
+      cors({ 
+        origin: process.env.API_CORS_ORIGIN || "http://localhost:3000", 
+        credentials: true 
+      })
+    );
     this.app.use(apiRateLimit);
     this.app.use(express.json());
+  }
 
+  setupRoutes() {
     this.app.use("/api/cart", cartRouter);
     this.app.use("/api/orders", ordersRouter);
     this.app.use("/api/products", productRoutes);
     this.app.use("/api/admin", adminRouter);
-
-    this.app.get("/api/health", (request, response) =>
+    this.app.use("/api/users", usersRouter);
+    this.app.use("/api/stores", storesRouter);
+    this.app.use("/api", debugRouter);
+    
+    this.app.get("/api/health", (request: Request, response: Response) =>
       response.status(200).json({ message: "API running!" })
     );
+  }
 
-    // Simple test endpoint for CORS debugging
-    this.app.get("/api/test-cors", (request, response) => {
-      response.status(200).json({ 
-        message: "CORS test successful",
-        timestamp: new Date().toISOString(),
-        origin: request.headers.origin
-      });
-    });
-
-    this.app.get("/api/users", async (request, response) => {
-      const users = await prisma.user.findMany({
-        select: {
-          id: true,
-          email: true,
-          role: true,
-          createdAt: true,
-          profile: { select: { fullName: true } },
-        },
-      });
-      response.status(200).json(users);
-    });
-
-    // Temporary endpoint for testing stores (no auth required)
-    this.app.get("/api/stores", async (request, response) => {
-      try {
-        const stores = await prisma.store.findMany({
-          select: {
-            id: true,
-            name: true,
-            locations: {
-              select: {
-                addressLine: true,
-                city: true,
-                province: true,
-              },
-              take: 1,
-            },
-          },
-          where: {
-            isActive: true,
-          },
-          orderBy: {
-            name: 'asc',
-          },
-        });
-
-        // Flatten the response for easier frontend consumption
-        const formattedStores = stores.map(store => ({
-          id: store.id,
-          name: store.name,
-          address: store.locations[0]?.addressLine || '',
-          city: store.locations[0]?.city || '',
-          province: store.locations[0]?.province || '',
-        }));
-
-        response.status(200).json({
-          success: true,
-          data: formattedStores,
-        });
-      } catch (error) {
-        response.status(500).json({
-          success: false,
-          message: error instanceof Error ? error.message : "Internal server error",
-        });
-      }
-    });
-
-    this.app.get("/api/users/:id", async (request, response) => {
-      const { id } = request.params;
-      const user = await prisma.user.findUnique({
-        where: { id: parseInt(id) },
-        select: {
-          id: true,
-          email: true,
-          role: true,
-          createdAt: true,
-          profile: { select: { fullName: true } },
-        },
-      });
-
-      if (!user) {
-        return response.status(404).json({ message: "User not found" });
-      }
-
-      response.status(200).json(user);
-    });
-
-    // Internal debug: report Cloudinary configuration status (non-sensitive)
-    this.app.get("/api/_internal/cloudinary", (req, res) => {
-      try {
-        const cfg = cloudinary.config();
-        // only return cloud_name and whether CLOUDINARY_URL exists
-        res.json({
-          cloud_name: cfg.cloud_name || null,
-          has_url_env: !!process.env.CLOUDINARY_URL,
-          has_key_env: !!process.env.CLOUDINARY_API_KEY,
-        });
-      } catch (err) {
-        logger.error(String(err));
-        res.status(500).json({ error: String(err) });
-      }
-    });
-
-    // Return addresses for a user (used by frontend checkout)
-    this.app.get("/api/users/:id/addresses", async (request, response) => {
-      const { id } = request.params;
-      const userId = parseInt(id as string);
-      if (!userId)
-        return response.status(400).json({ message: "Invalid user id" });
-      const addresses = await prisma.userAddress.findMany({
-        where: { userId },
-        select: {
-          id: true,
-          recipientName: true,
-          addressLine: true,
-          province: true,
-          city: true,
-          postalCode: true,
-          latitude: true,
-          longitude: true,
-          isPrimary: true,
-        },
-      });
-      return response.status(200).json(addresses);
-    });
-
-    this.app.post("/api/users", async (request, response) => {
-      const parsedData = CreateUserSchema.safeParse(request.body);
-
-      if (!parsedData.success) {
-        return response.status(400).json({ message: parsedData.error });
-      }
-
-      // parsedData.data should already be validated by CreateUserSchema
-      const pd = parsedData.data as {
-        email: string;
-        password?: string;
-        role?: string;
-      };
-      // Narrow and validate role to the allowed union to satisfy Prisma types
-      type UserRole = "USER" | "SUPER_ADMIN" | "STORE_ADMIN";
-      const roleCandidate = pd.role;
-      const userRole =
-        roleCandidate === "USER" ||
-        roleCandidate === "SUPER_ADMIN" ||
-        roleCandidate === "STORE_ADMIN"
-          ? (roleCandidate as UserRole)
-          : undefined;
-
-      const userData: any = {
-        email: pd.email,
-        password: pd.password || "",
-      };
-      if (userRole) userData.role = userRole;
-      const user = await prisma.user.create({ data: userData });
-      response.status(201).json({ message: "User created", user });
-    });
-
+  setupErrorHandling() {
     this.app.use(notFoundMiddleware);
     this.app.use(errorMiddleware);
   }
