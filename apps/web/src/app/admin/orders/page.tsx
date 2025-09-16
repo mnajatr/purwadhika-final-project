@@ -130,14 +130,15 @@ export default function AdminOrdersPage() {
     switch (status) {
       case "PENDING_PAYMENT":
         return "bg-yellow-100 text-yellow-800";
+      case "PROCESSING":
+        return "bg-indigo-100 text-indigo-800";
       case "PAYMENT_REVIEW":
         return "bg-blue-100 text-blue-800";
-      case "CONFIRMED":
+  case "CONFIRMED":
         return "bg-green-100 text-green-800";
       case "SHIPPED":
         return "bg-purple-100 text-purple-800";
-      case "DELIVERED":
-        return "bg-gray-100 text-gray-800";
+  // "DELIVERED" is not used in the backend status enum; keep CONFIRMED as final delivered state
       case "CANCELLED":
         return "bg-red-100 text-red-800";
       default:
@@ -152,11 +153,11 @@ export default function AdminOrdersPage() {
   };
 
   const canShip = (order: Order) => {
-    return order.status === "CONFIRMED";
+    return order.status === "PROCESSING";
   };
 
   const canCancel = (order: Order) => {
-    return ["PENDING_PAYMENT", "PAYMENT_REVIEW", "CONFIRMED"].includes(
+    return ["PENDING_PAYMENT", "PAYMENT_REVIEW", "PROCESSING"].includes(
       order.status
     );
   };
@@ -207,9 +208,10 @@ export default function AdminOrdersPage() {
                 <option value="">All Statuses</option>
                 <option value="PENDING_PAYMENT">Pending Payment</option>
                 <option value="PAYMENT_REVIEW">Payment Review</option>
+                <option value="PROCESSING">Processing</option>
                 <option value="CONFIRMED">Confirmed</option>
                 <option value="SHIPPED">Shipped</option>
-                <option value="DELIVERED">Delivered</option>
+                {/* Backend uses CONFIRMED for delivered/receipt state */}
                 <option value="CANCELLED">Cancelled</option>
               </select>
             </div>
@@ -365,7 +367,7 @@ export default function AdminOrdersPage() {
                             order.status
                           )}`}
                         >
-                          {order.status.replace("_", " ")}
+                          {order.status.replace(/_/g, " ")}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

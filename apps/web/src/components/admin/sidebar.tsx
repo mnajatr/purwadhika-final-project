@@ -8,7 +8,7 @@ export default function Sidebar() {
     { name: "Home", path: "/products" },
     { name: "Users", path: "/admin/userManagement" },
     { name: "Products", path: "/admin/productManagement" },
-    { name: "Inventory", path: "/admin/inventory" },
+    { name: "Inventory", path: "/admin/inventoryManagement" },
     { name: "Discounts", path: "/admin/discountManagement" },
     { name: "Category", path: "/admin/categoryManagement" },
     { name: "Orders", path: "/admin/orders" },

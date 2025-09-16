@@ -39,12 +39,12 @@ export class OrderService {
     return fulfillmentService.shipOrder(orderId, actorUserId);
   }
 
-  async confirmOrder(orderId: number, requesterUserId?: number) {
-    return fulfillmentService.confirmOrder(orderId, requesterUserId);
+  async confirmOrder(orderId: number, requesterUserId?: number, actorId?: number) {
+    return fulfillmentService.confirmOrder(orderId, requesterUserId, actorId);
   }
 
-  async cancelOrder(orderId: number, requesterUserId: number) {
-    return fulfillmentService.cancelOrder(orderId, requesterUserId);
+  async cancelOrder(orderId: number, requesterUserId: number, actorId?: number) {
+    return fulfillmentService.cancelOrder(orderId, requesterUserId, actorId);
   }
 
   async listOrders(opts: {
