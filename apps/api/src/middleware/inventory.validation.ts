@@ -26,6 +26,12 @@ export const transferInventoryValidation = [
   body("items.*.qty")
     .isInt({ min: 1 })
     .withMessage("Quantity must be a positive integer"),
+
+  // optional note for transfer/adjustment
+  body("note")
+    .optional()
+    .isLength({ min: 1, max: 500 })
+    .withMessage("Note must be between 1 and 500 characters"),
 ];
 
 export const updateStockValidation = [
@@ -120,7 +126,7 @@ export const getInventoryReportValidation = [
     .isISO8601()
     .withMessage("End date must be a valid ISO8601 date")
     .custom((value, { req }) => {
-      if (req.query.startDate && value) {
+      if (req.query?.startDate && value) {
         const startDate = new Date(req.query.startDate as string);
         const endDate = new Date(value);
         if (endDate < startDate) {

@@ -42,6 +42,7 @@ interface StockJournal {
   admin: {
     email: string;
   };
+  note?: string;
 }
 
 export default function InventoryManagementPage() {
@@ -56,6 +57,7 @@ export default function InventoryManagementPage() {
   const [transferItems, setTransferItems] = useState<TransferItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [transferQty, setTransferQty] = useState<number>(1);
+  const [transferNote, setTransferNote] = useState<string>("");
   
   // Manual adjustment states
   const [adjustmentStoreId, setAdjustmentStoreId] = useState<string>("");
@@ -302,6 +304,7 @@ export default function InventoryManagementPage() {
             productId: item.productId,
             qty: item.qty,
           })),
+          note: transferNote,
         }),
       });
 
@@ -358,16 +361,7 @@ export default function InventoryManagementPage() {
             >
               Stock Transfer
             </button>
-            <button
-              onClick={() => setActiveTab("adjustment")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "adjustment"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Manual Adjustment
-            </button>
+            {/* Manual Adjustment tab hidden per project choice; keep endpoint for admins only */}
             <button
               onClick={() => setActiveTab("journal")}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -538,17 +532,26 @@ export default function InventoryManagementPage() {
               </div>
 
               <div className="flex justify-end mt-6">
-                <button
-                  onClick={handleTransfer}
-                  disabled={isSubmitting || transferItems.length === 0}
-                  className={`px-8 py-3 rounded-md font-medium transition-colors ${
-                    isSubmitting || transferItems.length === 0
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  }`}
-                >
-                  {isSubmitting ? "Transferring..." : "Transfer Inventory"}
-                </button>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="text"
+                    placeholder="Reason / note (e.g. REPLENISH)"
+                    value={transferNote}
+                    onChange={(e) => setTransferNote(e.target.value)}
+                    className="p-2 border border-gray-300 rounded-md"
+                  />
+                  <button
+                    onClick={handleTransfer}
+                    disabled={isSubmitting || transferItems.length === 0}
+                    className={`px-8 py-3 rounded-md font-medium transition-colors ${
+                      isSubmitting || transferItems.length === 0
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    }`}
+                  >
+                    {isSubmitting ? "Transferring..." : "Transfer Inventory"}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -722,6 +725,9 @@ export default function InventoryManagementPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Admin
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Note
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -750,6 +756,9 @@ export default function InventoryManagementPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {journal.admin.email}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" title={journal.note || ''}>
+                        {journal.note ? (journal.note.length > 80 ? journal.note.slice(0, 80) + '…' : journal.note) : '-'}
                       </td>
                     </tr>
                   ))}

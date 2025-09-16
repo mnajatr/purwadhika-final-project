@@ -39,7 +39,7 @@ export class InventoryController {
         });
       }
 
-      const { fromStoreId, toStoreId, items } = req.body;
+  const { fromStoreId, toStoreId, items, note } = req.body;
       const userId = req.user?.id;
 
       if (!userId) {
@@ -53,7 +53,8 @@ export class InventoryController {
         fromStoreId,
         toStoreId,
         items,
-        userId
+        userId,
+        note
       );
 
       res.json({

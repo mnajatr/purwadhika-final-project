@@ -103,7 +103,8 @@ export class InventoryService {
     toStoreId: number,
     items: Array<{ productId: number; qty: number }>,
     userId: number,
-    tx?: Prisma.TransactionClient
+    note?: string,
+    tx?: Prisma.TransactionClient,
   ): Promise<void> {
     const executeTransfer = async (transaction: Prisma.TransactionClient) => {
       // Validate source store has enough stock
@@ -134,6 +135,7 @@ export class InventoryService {
             productId: item.productId,
             qtyChange: -item.qty,
             reason: "TRANSFER_OUT",
+            note: note || null,
             adminId: userId,
           },
         });
@@ -163,6 +165,7 @@ export class InventoryService {
             productId: item.productId,
             qtyChange: item.qty,
             reason: "TRANSFER_IN",
+            note: note || null,
             adminId: userId,
           },
         });

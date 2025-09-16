@@ -244,6 +244,7 @@ model StockJournal {
   inventory StoreInventory    @relation(fields: [storeId, productId], references: [storeId, productId])
   qtyChange Int
   reason    StockChangeReason
+  note      String?
   admin     User              @relation(fields: [adminId], references: [id])
   adminId   Int
   createdAt DateTime          @default(now())
