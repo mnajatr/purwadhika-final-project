@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useProducts } from "@/hooks/useProduct";
 import Sidebar from "@/components/admin/sidebar";
+import DeleteProductButton from "@/components/products/DeleteButtonProduct";
 
 export default function ProductsList() {
   const [search, setSearch] = useState("");
@@ -162,17 +163,12 @@ export default function ProductsList() {
                     </td>
                     <td className="px-4 py-3 text-sm flex gap-2">
                       <Link
-                        href={`/products/${product.slug}/edit`}
+                        href={`/products/${product.slug}/update`}
                         className="text-indigo-600 hover:underline"
                       >
                         Edit
                       </Link>
-                      <Link
-                        href={`/products/${product.slug}/delete`}
-                        className="text-red-600 hover:underline"
-                      >
-                        Delete
-                      </Link>
+                      <DeleteProductButton slug={product.slug} />
                     </td>
                   </tr>
                 ))}

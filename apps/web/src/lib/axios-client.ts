@@ -30,10 +30,10 @@ class ApiClient {
           // Prefer explicit dev id saved in localStorage (set by dev UI)
           if (typeof window !== "undefined") {
             const stored = localStorage.getItem("devUserId");
-            console.log('axios-client: devUserId from localStorage:', stored);
+            console.log("axios-client: devUserId from localStorage:", stored);
             if (stored && stored !== "none") {
               config.headers["x-dev-user-id"] = stored;
-              console.log('axios-client: set x-dev-user-id to:', stored);
+              console.log("axios-client: set x-dev-user-id to:", stored);
             }
             // if stored is "none" or not present, fall back to default
           }
@@ -44,7 +44,7 @@ class ApiClient {
         // Default fallback id when none is set
         if (!config.headers["x-dev-user-id"]) {
           config.headers["x-dev-user-id"] = "4";
-          console.log('axios-client: using default x-dev-user-id: 4');
+          console.log("axios-client: using default x-dev-user-id: 4");
         }
       }
       console.log(
@@ -52,7 +52,8 @@ class ApiClient {
         config.method?.toUpperCase(),
         config.url,
         config.params,
-        'headers x-dev-user-id:', config.headers["x-dev-user-id"]
+        "headers x-dev-user-id:",
+        config.headers["x-dev-user-id"]
       );
       return config;
     });
@@ -102,6 +103,11 @@ class ApiClient {
 
   async patch<T, D = unknown>(url: string, data?: D): Promise<T> {
     const resp = await this.client.patch<T>(url, data);
+    return resp.data;
+  }
+
+  async put<T, D = unknown>(url: string, data?: D): Promise<T> {
+    const resp = await this.client.put<T>(url, data);
     return resp.data;
   }
 
