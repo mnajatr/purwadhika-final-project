@@ -1,24 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-
-interface Store {
-  id: number;
-  name: string;
-  address: string;
-  city: string;
-  province: string;
-}
-
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  stockQty: number;
-  category: {
-    name: string;
-  };
-}
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { inventoryApi, type Store, type Product, type StockJournal } from "@/services/inventory.service";
+import { ApiError } from "@/lib/axios-client";
 
 interface TransferItem {
   productId: number;
@@ -27,29 +19,9 @@ interface TransferItem {
   availableStock: number;
 }
 
-interface StockJournal {
-  id: number;
-  productId: number;
-  qtyChange: number;
-  reason: string;
-  createdAt: string;
-  product: {
-    name: string;
-  };
-  store: {
-    name: string;
-  };
-  admin: {
-    email: string;
-  };
-  note?: string;
-}
-
 export default function InventoryManagementPage() {
-    const [activeTab, setActiveTab] = useState<"transfer" | "adjustment" | "journal">("transfer");
-  const [stores, setStores] = useState<Store[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [stockJournals, setStockJournals] = useState<StockJournal[]>([]);
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<"transfer" | "adjustment" | "journal">("transfer");
   
   // Transfer states
   const [fromStoreId, setFromStoreId] = useState<string>("");
@@ -64,123 +36,75 @@ export default function InventoryManagementPage() {
   const [adjustmentProductId, setAdjustmentProductId] = useState<string>("");
   const [adjustmentQty, setAdjustmentQty] = useState<number>(1);
   const [adjustmentReason, setAdjustmentReason] = useState<string>("ADD");
-  const [adjustmentProducts, setAdjustmentProducts] = useState<Product[]>([]);
   
   // Stock journal states
   const [selectedStoreForJournal, setSelectedStoreForJournal] = useState<string>("");
   const [journalDateFrom, setJournalDateFrom] = useState<string>("");
   const [journalDateTo, setJournalDateTo] = useState<string>("");
-  
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    const loadStores = async () => {
-      console.log("Fetching stores...");
-      try {
-        const response = await fetch("http://localhost:8000/api/stores");
-        console.log("Stores response status:", response.status);
+  // React Query hooks
+  const { data: stores = [], isLoading: storesLoading } = useQuery({
+    queryKey: ['stores'],
+    queryFn: inventoryApi.getStores,
+  });
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log("Stores data:", data);
-          setStores(data.data);
-        } else {
-          console.error("Failed to fetch stores, status:", response.status);
-        }
-      } catch (error) {
-        console.error("Error fetching stores:", error);
-        alert("Failed to fetch stores");
-      }
-    };
-    
-    loadStores();
-  }, []);
+  const { data: products = [], isLoading: productsLoading } = useQuery({
+    queryKey: ['storeInventory', fromStoreId],
+    queryFn: () => inventoryApi.getStoreInventory(parseInt(fromStoreId)),
+    enabled: !!fromStoreId,
+  });
 
-  const fetchStockJournals = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (selectedStoreForJournal) params.append("storeId", selectedStoreForJournal);
-      if (journalDateFrom) params.append("startDate", journalDateFrom);
-      if (journalDateTo) params.append("endDate", journalDateTo);
-      params.append("limit", "50");
+  const { data: adjustmentProducts = [] } = useQuery({
+    queryKey: ['storeInventory', adjustmentStoreId],
+    queryFn: () => inventoryApi.getStoreInventory(parseInt(adjustmentStoreId)),
+    enabled: !!adjustmentStoreId,
+  });
 
-      const response = await fetch(`http://localhost:8000/api/admin/inventory/stock-journals?${params.toString()}`, {
-        headers: {
-          "x-dev-user-id": "1", // Super admin for testing
-        },
-      });
+  const { data: stockJournals = [], isLoading: journalsLoading, refetch: refetchJournals } = useQuery({
+    queryKey: ['stockJournals', selectedStoreForJournal, journalDateFrom, journalDateTo],
+    queryFn: () => inventoryApi.getStockJournals({
+      storeId: selectedStoreForJournal,
+      startDate: journalDateFrom,
+      endDate: journalDateTo,
+    }),
+    enabled: activeTab === 'journal',
+  });
 
-      if (response.ok) {
-        const data = await response.json();
-        setStockJournals(data.data.journals);
-      }
-    } catch (error) {
-      console.error("Error fetching stock journals:", error);
-      alert("Failed to fetch stock journals");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectedStoreForJournal, journalDateFrom, journalDateTo]);
-
-  useEffect(() => {
-    if (fromStoreId) {
-      fetchStoreInventory(parseInt(fromStoreId));
-    } else {
-      setProducts([]);
+  // Mutations
+  const transferMutation = useMutation({
+    mutationFn: inventoryApi.transferInventory,
+    onSuccess: () => {
+      alert("Inventory transferred successfully");
       setTransferItems([]);
-    }
-  }, [fromStoreId]);
+      setFromStoreId("");
+      setToStoreId("");
+      setTransferNote("");
+      queryClient.invalidateQueries({ queryKey: ['storeInventory'] });
+      queryClient.invalidateQueries({ queryKey: ['stockJournals'] });
+    },
+    onError: (error: ApiError) => {
+      alert(error.response?.data?.message || "Failed to transfer inventory");
+    },
+  });
 
-  useEffect(() => {
-    if (adjustmentStoreId) {
-      fetchStoreInventory(parseInt(adjustmentStoreId), "adjustment");
-    } else {
-      setAdjustmentProducts([]);
-    }
-  }, [adjustmentStoreId]);
+  const adjustmentMutation = useMutation({
+    mutationFn: inventoryApi.adjustStock,
+    onSuccess: () => {
+      alert("Stock adjustment successful!");
+      setAdjustmentStoreId("");
+      setAdjustmentProductId("");
+      setAdjustmentQty(1);
+      setAdjustmentReason("ADD");
+      queryClient.invalidateQueries({ queryKey: ['storeInventory'] });
+      queryClient.invalidateQueries({ queryKey: ['stockJournals'] });
+    },
+    onError: (error: ApiError) => {
+      alert(error.response?.data?.message || "Failed to adjust stock");
+    },
+  });
 
-  useEffect(() => {
-    if (activeTab === "journal") {
-      fetchStockJournals();
-    }
-  }, [activeTab, fetchStockJournals]);
-
-  const fetchStoreInventory = async (storeId: number, source: "transfer" | "adjustment" = "transfer") => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(`http://localhost:8000/api/admin/inventory/stores/${storeId}?limit=1000`, {
-        headers: {
-          "x-dev-user-id": "1", // Super admin for testing
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const productList = data.data.inventories.map((inv: { product: { id: number; name: string; price: number; category: string; }; stockQty: number; }) => ({
-          id: inv.product.id,
-          name: inv.product.name,
-          price: inv.product.price,
-          stockQty: inv.stockQty,
-          category: inv.product.category,
-        }));
-        
-        if (source === "transfer") {
-          setProducts(productList);
-        } else if (source === "adjustment") {
-          setAdjustmentProducts(productList);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching inventory:", error);
-      alert("Failed to fetch inventory");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleManualAdjustment = async () => {
+  // Handler functions
+  const handleManualAdjustment = () => {
     if (!adjustmentStoreId || !adjustmentProductId || !adjustmentQty || !adjustmentReason) {
       alert("Please fill all fields");
       return;
@@ -191,41 +115,13 @@ export default function InventoryManagementPage() {
       return;
     }
 
-    try {
-      const response = await fetch("http://localhost:8000/api/admin/inventory/update-stock", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-dev-user-id": "1", // Super admin for testing
-        },
-        body: JSON.stringify({
-          storeId: parseInt(adjustmentStoreId),
-          productId: parseInt(adjustmentProductId),
-          changeQty: adjustmentQty,
-          reason: adjustmentReason,
-        }),
-      });
-
-      if (response.ok) {
-        alert("Stock adjustment successful!");
-        setAdjustmentStoreId("");
-        setAdjustmentProductId("");
-        setAdjustmentQty(0);
-        setAdjustmentReason("ADD");
-        // Refresh products list
-        if (adjustmentStoreId) {
-          fetchStoreInventory(parseInt(adjustmentStoreId), "adjustment");
-        }
-      } else {
-        const data = await response.json();
-        alert(data.message || "Failed to adjust stock");
-      }
-    } catch (error) {
-      console.error("Error adjusting stock:", error);
-      alert("Failed to adjust stock");
-    }
+    adjustmentMutation.mutate({
+      storeId: parseInt(adjustmentStoreId),
+      productId: parseInt(adjustmentProductId),
+      changeQty: adjustmentQty,
+      reason: adjustmentReason,
+    });
   };
-
   const addTransferItem = () => {
     if (!selectedProductId || transferQty <= 0) {
       alert("Please select a product and enter a valid quantity");
@@ -273,7 +169,7 @@ export default function InventoryManagementPage() {
     setTransferItems(transferItems.filter((_, i) => i !== index));
   };
 
-  const handleTransfer = async () => {
+  const handleTransfer = () => {
     if (!fromStoreId || !toStoreId) {
       alert("Please select both source and destination stores");
       return;
@@ -289,44 +185,15 @@ export default function InventoryManagementPage() {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const response = await fetch("http://localhost:8000/api/admin/inventory/transfer", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-dev-user-id": "1", // Super admin for testing
-        },
-        body: JSON.stringify({
-          fromStoreId: parseInt(fromStoreId),
-          toStoreId: parseInt(toStoreId),
-          items: transferItems.map(item => ({
-            productId: item.productId,
-            qty: item.qty,
-          })),
-          note: transferNote,
-        }),
-      });
-
-      if (response.ok) {
-        alert("Inventory transferred successfully");
-        setTransferItems([]);
-        setFromStoreId("");
-        setToStoreId("");
-        
-        if (fromStoreId) {
-          fetchStoreInventory(parseInt(fromStoreId));
-        }
-      } else {
-        const errorData = await response.json();
-        alert(errorData.message || "Failed to transfer inventory");
-      }
-    } catch (error) {
-      console.error("Error transferring inventory:", error);
-      alert("Failed to transfer inventory");
-    } finally {
-      setIsSubmitting(false);
-    }
+    transferMutation.mutate({
+      fromStoreId: parseInt(fromStoreId),
+      toStoreId: parseInt(toStoreId),
+      items: transferItems.map(item => ({
+        productId: item.productId,
+        qty: item.qty,
+      })),
+      note: transferNote,
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -351,27 +218,20 @@ export default function InventoryManagementPage() {
       <div className="mb-8">
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8">
-            <button
+            <Button
+              variant={activeTab === "transfer" ? "default" : "ghost"}
               onClick={() => setActiveTab("transfer")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "transfer"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+              className="py-2 px-1 border-b-2 font-medium text-sm"
             >
               Stock Transfer
-            </button>
-            {/* Manual Adjustment tab hidden per project choice; keep endpoint for admins only */}
-            <button
+            </Button>
+            <Button
+              variant={activeTab === "journal" ? "default" : "ghost"}
               onClick={() => setActiveTab("journal")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "journal"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+              className="py-2 px-1 border-b-2 font-medium text-sm"
             >
               Stock Journal
-            </button>
+            </Button>
           </nav>
         </div>
       </div>
@@ -427,7 +287,7 @@ export default function InventoryManagementPage() {
             <div className="mb-6">
               <h3 className="text-lg font-semibold mb-4 text-gray-800">Add Items to Transfer</h3>
               
-              {isLoading ? (
+              {productsLoading ? (
                 <div className="text-center py-4 text-gray-600">Loading inventory...</div>
               ) : (
                 <div className="flex flex-col sm:flex-row gap-4">
@@ -542,14 +402,14 @@ export default function InventoryManagementPage() {
                   />
                   <button
                     onClick={handleTransfer}
-                    disabled={isSubmitting || transferItems.length === 0}
+                    disabled={transferMutation.isPending || transferItems.length === 0}
                     className={`px-8 py-3 rounded-md font-medium transition-colors ${
-                      isSubmitting || transferItems.length === 0
+                      transferMutation.isPending || transferItems.length === 0
                         ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                         : "bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                     }`}
                   >
-                    {isSubmitting ? "Transferring..." : "Transfer Inventory"}
+                    {transferMutation.isPending ? "Transferring..." : "Transfer Inventory"}
                   </button>
                 </div>
               </div>
@@ -700,7 +560,7 @@ export default function InventoryManagementPage() {
           </div>
 
           {/* Stock Journal Table */}
-          {isLoading ? (
+          {journalsLoading ? (
             <div className="text-center py-8 text-gray-600">Loading stock journals...</div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-gray-200">
