@@ -57,6 +57,8 @@ enum StockChangeReason {
   REMOVE
   RESERVE
   RELEASE
+  TRANSFER_IN
+  TRANSFER_OUT
 }
 
 enum TokenType {

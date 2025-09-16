@@ -1,6 +1,7 @@
 import { Router } from "express";
 import orderRoutes from "./admin/order.routes.js";
 import storesRoutes from "./admin/stores.routes.js";
+import inventoryRoutes from "./admin/inventory.routes.js";
 import { adminAuth } from "../middleware/admin.middleware.js";
 
 const router = Router();
@@ -14,6 +15,8 @@ router.use(adminAuth);
 router.use("/orders", orderRoutes);
 // Mount admin stores listing at /admin/stores (for super_admin filtering)
 router.use("/stores", storesRoutes);
+// Mount inventory management routes at /admin/inventory
+router.use("/inventory", inventoryRoutes);
 // Mount admin profile at /admin/me
 router.get("/me", async (req: any, res) => {
   try {

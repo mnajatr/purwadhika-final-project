@@ -97,6 +97,202 @@ export class InventoryService {
       });
     }
   }
+
+  async transferInventory(
+    fromStoreId: number,
+    toStoreId: number,
+    items: Array<{ productId: number; qty: number }>,
+    userId: number,
+    tx?: Prisma.TransactionClient
+  ): Promise<void> {
+    const executeTransfer = async (transaction: Prisma.TransactionClient) => {
+      // Validate source store has enough stock
+      for (const item of items) {
+        const sourceInventory = await transaction.storeInventory.findFirst({
+          where: { storeId: fromStoreId, productId: item.productId },
+        });
+
+        if (!sourceInventory || sourceInventory.stockQty < item.qty) {
+          throw new Error(
+            `Insufficient stock for product ID ${item.productId} in source store. Available: ${sourceInventory?.stockQty || 0}`
+          );
+        }
+      }
+
+      // Process transfers
+      for (const item of items) {
+        // Decrease from source store
+        await transaction.storeInventory.updateMany({
+          where: { storeId: fromStoreId, productId: item.productId },
+          data: { stockQty: { decrement: item.qty } },
+        });
+
+        // Create outbound journal entry
+        await transaction.stockJournal.create({
+          data: {
+            storeId: fromStoreId,
+            productId: item.productId,
+            qtyChange: -item.qty,
+            reason: "TRANSFER_OUT",
+            adminId: userId,
+          },
+        });
+
+        // Increase in destination store (upsert to handle non-existing inventory)
+        await transaction.storeInventory.upsert({
+          where: {
+            storeId_productId: {
+              storeId: toStoreId,
+              productId: item.productId,
+            },
+          },
+          update: {
+            stockQty: { increment: item.qty },
+          },
+          create: {
+            storeId: toStoreId,
+            productId: item.productId,
+            stockQty: item.qty,
+          },
+        });
+
+        // Create inbound journal entry
+        await transaction.stockJournal.create({
+          data: {
+            storeId: toStoreId,
+            productId: item.productId,
+            qtyChange: item.qty,
+            reason: "TRANSFER_IN",
+            adminId: userId,
+          },
+        });
+      }
+    };
+
+    if (tx) {
+      await executeTransfer(tx);
+    } else {
+      await prisma.$transaction(executeTransfer);
+    }
+  }
+
+  async getStoreInventories(storeId: number, page: number = 1, limit: number = 10, search?: string) {
+    const skip = (page - 1) * limit;
+    
+    const where = {
+      storeId,
+      ...(search && {
+        product: {
+          name: {
+            contains: search,
+            mode: 'insensitive' as const,
+          },
+        },
+      }),
+    };
+
+    const [inventories, total] = await Promise.all([
+      prisma.storeInventory.findMany({
+        where,
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              images: true,
+              category: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+        skip,
+        take: limit,
+        orderBy: {
+          product: {
+            name: 'asc',
+          },
+        },
+      }),
+      prisma.storeInventory.count({ where }),
+    ]);
+
+    return {
+      inventories,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getStockJournals(
+    storeId?: number,
+    page: number = 1,
+    limit: number = 10,
+    productId?: number,
+    reason?: string,
+    startDate?: string,
+    endDate?: string
+  ) {
+    const skip = (page - 1) * limit;
+    
+    const where: any = {};
+    
+    if (storeId) where.storeId = storeId;
+    if (productId) where.productId = productId;
+    if (reason) where.reason = reason;
+    
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) where.createdAt.gte = new Date(startDate);
+      if (endDate) where.createdAt.lte = new Date(endDate);
+    }
+
+    const [journals, total] = await Promise.all([
+      prisma.stockJournal.findMany({
+        where,
+        include: {
+          product: {
+            select: {
+              name: true,
+            },
+          },
+          store: {
+            select: {
+              name: true,
+            },
+          },
+          admin: {
+            select: {
+              email: true,
+            },
+          },
+        },
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      prisma.stockJournal.count({ where }),
+    ]);
+
+    return {
+      journals,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
 }
 
 export const inventoryService = new InventoryService();

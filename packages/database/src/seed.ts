@@ -382,6 +382,39 @@ async function seedInventories(stores: any[], products: any[]) {
 
   console.log(`✅ Created ${inventoryCount} inventory records`);
 }
+
+async function seedShippingMethods() {
+  console.log("🚚 Seeding shipping methods...");
+
+  const shippingMethods = [
+    {
+      carrier: "JNE",
+      serviceCode: "REG",
+      isActive: true,
+    },
+    {
+      carrier: "JNE",
+      serviceCode: "OKE", 
+      isActive: true,
+    },
+    {
+      carrier: "TIKI",
+      serviceCode: "REG",
+      isActive: true,
+    },
+  ];
+
+  const createdMethods = [];
+  for (const method of shippingMethods) {
+    const created = await prisma.shippingMethod.create({
+      data: method,
+    });
+    createdMethods.push(created);
+  }
+
+  console.log(`✅ Created ${createdMethods.length} shipping methods`);
+  return createdMethods;
+}
 async function seedOrders(users: any[], stores: any[], products: any[]) {
   console.log("📦 Seeding sample orders for Feature 3 testing...");
 
@@ -590,6 +623,7 @@ async function seed() {
     const products = await seedProducts(categories);
 
   await seedInventories(stores, products);
+  const shippingMethods = await seedShippingMethods();
   await seedOrders(users, stores, products);
   await seedCarts(users, products, stores);
 
