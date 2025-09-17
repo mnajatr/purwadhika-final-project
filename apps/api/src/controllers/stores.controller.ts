@@ -42,7 +42,8 @@ export class StoresController {
     } catch (error) {
       response.status(500).json({
         success: false,
-        message: error instanceof Error ? error.message : "Internal server error",
+        message:
+          error instanceof Error ? error.message : "Internal server error",
       });
     }
   }

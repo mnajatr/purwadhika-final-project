@@ -21,12 +21,10 @@ function sendMessage(res: Response, message: string) {
 }
 
 function sendError(res: Response, error: unknown, status = 500) {
-  return res
-    .status(status)
-    .json({
-      status: "error",
-      message: error instanceof Error ? error.message : String(error),
-    });
+  return res.status(status).json({
+    status: "error",
+    message: error instanceof Error ? error.message : String(error),
+  });
 }
 
 export class InventoryController {

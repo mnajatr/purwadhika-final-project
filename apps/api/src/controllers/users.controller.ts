@@ -19,7 +19,8 @@ export class UsersController {
     } catch (error) {
       response.status(500).json({
         success: false,
-        message: error instanceof Error ? error.message : "Internal server error",
+        message:
+          error instanceof Error ? error.message : "Internal server error",
       });
     }
   }
@@ -47,7 +48,8 @@ export class UsersController {
     } catch (error) {
       response.status(500).json({
         success: false,
-        message: error instanceof Error ? error.message : "Internal server error",
+        message:
+          error instanceof Error ? error.message : "Internal server error",
       });
     }
   }
@@ -67,7 +69,7 @@ export class UsersController {
         password?: string;
         role?: string;
       };
-      
+
       // Narrow and validate role to the allowed union to satisfy Prisma types
       type UserRole = "USER" | "SUPER_ADMIN" | "STORE_ADMIN";
       const roleCandidate = pd.role;
@@ -83,13 +85,14 @@ export class UsersController {
         password: pd.password || "",
       };
       if (userRole) userData.role = userRole;
-      
+
       const user = await prisma.user.create({ data: userData });
       response.status(201).json({ message: "User created", user });
     } catch (error) {
       response.status(500).json({
         success: false,
-        message: error instanceof Error ? error.message : "Internal server error",
+        message:
+          error instanceof Error ? error.message : "Internal server error",
       });
     }
   }
@@ -99,11 +102,11 @@ export class UsersController {
     try {
       const { id } = request.params;
       const userId = parseInt(id as string);
-      
+
       if (!userId) {
         return response.status(400).json({ message: "Invalid user id" });
       }
-      
+
       const addresses = await prisma.userAddress.findMany({
         where: { userId },
         select: {
@@ -118,12 +121,13 @@ export class UsersController {
           isPrimary: true,
         },
       });
-      
+
       return response.status(200).json(addresses);
     } catch (error) {
       response.status(500).json({
         success: false,
-        message: error instanceof Error ? error.message : "Internal server error",
+        message:
+          error instanceof Error ? error.message : "Internal server error",
       });
     }
   }

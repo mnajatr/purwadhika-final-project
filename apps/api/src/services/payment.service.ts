@@ -1,7 +1,11 @@
 import { prisma } from "@repo/database";
-import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
+// cloudinary config and setup are handled centrally in fileService/config; no direct import needed here
 import { orderCancelQueue } from "../queues/orderCancelQueue.js";
 import { createConflictError } from "../errors/app.error.js";
+import path from "node:path";
+import os from "node:os";
+import fs from "node:fs/promises";
+import { fileService } from "./file.service.js";
 
 type PaymentMinimal = {
   id: number;
@@ -22,12 +26,7 @@ export class PaymentService {
     payment: PaymentMinimal | null;
     orderStatus: string;
   }> {
-    const config = cloudinary.config();
-    if (!config.cloud_name || !config.api_key) {
-      throw new Error(
-        "Cloudinary not configured: missing cloud_name or api_key"
-      );
-    }
+    // cloudinary configuration is handled by configs/fileService; assume fileService will surface errors if missing
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -41,21 +40,25 @@ export class PaymentService {
       );
     }
 
-    const uploadRes = (await new Promise<UploadApiResponse>(
-      (resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { folder: `orders/${orderId}`, resource_type: "image" },
-          (error: Error | undefined, result: UploadApiResponse | undefined) => {
-            if (error) return reject(error);
-            if (!result) return reject(new Error("Empty upload result"));
-            resolve(result);
-          }
-        );
-        stream.end(Buffer.from(fileBuffer));
-      }
-    )) as UploadApiResponse;
+    // Write buffer to a temp file and upload using shared fileService
+    // sanitize mime subtype (e.g. "image/svg+xml" -> "svg")
+    let ext = "bin";
+    if (mime && mime.includes("/")) {
+      const subtype = mime.split("/")[1];
+      ext = subtype.split("+")[0].replace(/[^a-z0-9]/gi, "") || "bin";
+    }
+    const tmpName = `payment-${orderId}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const tmpPath = path.join(os.tmpdir(), tmpName);
+    await fs.writeFile(tmpPath, Buffer.from(fileBuffer));
 
-    const proofUrl = uploadRes.secure_url ?? uploadRes.url;
+    let proofUrl: string;
+    try {
+      proofUrl = await fileService.uploadPicture(tmpPath);
+    } catch (err) {
+      // ensure temp file is removed on error as well
+      try { await fs.unlink(tmpPath); } catch (e) { /* ignore */ }
+      throw err;
+    }
 
     let paymentRecord: PaymentMinimal | null = null;
 

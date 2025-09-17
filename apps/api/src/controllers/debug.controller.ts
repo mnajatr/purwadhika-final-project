@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { v2 as cloudinary } from "cloudinary";
+import { cloudinary } from "../configs/cloudinary.config.js";
 import logger from "../utils/logger.js";
 
 export class DebugController {

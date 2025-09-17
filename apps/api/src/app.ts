@@ -7,7 +7,7 @@ import adminRouter from "./routes/admin.routes.js";
 import usersRouter from "./routes/users.routes.js";
 import storesRouter from "./routes/stores.routes.js";
 import debugRouter from "./routes/debug.routes.js";
-import { v2 as cloudinary } from "cloudinary";
+import { setupCloudinary } from "./configs/cloudinary.config.js";
 import logger from "./utils/logger.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
@@ -22,57 +22,17 @@ export class App {
 
   constructor() {
     this.app = express();
-    this.setupCloudinary();
+    setupCloudinary();
     this.setupMiddleware();
     this.setupRoutes();
     this.setupErrorHandling();
   }
 
-  setupCloudinary() {
-    // Configure Cloudinary at startup from env to ensure SDK has credentials
-    try {
-      if (process.env.CLOUDINARY_URL) {
-        // cloudinary://<api_key>:<api_secret>@<cloud_name>
-        try {
-          const parsed = new URL(process.env.CLOUDINARY_URL);
-          const apiKey = parsed.username;
-          const apiSecret = parsed.password;
-          const cloudName = parsed.hostname;
-          if (apiKey && apiSecret && cloudName) {
-            cloudinary.config({
-              cloud_name: cloudName,
-              api_key: apiKey,
-              api_secret: apiSecret,
-              secure: true,
-            });
-            logger.info("Cloudinary configured from CLOUDINARY_URL");
-          } else {
-            cloudinary.config({ secure: true });
-            logger.warn("CLOUDINARY_URL present but parsing failed");
-          }
-        } catch (err) {
-          cloudinary.config({ secure: true });
-          logger.warn("Failed to parse CLOUDINARY_URL:", String(err));
-        }
-      } else if (process.env.CLOUDINARY_CLOUD_NAME) {
-        cloudinary.config({
-          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-          api_key: process.env.CLOUDINARY_API_KEY,
-          api_secret: process.env.CLOUDINARY_API_SECRET,
-          secure: true,
-        });
-        logger.info("Cloudinary configured from CLOUDINARY_CLOUD_NAME/API_KEY");
-      }
-    } catch (err) {
-      logger.warn("Cloudinary configuration error:", String(err));
-    }
-  }
-
   setupMiddleware() {
     this.app.use(
-      cors({ 
-        origin: process.env.API_CORS_ORIGIN || "http://localhost:3000", 
-        credentials: true 
+      cors({
+        origin: process.env.API_CORS_ORIGIN || "http://localhost:3000",
+        credentials: true,
       })
     );
     this.app.use(apiRateLimit);
@@ -87,7 +47,7 @@ export class App {
     this.app.use("/api/users", usersRouter);
     this.app.use("/api/stores", storesRouter);
     this.app.use("/api", debugRouter);
-    
+
     this.app.get("/api/health", (request: Request, response: Response) =>
       response.status(200).json({ message: "API running!" })
     );
