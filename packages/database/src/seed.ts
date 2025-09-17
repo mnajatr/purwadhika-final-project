@@ -270,7 +270,9 @@ async function seedStores() {
   // No Jakarta store seeded for radius-negative test case
 
   // Jakarta location (lat: -6.2000, lon: 106.8166)
-  const jakarta = createdStores.find((s) => s.name.toLowerCase().includes("jakarta"));
+  const jakarta = createdStores.find((s) =>
+    s.name.toLowerCase().includes("jakarta")
+  );
   if (jakarta) {
     await prisma.storeLocation.create({
       data: {
@@ -280,7 +282,7 @@ async function seedStores() {
         city: "Jakarta",
         district: "Tanah Abang",
         postalCode: "10210",
-        latitude: -6.2000,
+        latitude: -6.2,
         longitude: 106.8166,
       },
     });
@@ -354,6 +356,39 @@ async function seedProducts(categories: any[]) {
   return createdProducts;
 }
 
+async function seedDiscounts(stores: any[], products: any[]) {
+  console.log("🏷️ Seeding discounts...");
+
+  const createdDiscounts = [];
+
+  // Bikin beberapa diskon random
+  for (let i = 0; i < 10; i++) {
+    const store = faker.helpers.arrayElement(stores);
+    const product = faker.helpers.arrayElement(products);
+
+    const discount = await prisma.discount.create({
+      data: {
+        storeId: store.id,
+        productId: product.id,
+        value: faker.helpers.arrayElement(["PRODUCT_DISCOUNT", "BUY1GET1"]),
+        type: faker.helpers.arrayElement(["PERCENTAGE", "NOMINAL"]),
+        minPurchase: faker.datatype.boolean()
+          ? faker.number.int({ min: 1, max: 5 })
+          : null,
+        maxDiscount: faker.datatype.boolean()
+          ? faker.number.int({ min: 5000, max: 50000 })
+          : null,
+        expiredAt: faker.date.soon({ days: 30 }),
+      },
+    });
+
+    createdDiscounts.push(discount);
+  }
+
+  console.log(`✅ Created ${createdDiscounts.length} discounts`);
+  return createdDiscounts;
+}
+
 async function seedInventories(stores: any[], products: any[]) {
   console.log("📦 Seeding store inventories...");
 
@@ -394,7 +429,7 @@ async function seedShippingMethods() {
     },
     {
       carrier: "JNE",
-      serviceCode: "OKE", 
+      serviceCode: "OKE",
       isActive: true,
     },
     {
@@ -432,7 +467,9 @@ async function seedOrders(users: any[], stores: any[], products: any[]) {
   }
 
   // Ensure the test user has an address
-  const address = await prisma.userAddress.findFirst({ where: { userId: testUser.id } });
+  const address = await prisma.userAddress.findFirst({
+    where: { userId: testUser.id },
+  });
   if (!address) {
     console.log("No address found for test user — skipping orders");
     return [];
@@ -442,7 +479,11 @@ async function seedOrders(users: any[], stores: any[], products: any[]) {
   const createdOrders: any[] = [];
 
   // helper to create a simple order with one item
-  async function createSimpleOrder(status: string, withPayment = false, withShipment = false) {
+  async function createSimpleOrder(
+    status: string,
+    withPayment = false,
+    withShipment = false
+  ) {
     const product = products[0];
     const qty = 2;
     const unitPrice = Number(product.price ?? product.basePrice ?? 0);
@@ -451,11 +492,11 @@ async function seedOrders(users: any[], stores: any[], products: any[]) {
     const discountTotal = 0;
     const grandTotal = subtotal + shippingCost - discountTotal;
 
-  const order = await prisma.order.create({
+    const order = await prisma.order.create({
       data: {
         userId: testUser.id,
         storeId: store.id,
-    addressId,
+        addressId,
         status: status as any,
         paymentMethod: "MANUAL_TRANSFER",
         subtotalAmount: subtotal,
@@ -468,7 +509,10 @@ async function seedOrders(users: any[], stores: any[], products: any[]) {
           create: [
             {
               productId: product.id,
-              productSnapshot: JSON.stringify({ id: product.id, name: product.name }),
+              productSnapshot: JSON.stringify({
+                id: product.id,
+                name: product.name,
+              }),
               unitPriceSnapshot: unitPrice,
               qty,
               totalAmount: subtotal,
@@ -486,9 +530,17 @@ async function seedOrders(users: any[], stores: any[], products: any[]) {
           orderId: order.id,
           status: status === "PAYMENT_REVIEW" ? "PENDING" : "PAID",
           amount: grandTotal,
-          proofImageUrl: status === "PAYMENT_REVIEW" ? "https://example.com/proof.jpg" : null,
+          proofImageUrl:
+            status === "PAYMENT_REVIEW"
+              ? "https://example.com/proof.jpg"
+              : null,
           reviewedAt: status === "PAYMENT_REVIEW" ? null : new Date(),
-          paidAt: status === "CONFIRMED" || status === "SHIPPED" || status === "PROCESSING" ? new Date() : null,
+          paidAt:
+            status === "CONFIRMED" ||
+            status === "SHIPPED" ||
+            status === "PROCESSING"
+              ? new Date()
+              : null,
         },
       });
     }
@@ -618,14 +670,15 @@ async function seed() {
     // Seed user addresses early so seedOrders can find an address for the test user
     await seedUserAddresses(users);
     const categories = await seedCategories();
-  const stores = await seedStores();
-  await seedStoreAssignments(users, stores);
+    const stores = await seedStores();
+    await seedStoreAssignments(users, stores);
     const products = await seedProducts(categories);
 
-  await seedInventories(stores, products);
-  const shippingMethods = await seedShippingMethods();
-  await seedOrders(users, stores, products);
-  await seedCarts(users, products, stores);
+    await seedInventories(stores, products);
+    const discounts = await seedDiscounts(stores, products);
+    const shippingMethods = await seedShippingMethods();
+    await seedOrders(users, stores, products);
+    await seedCarts(users, products, stores);
 
     const regularUsers = users.filter((user) => user.role === "USER");
 

@@ -51,7 +51,6 @@ export function useUpdateProduct() {
   });
 }
 
-// 🔹 Delete product
 export function useDeleteProduct() {
   const queryClient = useQueryClient();
 
@@ -62,26 +61,3 @@ export function useDeleteProduct() {
     },
   });
 }
-
-// export function useUpdateProduct() {
-//   const queryClient = useQueryClient();
-//   return useMutation({
-//     mutationFn: ({ id, ...data }: any) =>
-//       productsService.update(id, data).then((res) => res.data),
-//     onSuccess: (_, { id }) => {
-//       queryClient.invalidateQueries({ queryKey: ["products"] });
-//       queryClient.invalidateQueries({ queryKey: ["product", id] });
-//     },
-//   });
-// }
-
-// export function useDeleteProduct() {
-//   const queryClient = useQueryClient();
-//   return useMutation({
-//     mutationFn: (id: string) =>
-//       productsService.delete(id).then((res) => res.data),
-//     onSuccess: () => {
-//       queryClient.invalidateQueries({ queryKey: ["products"] });
-//     },
-//   });
-// }
