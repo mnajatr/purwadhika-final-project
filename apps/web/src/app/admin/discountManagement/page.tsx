@@ -1,18 +1,22 @@
 "use client";
 
-import { useState } from "react";
 import Sidebar from "@/components/admin/sidebar";
+import Link from "next/link";
+import { useDiscounts, useDeleteDiscount } from "@/hooks/useDiscount";
 
 export default function ManageDiscounts() {
-  const [discounts, setDiscounts] = useState([
-    { id: 1, code: "WELCOME10", percentage: 10 },
-    { id: 2, code: "SALE20", percentage: 20 },
-  ]);
+  const { data: discounts = [], isLoading } = useDiscounts();
+  const deleteDiscount = useDeleteDiscount();
+
+  const handleDelete = (id: number) => {
+    if (confirm("Are you sure you want to delete this discount?")) {
+      deleteDiscount.mutate(id);
+    }
+  };
 
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
-
       <Sidebar />
 
       {/* Konten utama */}
@@ -20,23 +24,37 @@ export default function ManageDiscounts() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
           <h1 className="text-2xl md:text-3xl font-bold">Manage Discounts</h1>
-          <button className="bg-indigo-500 text-white px-4 py-2 rounded-lg shadow hover:bg-indigo-700 transition">
-            + Add Discount
-          </button>
+          <Link
+            href={`/discount/create`}
+            className="text-indigo-600 hover:underline"
+          >
+            Create Discount
+          </Link>
         </div>
 
         {/* Table */}
-        {discounts.length === 0 ? (
+        {isLoading ? (
+          <p className="text-center text-gray-500">Loading discounts...</p>
+        ) : discounts.length === 0 ? (
           <p className="text-center text-gray-500">No discounts available.</p>
         ) : (
           <table className="min-w-full border border-gray-200 rounded-lg overflow-hidden">
             <thead className="bg-gray-100">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                  Code
+                  Store
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                  Percentage
+                  Product
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                  Type
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                  Value
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                  Expired At
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
                   Actions
@@ -46,18 +64,30 @@ export default function ManageDiscounts() {
             <tbody className="divide-y divide-gray-200">
               {discounts.map((d) => (
                 <tr key={d.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-800">
-                    {d.code}
+                  <td className="px-4 py-3 text-sm text-gray-800">
+                    {d.store?.name}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
-                    {d.percentage}%
+                    {d.product?.name}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{d.type}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{d.value}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {new Date(d.expiredAt).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3 text-sm flex gap-3">
-                    <button className="text-indigo-600 hover:underline">
+                    <Link
+                      href={`/discount/${d.id}/update`}
+                      className="text-indigo-600 hover:underline"
+                    >
                       Edit
-                    </button>
-                    <button className="text-red-600 hover:underline">
-                      Delete
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(d.id)}
+                      className="text-red-600 hover:underline"
+                      disabled={deleteDiscount.isPending}
+                    >
+                      {deleteDiscount.isPending ? "Deleting..." : "Delete"}
                     </button>
                   </td>
                 </tr>
