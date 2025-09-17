@@ -6,7 +6,6 @@ import productRoutes from "./routes/product.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import usersRouter from "./routes/users.routes.js";
 import storesRouter from "./routes/stores.routes.js";
-import debugRouter from "./routes/debug.routes.js";
 import { setupCloudinary } from "./configs/cloudinary.config.js";
 import logger from "./utils/logger.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
@@ -46,7 +45,7 @@ export class App {
     this.app.use("/api/admin", adminRouter);
     this.app.use("/api/users", usersRouter);
     this.app.use("/api/stores", storesRouter);
-    this.app.use("/api", debugRouter);
+    // Debug routes removed for production; keep local/dev-only debug routes out of main app.
 
     this.app.get("/api/health", (request: Request, response: Response) =>
       response.status(200).json({ message: "API running!" })
