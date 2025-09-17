@@ -57,10 +57,11 @@ export function CartPage({ userId }: CartPageProps) {
   }, 0);
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6">
-      <h2 className="text-2xl font-bold mb-6">Shopping Cart</h2>
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
-        <div className="bg-card rounded-xl border-2 border-gray-300 p-4 sm:p-6 shadow-sm">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6">
+        <h2 className="text-2xl font-bold mb-6 text-gray-900">My Cart</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-1 pb-4 border-b mb-4">
             <div className="flex items-center gap-3">
               <input
@@ -68,22 +69,23 @@ export function CartPage({ userId }: CartPageProps) {
                 aria-label="select all"
                 checked={allSelected}
                 onChange={toggleSelectAll}
-                className="h-5 w-5 rounded-md accent-primary"
+                className="h-5 w-5 rounded-md text-indigo-600 focus:ring-indigo-500 border-gray-300"
               />
-              <span className="text-lg font-semibold">Select All</span>
+              <span className="text-lg font-semibold text-gray-900">
+                Select All
+              </span>
             </div>
           </div>
 
-          <div className="divide-y">
+          <div className="space-y-4">
             {cart.items.map((item) => (
-              <div key={item.id} className="py-4">
-                <CartItem
-                  item={item}
-                  userId={userId}
-                  selected={!!selectedIds[item.id]}
-                  onToggle={() => toggleSelect(item.id)}
-                />
-              </div>
+              <CartItem
+                key={item.id}
+                item={item}
+                userId={userId}
+                selected={!!selectedIds[item.id]}
+                onToggle={() => toggleSelect(item.id)}
+              />
             ))}
           </div>
 
@@ -105,81 +107,100 @@ export function CartPage({ userId }: CartPageProps) {
         </div>
 
         <div className="w-full lg:w-auto">
-          <div className="bg-card rounded-xl border-2 border-gray-300 p-6 shadow-sm lg:sticky lg:top-6">
-            <h3 className="text-xl font-semibold mb-4">Shopping Summary</h3>
-            <div className="border-t border-b py-4">
-              <div className="flex justify-between text-md text-muted-foreground">
-                <span>Subtotal</span>
-                <span className="font-medium">
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm lg:sticky lg:top-6">
+            <h3 className="text-xl font-semibold mb-4 text-gray-900">
+              Shopping Summary
+            </h3>
+
+            <div className="space-y-3 mb-6">
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Subtotal:</span>
+                <span className="font-medium text-gray-900">
                   Rp {subtotal.toLocaleString()}
                 </span>
               </div>
-            </div>
-            <div className="mt-6">
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="text"
-                    readOnly
-                    value={idempotencyKey ?? "(no key generated)"}
-                    className="flex-1 input input-bordered"
-                    aria-label="idempotency-key"
-                  />
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      setIdempotencyKey(String(Math.random()).slice(2, 14))
-                    }
-                  >
-                    Generate
-                  </Button>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Delivery:</span>
+                <span className="font-medium text-gray-900">Rp 10.000</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Discount:</span>
+                <span className="font-medium text-red-600">-Rp 50.000</span>
+              </div>
+              <div className="border-t pt-3">
+                <div className="flex justify-between text-lg font-semibold text-gray-900">
+                  <span>Total:</span>
+                  <span>Rp {(subtotal + 10000 - 50000).toLocaleString()}</span>
                 </div>
+              </div>
+            </div>
 
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  readOnly
+                  value={idempotencyKey ?? "(no key generated)"}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50"
+                  aria-label="idempotency-key"
+                />
                 <Button
-                  className="w-full bg-blue-600 text-white hover:bg-blue-700"
-                  size="lg"
-                  onClick={() => {
-                    const selectedIdsArr = Object.keys(selectedIds)
-                      .filter((k) => selectedIds[Number(k)])
-                      .map((k) => Number(k));
-                    // store selection + userId in session so Checkout page can read it
-                    try {
-                      sessionStorage.setItem(
-                        "checkout:selectedIds",
-                        JSON.stringify(selectedIdsArr)
-                      );
-                      sessionStorage.setItem("checkout:userId", String(userId));
-                    } catch {}
-                    router.push("/checkout");
-                  }}
-                  disabled={creating}
-                >
-                  {creating ? "Processing..." : "Checkout"}
-                </Button>
-
-                <Button
-                  variant="outline"
                   size="sm"
-                  onClick={() => {
-                    const selectedIdsArr = Object.keys(selectedIds)
-                      .filter((k) => selectedIds[Number(k)])
-                      .map((k) => Number(k));
-                    try {
-                      sessionStorage.setItem(
-                        "checkout:selectedIds",
-                        JSON.stringify(selectedIdsArr)
-                      );
-                      sessionStorage.setItem("checkout:userId", String(userId));
-                    } catch {}
-                    router.push("/checkout");
-                  }}
+                  onClick={() =>
+                    setIdempotencyKey(String(Math.random()).slice(2, 14))
+                  }
+                  className="bg-gray-200 text-gray-700 hover:bg-gray-300 border-0"
                 >
-                  Go to Checkout (simulate double-submit)
+                  Generate
                 </Button>
               </div>
+
+              <Button
+                className="w-full bg-indigo-600 text-white hover:bg-indigo-700 py-3 rounded-lg font-semibold"
+                size="lg"
+                onClick={() => {
+                  const selectedIdsArr = Object.keys(selectedIds)
+                    .filter((k) => selectedIds[Number(k)])
+                    .map((k) => Number(k));
+                  // store selection + userId in session so Checkout page can read it
+                  try {
+                    sessionStorage.setItem(
+                      "checkout:selectedIds",
+                      JSON.stringify(selectedIdsArr)
+                    );
+                    sessionStorage.setItem("checkout:userId", String(userId));
+                  } catch {}
+                  router.push("/checkout");
+                }}
+                disabled={creating}
+              >
+                {creating ? "Processing..." : "Checkout"}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const selectedIdsArr = Object.keys(selectedIds)
+                    .filter((k) => selectedIds[Number(k)])
+                    .map((k) => Number(k));
+                  try {
+                    sessionStorage.setItem(
+                      "checkout:selectedIds",
+                      JSON.stringify(selectedIdsArr)
+                    );
+                    sessionStorage.setItem("checkout:userId", String(userId));
+                  } catch {}
+                  router.push("/checkout");
+                }}
+                className="w-full border-indigo-600 text-indigo-600 hover:bg-indigo-50"
+              >
+                Go to Checkout (simulate double-submit)
+              </Button>
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
