@@ -1,10 +1,6 @@
 import { prisma } from "@repo/database";
-// cloudinary config and setup are handled centrally in fileService/config; no direct import needed here
 import { orderCancelQueue } from "../queues/orderCancelQueue.js";
 import { createConflictError } from "../errors/app.error.js";
-import path from "node:path";
-import os from "node:os";
-import fs from "node:fs/promises";
 import { fileService } from "./file.service.js";
 
 type PaymentMinimal = {
@@ -16,7 +12,6 @@ type PaymentMinimal = {
 };
 
 export class PaymentService {
-  // Uploads payment proof to Cloudinary and updates/creates payment record.
   async uploadPaymentProof(
     orderId: number,
     fileBuffer: Buffer | Uint8Array,
@@ -26,7 +21,6 @@ export class PaymentService {
     payment: PaymentMinimal | null;
     orderStatus: string;
   }> {
-    // cloudinary configuration is handled by configs/fileService; assume fileService will surface errors if missing
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -40,25 +34,8 @@ export class PaymentService {
       );
     }
 
-    // Write buffer to a temp file and upload using shared fileService
-    // sanitize mime subtype (e.g. "image/svg+xml" -> "svg")
-    let ext = "bin";
-    if (mime && mime.includes("/")) {
-      const subtype = mime.split("/")[1];
-      ext = subtype.split("+")[0].replace(/[^a-z0-9]/gi, "") || "bin";
-    }
-    const tmpName = `payment-${orderId}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const tmpPath = path.join(os.tmpdir(), tmpName);
-    await fs.writeFile(tmpPath, Buffer.from(fileBuffer));
-
-    let proofUrl: string;
-    try {
-      proofUrl = await fileService.uploadPicture(tmpPath);
-    } catch (err) {
-      // ensure temp file is removed on error as well
-      try { await fs.unlink(tmpPath); } catch (e) { /* ignore */ }
-      throw err;
-    }
+    // Upload directly from buffer (multer.memoryStorage used in controller)
+    const proofUrl = await fileService.uploadBuffer(Buffer.from(fileBuffer), { resource_type: "auto" });
 
     let paymentRecord: PaymentMinimal | null = null;
 
