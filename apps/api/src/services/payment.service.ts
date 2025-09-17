@@ -1,7 +1,7 @@
 import { prisma } from "@repo/database";
-import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
 import { orderCancelQueue } from "../queues/orderCancelQueue.js";
 import { createConflictError } from "../errors/app.error.js";
+import { fileService } from "./file.service.js";
 
 type PaymentMinimal = {
   id: number;
@@ -12,7 +12,6 @@ type PaymentMinimal = {
 };
 
 export class PaymentService {
-  // Uploads payment proof to Cloudinary and updates/creates payment record.
   async uploadPaymentProof(
     orderId: number,
     fileBuffer: Buffer | Uint8Array,
@@ -22,12 +21,6 @@ export class PaymentService {
     payment: PaymentMinimal | null;
     orderStatus: string;
   }> {
-    const config = cloudinary.config();
-    if (!config.cloud_name || !config.api_key) {
-      throw new Error(
-        "Cloudinary not configured: missing cloud_name or api_key"
-      );
-    }
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -41,21 +34,8 @@ export class PaymentService {
       );
     }
 
-    const uploadRes = (await new Promise<UploadApiResponse>(
-      (resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { folder: `orders/${orderId}`, resource_type: "image" },
-          (error: Error | undefined, result: UploadApiResponse | undefined) => {
-            if (error) return reject(error);
-            if (!result) return reject(new Error("Empty upload result"));
-            resolve(result);
-          }
-        );
-        stream.end(Buffer.from(fileBuffer));
-      }
-    )) as UploadApiResponse;
-
-    const proofUrl = uploadRes.secure_url ?? uploadRes.url;
+    // Upload directly from buffer (multer.memoryStorage used in controller)
+    const proofUrl = await fileService.uploadBuffer(Buffer.from(fileBuffer), { resource_type: "auto" });
 
     let paymentRecord: PaymentMinimal | null = null;
 

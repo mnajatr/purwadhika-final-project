@@ -1,53 +1,57 @@
 import { Request, Response } from "express";
 import { inventoryService } from "../services/inventory.service.js";
-import { validationResult } from "express-validator";
 import { prisma } from "@repo/database";
+import type {
+  TransferBody,
+  UpdateStockBody,
+  StockJournalsQuery,
+} from "@repo/schemas";
+
+function parseNumber(v: unknown, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function sendSuccess(res: Response, data: any) {
+  return res.json({ status: "success", data });
+}
+
+function sendMessage(res: Response, message: string) {
+  return res.json({ status: "success", message });
+}
+
+function sendError(res: Response, error: unknown, status = 500) {
+  return res.status(status).json({
+    status: "error",
+    message: error instanceof Error ? error.message : String(error),
+  });
+}
 
 export class InventoryController {
   async getStoreInventories(req: Request, res: Response) {
     try {
       const { storeId } = req.params;
-      const { page = 1, limit = 10, search } = req.query;
+      const { page, limit, search } = req.query;
 
       const result = await inventoryService.getStoreInventories(
-        parseInt(storeId),
-        parseInt(page as string),
-        parseInt(limit as string),
-        search as string
+        parseNumber(storeId),
+        parseNumber(page, 1),
+        parseNumber(limit, 10),
+        (search as string) || undefined
       );
 
-      res.json({
-        status: "success",
-        data: result,
-      });
+      return sendSuccess(res, result);
     } catch (error) {
-      res.status(500).json({
-        status: "error",
-        message: error instanceof Error ? error.message : "Internal server error",
-      });
+      return sendError(res, error);
     }
   }
 
   async transferInventory(req: Request, res: Response) {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          status: "error",
-          message: "Validation failed",
-          errors: errors.array(),
-        });
-      }
-
-  const { fromStoreId, toStoreId, items, note } = req.body;
+      const { fromStoreId, toStoreId, items, note } = req.body as TransferBody;
       const userId = req.user?.id;
 
-      if (!userId) {
-        return res.status(401).json({
-          status: "error",
-          message: "User not authenticated",
-        });
-      }
+      if (!userId) return sendError(res, "User not authenticated", 401);
 
       await inventoryService.transferInventory(
         fromStoreId,
@@ -56,75 +60,40 @@ export class InventoryController {
         userId,
         note
       );
-
-      res.json({
-        status: "success",
-        message: "Inventory transferred successfully",
-      });
+      return sendMessage(res, "Inventory transferred successfully");
     } catch (error) {
-      res.status(500).json({
-        status: "error",
-        message: error instanceof Error ? error.message : "Internal server error",
-      });
+      return sendError(res, error);
     }
   }
 
   async getStockJournals(req: Request, res: Response) {
     try {
-      const { 
-        storeId, 
-        page = 1, 
-        limit = 10, 
-        productId, 
-        reason, 
-        startDate, 
-        endDate 
-      } = req.query;
+      const { storeId, page, limit, productId, reason, startDate, endDate } =
+        req.query as unknown as StockJournalsQuery;
 
       const result = await inventoryService.getStockJournals(
-        storeId ? parseInt(storeId as string) : undefined,
-        parseInt(page as string),
-        parseInt(limit as string),
-        productId ? parseInt(productId as string) : undefined,
-        reason as string,
-        startDate as string,
-        endDate as string
+        storeId ? parseNumber(storeId) : undefined,
+        parseNumber(page, 1),
+        parseNumber(limit, 10),
+        productId ? parseNumber(productId) : undefined,
+        reason,
+        startDate,
+        endDate
       );
 
-      res.json({
-        status: "success",
-        data: result,
-      });
+      return sendSuccess(res, result);
     } catch (error) {
-      res.status(500).json({
-        status: "error",
-        message: error instanceof Error ? error.message : "Internal server error",
-      });
+      return sendError(res, error);
     }
   }
 
   async updateStockManual(req: Request, res: Response) {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          status: "error",
-          message: "Validation failed",
-          errors: errors.array(),
-        });
-      }
-
-      const { storeId, productId, qtyChange, reason } = req.body;
+      const { storeId, productId, qtyChange, reason } =
+        req.body as UpdateStockBody;
       const userId = req.user?.id;
+      if (!userId) return sendError(res, "User not authenticated", 401);
 
-      if (!userId) {
-        return res.status(401).json({
-          status: "error",
-          message: "User not authenticated",
-        });
-      }
-
-      // Manual stock adjustment using transaction
       await prisma.$transaction(async (tx) => {
         if (reason === "ADD" && qtyChange > 0) {
           await inventoryService.restoreInventory(
@@ -136,7 +105,7 @@ export class InventoryController {
         } else if (reason === "REMOVE" && qtyChange > 0) {
           await inventoryService.reserveInventory(
             storeId,
-            0, // orderId not needed for manual adjustment
+            0,
             [{ productId, qty: qtyChange }],
             userId,
             tx
@@ -144,15 +113,9 @@ export class InventoryController {
         }
       });
 
-      res.json({
-        status: "success",
-        message: "Stock updated successfully",
-      });
+      return sendMessage(res, "Stock updated successfully");
     } catch (error) {
-      res.status(500).json({
-        status: "error",
-        message: error instanceof Error ? error.message : "Internal server error",
-      });
+      return sendError(res, error);
     }
   }
 
@@ -175,17 +138,16 @@ export class InventoryController {
           isActive: true,
         },
         orderBy: {
-          name: 'asc',
+          name: "asc",
         },
       });
 
-      // Flatten the response for easier frontend consumption
-      const formattedStores = stores.map(store => ({
+      const formattedStores = stores.map((store) => ({
         id: store.id,
         name: store.name,
-        address: store.locations[0]?.addressLine || '',
-        city: store.locations[0]?.city || '',
-        province: store.locations[0]?.province || '',
+        address: store.locations[0]?.addressLine || "",
+        city: store.locations[0]?.city || "",
+        province: store.locations[0]?.province || "",
       }));
 
       res.json({
@@ -195,27 +157,29 @@ export class InventoryController {
     } catch (error) {
       res.status(500).json({
         status: "error",
-        message: error instanceof Error ? error.message : "Internal server error",
+        message:
+          error instanceof Error ? error.message : "Internal server error",
       });
     }
   }
 
   async getInventoryReport(req: Request, res: Response) {
     try {
-      const { storeId, startDate, endDate } = req.query;
+      const { storeId, startDate, endDate } = req.query as Record<string, any>;
 
       const whereClause: any = {};
-      if (storeId) whereClause.storeId = parseInt(storeId as string);
+      if (storeId) whereClause.storeId = parseNumber(storeId);
       if (startDate || endDate) {
         whereClause.createdAt = {};
-        if (startDate) whereClause.createdAt.gte = new Date(startDate as string);
+        if (startDate)
+          whereClause.createdAt.gte = new Date(startDate as string);
         if (endDate) whereClause.createdAt.lte = new Date(endDate as string);
       }
 
       const [stockSummary, recentTransactions] = await Promise.all([
         // Stock summary by store
         prisma.storeInventory.groupBy({
-          by: ['storeId'],
+          by: ["storeId"],
           _sum: {
             stockQty: true,
           },
@@ -246,7 +210,7 @@ export class InventoryController {
             },
           },
           orderBy: {
-            createdAt: 'desc',
+            createdAt: "desc",
           },
           take: 20,
         }),
@@ -262,7 +226,8 @@ export class InventoryController {
     } catch (error) {
       res.status(500).json({
         status: "error",
-        message: error instanceof Error ? error.message : "Internal server error",
+        message:
+          error instanceof Error ? error.message : "Internal server error",
       });
     }
   }

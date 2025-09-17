@@ -48,16 +48,8 @@ export class PaymentController {
           .json(errorResponse("Missing file 'proof' in request"));
       }
 
-      const allowed = ["image/png", "image/jpeg", "image/jpg"];
+      // MIME and size validations are enforced by multer in upload.middleware
       const mime = f.mimetype ?? "application/octet-stream";
-      if (!allowed.includes(mime)) {
-        return res.status(400).json(errorResponse("Invalid file type"));
-      }
-
-      const MAX_BYTES = 1 * 1024 * 1024; // 1MB
-      if (f.buffer.length > MAX_BYTES) {
-        return res.status(400).json(errorResponse("File too large"));
-      }
 
       const uploadResult = await this.service.uploadPaymentProof(
         id,
