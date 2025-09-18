@@ -1,26 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useCartStore } from "@/stores/cart-store";
 import { useEffect, useState } from "react";
+import { useCart } from "@/hooks/useCart";
 
 export default function Navbar() {
-  const { itemCount, totalAmount, initializeCart } = useCartStore();
-  const [userId, setUserId] = useState<number | null>(null);
+  const [userId, setUserId] = useState<number>(1);
+  const { data: cart } = useCart(userId, 1);
 
-  // Get development user ID from localStorage and initialize cart
+  // Calculate cart totals from cart data
+  const itemCount = cart?.items?.length || 0;
+  const totalAmount = cart?.items?.reduce((sum, item) => {
+    const unitPrice = Number(item.product?.price ?? 0) || 0;
+    return sum + unitPrice * item.qty;
+  }, 0) || 0;
+
+  // Get development user ID from localStorage
   useEffect(() => {
     const devUserId = localStorage.getItem("devUserId");
     if (devUserId && devUserId !== "none") {
-      const userIdNum = parseInt(devUserId);
-      setUserId(userIdNum);
-      initializeCart(userIdNum);
+      setUserId(parseInt(devUserId));
     } else {
-      const defaultUserId = 1; // Default user for demo
-      setUserId(defaultUserId);
-      initializeCart(defaultUserId);
+      setUserId(1); // Default user for demo
     }
-  }, [initializeCart]);
+  }, []);
 
   return (
     <nav className="bg-white shadow-lg border-b">
@@ -53,8 +56,18 @@ export default function Navbar() {
           <div className="flex items-center space-x-4">
             {/* User Icon */}
             <div className="flex items-center space-x-2 text-gray-700">
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
               </svg>
               <span className="text-sm">User {userId}</span>
             </div>
@@ -65,8 +78,18 @@ export default function Navbar() {
               className="relative flex items-center space-x-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-4 py-2 rounded-lg transition-colors"
             >
               <div className="relative">
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01"
+                  />
                 </svg>
                 {itemCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">

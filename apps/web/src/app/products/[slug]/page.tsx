@@ -4,14 +4,16 @@ import { useParams } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useProduct } from "@/hooks/useProduct";
-import { useCartStore } from "@/stores/cart-store";
+import { useAddToCart } from "@/hooks/useCart";
+import { toast } from "sonner";
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const { data: product, isLoading, error } = useProduct(slug);
-  const [userId, setUserId] = useState<number | null>(null);
+  const [userId, setUserId] = useState<number>(1);
   const [quantity, setQuantity] = useState(1);
-  const { addToCart, isLoading: cartLoading } = useCartStore();
+  
+  const addToCartMutation = useAddToCart(userId, 1);
 
   // Get development user ID from localStorage
   useEffect(() => {
@@ -25,11 +27,19 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = async () => {
     if (!product || !userId) return;
-    
+
     try {
-      await addToCart(parseInt(product.id), quantity, userId);
+      await addToCartMutation.mutateAsync({
+        productId: parseInt(product.id),
+        qty: quantity,
+        storeId: 1,
+        userId: userId,
+      });
+      toast.success(`${quantity} ${product.name} berhasil ditambahkan ke keranjang!`);
+      setQuantity(1); // Reset quantity after adding
     } catch (error) {
       console.error("Failed to add to cart:", error);
+      toast.error("Gagal menambahkan produk ke keranjang");
     }
   };
 
@@ -115,12 +125,12 @@ export default function ProductDetailPage() {
             <button className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition">
               Beli Sekarang
             </button>
-            <button 
+            <button
               onClick={handleAddToCart}
-              disabled={cartLoading || !userId}
+              disabled={addToCartMutation.isPending}
               className="flex-1 border border-indigo-600 text-indigo-600 py-3 rounded-lg hover:bg-indigo-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {cartLoading ? "Menambahkan..." : "Tambah ke Keranjang"}
+              {addToCartMutation.isPending ? "Menambahkan..." : "Tambah ke Keranjang"}
             </button>
           </div>
         </div>
