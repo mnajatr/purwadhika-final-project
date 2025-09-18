@@ -9,11 +9,12 @@ export default function Navbar() {
   const { data: cart } = useCart(userId, 1);
 
   // Calculate cart totals from cart data
-  const itemCount = cart?.items?.length || 0;
-  const totalAmount = cart?.items?.reduce((sum, item) => {
-    const unitPrice = Number(item.product?.price ?? 0) || 0;
-    return sum + unitPrice * item.qty;
-  }, 0) || 0;
+  const itemCount = cart?.items?.reduce((sum, item) => sum + item.qty, 0) || 0;
+  const totalAmount =
+    cart?.items?.reduce((sum, item) => {
+      const unitPrice = Number(item.product?.price ?? 0) || 0;
+      return sum + unitPrice * item.qty;
+    }, 0) || 0;
 
   // Get development user ID from localStorage
   useEffect(() => {

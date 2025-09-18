@@ -12,7 +12,7 @@ export default function ProductDetailPage() {
   const { data: product, isLoading, error } = useProduct(slug);
   const [userId, setUserId] = useState<number>(1);
   const [quantity, setQuantity] = useState(1);
-  
+
   const addToCartMutation = useAddToCart(userId, 1);
 
   // Get development user ID from localStorage
@@ -35,7 +35,9 @@ export default function ProductDetailPage() {
         storeId: 1,
         userId: userId,
       });
-      toast.success(`${quantity} ${product.name} berhasil ditambahkan ke keranjang!`);
+      toast.success(
+        `${quantity} ${product.name} berhasil ditambahkan ke keranjang!`
+      );
       setQuantity(1); // Reset quantity after adding
     } catch (error) {
       console.error("Failed to add to cart:", error);
@@ -130,7 +132,9 @@ export default function ProductDetailPage() {
               disabled={addToCartMutation.isPending}
               className="flex-1 border border-indigo-600 text-indigo-600 py-3 rounded-lg hover:bg-indigo-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {addToCartMutation.isPending ? "Menambahkan..." : "Tambah ke Keranjang"}
+              {addToCartMutation.isPending
+                ? "Menambahkan..."
+                : "Tambah ke Keranjang"}
             </button>
           </div>
         </div>

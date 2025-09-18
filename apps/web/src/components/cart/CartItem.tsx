@@ -3,6 +3,7 @@
 import { useUpdateCartItem, useRemoveCartItem } from "@/hooks/useCart";
 import type { CartItem as CartItemType } from "@/types/cart.types";
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 // Image moved to CartItemImage
 import CartItemImage from "./CartItemImage";
 import CategoryBadge from "./CategoryBadge";
@@ -41,6 +42,19 @@ export default function CartItem({
 
   const updateCartItemMutation = useUpdateCartItem(userId, storeId);
   const removeCartItemMutation = useRemoveCartItem(userId, storeId);
+
+  // Get product details to get the correct category
+  const { data: products } = useQuery({
+    queryKey: ["products"],
+    queryFn: () =>
+      import("@/services/products.service").then((s) =>
+        s.productsService.getProducts()
+      ),
+  });
+
+  // Find the product with matching ID to get category
+  const productDetails = products?.find((p) => parseInt(p.id) === item.productId);
+  const productCategory = productDetails?.category || "General";
 
   const clearPending = () => {
     if (debounceTimerRef.current) {
@@ -170,7 +184,7 @@ export default function CartItem({
           {/* Product Details */}
           <div className="flex-1 min-w-0">
             {/* Category Badge */}
-            <CategoryBadge>Fruits &amp; Vegetables</CategoryBadge>
+            <CategoryBadge>{productCategory}</CategoryBadge>
 
             <h3 className="font-semibold text-gray-900 text-base mb-1 leading-tight">
               {item.product.name}
