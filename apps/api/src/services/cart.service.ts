@@ -1,6 +1,7 @@
 import { prisma } from "@repo/database";
 import { ERROR_MESSAGES } from "../utils/helpers.js";
 import { CartData, CartBusiness, CartValidation } from "../lib/cart/index.js";
+import { createValidationError } from "../errors/app.error.js";
 
 export class CartService {
   async getCartByUserIdAndStoreId(userId: number, storeId: number) {
@@ -53,9 +54,9 @@ export class CartService {
     const inventory = await prisma.storeInventory.findFirst({
       where: { productId: cartItem.productId, storeId: storeId },
     });
-    if (!inventory) throw new Error(ERROR_MESSAGES.INVENTORY.NO_INVENTORY);
+  if (!inventory) throw createValidationError(ERROR_MESSAGES.INVENTORY.NO_INVENTORY);
     if (inventory.stockQty < qty) {
-      throw new Error(
+      throw createValidationError(
         `${ERROR_MESSAGES.INVENTORY.INSUFFICIENT_STOCK}. Available: ${inventory.stockQty}`
       );
     }

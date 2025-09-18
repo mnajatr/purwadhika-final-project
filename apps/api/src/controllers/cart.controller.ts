@@ -1,6 +1,10 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { CartService } from "../services/cart.service.js";
 import { successResponse, errorResponse } from "../utils/helpers.js";
+import {
+  createValidationError,
+  createNotFoundError,
+} from "../errors/app.error.js";
 
 function toNumber(value: unknown, fallback?: number) {
   if (value === undefined || value === null) return fallback;
@@ -15,220 +19,152 @@ export class CartController {
     this.cartService = new CartService();
   }
 
-  getCart = async (req: Request, res: Response) => {
+  // helper to read authenticated user id set by auth middleware
+  private getUserIdFromReq(req: Request): number | undefined {
+    // auth middleware attaches user: { id }
+    const anyReq = req as Request & { user?: { id?: number } };
+    return toNumber(anyReq.user?.id, undefined);
+  }
+
+  private getStoreIdFromReq(req: Request): number {
+    return toNumber(req.query?.storeId, toNumber(req.body?.storeId, 1)) ?? 1;
+  }
+
+  private mapErrorStatus(error: unknown): number {
+    const msg = error instanceof Error ? error.message : String(error);
+    const lowered = msg.toLowerCase();
+    if (
+      lowered.includes("not found") ||
+      lowered.includes("not available") ||
+      lowered.includes("insufficient") ||
+      lowered.includes("exceed") ||
+      lowered.includes("cannot")
+    ) {
+      return 400;
+    }
+    return 500;
+  }
+
+
+  getCart = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // TODO: Get userId from auth middleware when implemented
-      const userId = toNumber(req.query?.userId, undefined);
-      const storeId = toNumber(
-        req.query?.storeId,
-        toNumber(req.body?.storeId, 1)
-      );
+      const userId = this.getUserIdFromReq(req);
+      const storeId = this.getStoreIdFromReq(req);
 
       if (!userId) {
-        return res.status(400).json(errorResponse("Missing userId in request"));
+        throw createValidationError("Missing userId in request");
       }
+
       const cart = await this.cartService.getCartByUserIdAndStoreId(
         userId!,
-        storeId ?? 1
+        storeId
       );
 
-      const response = successResponse(cart, "Cart retrieved successfully");
-      res.json(response);
+      res.json(successResponse(cart, "Cart retrieved successfully"));
     } catch (error) {
-      const response = errorResponse(
-        "Error getting cart",
-        error instanceof Error ? error.message : "Unknown error"
-      );
-      res.status(500).json(response);
+      next(error);
     }
   };
 
-  addToCart = async (req: Request, res: Response) => {
+  addToCart = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // TODO: Get userId from auth middleware when implemented
-      const userId = toNumber(req.body?.userId, undefined);
+      const userId = this.getUserIdFromReq(req);
       const { productId, qty } = req.body;
-      const storeId = toNumber(req.body?.storeId, 1);
+      const storeId = this.getStoreIdFromReq(req);
 
       if (!userId) {
-        return res
-          .status(400)
-          .json(errorResponse("Missing userId in request body"));
+        throw createValidationError("Missing userId in request body");
       }
       if (!productId) {
-        return res
-          .status(400)
-          .json(errorResponse("Missing productId in request body"));
+        throw createValidationError("Missing productId in request body");
       }
 
       const cart = await this.cartService.addToCart(
         userId!,
         productId,
         qty,
-        storeId ?? 1
+        storeId
       );
 
-      const response = successResponse(cart, "Item added to cart successfully");
-      res.json(response);
+      res.json(successResponse(cart, "Item added to cart successfully"));
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      const statusCode =
-        errorMessage.includes("not found") ||
-        errorMessage.includes("not available") ||
-        errorMessage.includes("Insufficient") ||
-        errorMessage.includes("exceed") ||
-        errorMessage.includes("cannot")
-          ? 400
-          : 500;
-
-      const response = errorResponse(
-        "Failed to add item to cart",
-        errorMessage
-      );
-      res.status(statusCode).json(response);
+      next(error);
     }
   };
 
-  updateCartItem = async (req: Request, res: Response) => {
+  updateCartItem = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // TODO: Get userId from auth middleware when implemented
-      const userId = toNumber(req.body?.userId, undefined);
+      const userId = this.getUserIdFromReq(req);
       const itemId = toNumber(req.params?.itemId, undefined);
       const { qty } = req.body;
-      const storeId = toNumber(req.body?.storeId, 1);
+      const storeId = this.getStoreIdFromReq(req);
 
-      if (!userId)
-        return res
-          .status(400)
-          .json(errorResponse("Missing userId in request body"));
-      if (!itemId)
-        return res.status(400).json(errorResponse("Missing itemId in params"));
+      if (!userId) throw createValidationError("Missing userId in request body");
+      if (!itemId) throw createValidationError("Missing itemId in params");
       if (typeof qty === "undefined")
-        return res
-          .status(400)
-          .json(errorResponse("Missing qty in request body"));
+        throw createValidationError("Missing qty in request body");
 
       const cart = await this.cartService.updateCartItem(
         userId!,
         itemId!,
         qty,
-        storeId ?? 1
+        storeId
       );
 
-      const response = successResponse(cart, "Cart item updated successfully");
-      res.json(response);
+      res.json(successResponse(cart, "Cart item updated successfully"));
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      const statusCode =
-        errorMessage.includes("not found") ||
-        errorMessage.includes("Insufficient") ||
-        errorMessage.includes("exceed") ||
-        errorMessage.includes("cannot")
-          ? 400
-          : 500;
-
-      const response = errorResponse(
-        "Failed to update cart item",
-        errorMessage
-      );
-      res.status(statusCode).json(response);
+      next(error);
     }
   };
 
-  deleteCartItem = async (req: Request, res: Response) => {
+  deleteCartItem = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // TODO: Get userId from auth middleware when implemented
-      const userId = toNumber(req.body?.userId, undefined);
+      const userId = this.getUserIdFromReq(req);
       const itemId = toNumber(req.params?.itemId, undefined);
-      const storeId = toNumber(req.body?.storeId, 1);
+      const storeId = this.getStoreIdFromReq(req);
 
-      if (!userId)
-        return res
-          .status(400)
-          .json(errorResponse("Missing userId in request body"));
-      if (!itemId)
-        return res.status(400).json(errorResponse("Missing itemId in params"));
+      if (!userId) throw createValidationError("Missing userId in request body");
+      if (!itemId) throw createValidationError("Missing itemId in params");
 
       const cart = await this.cartService.deleteCartItem(
         userId!,
         itemId!,
-        storeId ?? 1
+        storeId
       );
 
-      const response = successResponse(
-        cart,
-        "Item removed from cart successfully"
-      );
-      res.json(response);
+      res.json(successResponse(cart, "Item removed from cart successfully"));
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      const statusCode = errorMessage.includes("not found") ? 400 : 500;
-
-      const response = errorResponse(
-        "Failed to remove cart item",
-        errorMessage
-      );
-      res.status(statusCode).json(response);
+      next(error);
     }
   };
 
-  clearCart = async (req: Request, res: Response) => {
+  clearCart = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // TODO: Get userId from auth middleware when implemented
-      const userId = toNumber(req.body?.userId, undefined);
-      const storeId = toNumber(req.body?.storeId, 1);
+      const userId = this.getUserIdFromReq(req);
+      const storeId = this.getStoreIdFromReq(req);
 
-      if (!userId)
-        return res
-          .status(400)
-          .json(errorResponse("Missing userId in request body"));
+      if (!userId) throw createValidationError("Missing userId in request body");
 
-      const cart = await this.cartService.clearCart(userId!, storeId ?? 1);
+      const cart = await this.cartService.clearCart(userId!, storeId);
 
-      const response = successResponse(cart, "Cart cleared successfully");
-      res.json(response);
+      res.json(successResponse(cart, "Cart cleared successfully"));
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      const statusCode = errorMessage.includes("not found") ? 400 : 500;
-
-      const response = errorResponse("Failed to clear cart", errorMessage);
-      res.status(statusCode).json(response);
+      next(error);
     }
   };
 
-  getCartTotals = async (req: Request, res: Response) => {
+  getCartTotals = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // TODO: Get userId from auth middleware when implemented
-      const userId = toNumber(req.query?.userId, undefined);
-      const storeId = toNumber(
-        req.query?.storeId,
-        toNumber(req.body?.storeId, 1)
-      );
+      const userId = this.getUserIdFromReq(req);
+      const storeId = this.getStoreIdFromReq(req);
 
-      if (!userId) {
-        return res.status(400).json(errorResponse("Missing userId in query"));
-      }
+      if (!userId) throw createValidationError("Missing userId in query");
 
-      const totals = await this.cartService.getCartTotals(
-        userId!,
-        storeId ?? 1
-      );
+      const totals = await this.cartService.getCartTotals(userId!, storeId);
 
-      const response = successResponse(
-        totals,
-        "Cart totals retrieved successfully"
-      );
-      res.json(response);
+      res.json(successResponse(totals, "Cart totals retrieved successfully"));
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-
-      const response = errorResponse("Failed to get cart totals", errorMessage);
-      res.status(500).json(response);
+      next(error);
     }
   };
 }

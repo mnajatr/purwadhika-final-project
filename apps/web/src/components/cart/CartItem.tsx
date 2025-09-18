@@ -53,7 +53,9 @@ export default function CartItem({
   });
 
   // Find the product with matching ID to get category
-  const productDetails = products?.find((p) => parseInt(p.id) === item.productId);
+  const productDetails = products?.find(
+    (p) => parseInt(p.id) === item.productId
+  );
   const productCategory = productDetails?.category || "General";
 
   const clearPending = () => {

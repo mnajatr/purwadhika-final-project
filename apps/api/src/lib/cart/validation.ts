@@ -1,5 +1,9 @@
 import { prisma } from "@repo/database";
 import { CART_CONSTANTS, ERROR_MESSAGES } from "../../utils/helpers.js";
+import {
+  createNotFoundError,
+  createValidationError,
+} from "../../errors/app.error.js";
 
 /**
  * Validation logic for cart operations
@@ -7,7 +11,7 @@ import { CART_CONSTANTS, ERROR_MESSAGES } from "../../utils/helpers.js";
 export class CartValidation {
   static validateQuantity(qty: number) {
     if (qty > CART_CONSTANTS.MAX_ITEM_QUANTITY) {
-      throw new Error(ERROR_MESSAGES.CART.MAX_QUANTITY_EXCEEDED);
+      throw createValidationError(ERROR_MESSAGES.CART.MAX_QUANTITY_EXCEEDED);
     }
   }
 
@@ -19,16 +23,16 @@ export class CartValidation {
     const product = await prisma.product.findUnique({
       where: { id: productId },
     });
-    if (!product) throw new Error(ERROR_MESSAGES.PRODUCT.NOT_FOUND);
+    if (!product) throw createNotFoundError("Product");
     if (!product.isActive)
-      throw new Error(ERROR_MESSAGES.PRODUCT.NOT_AVAILABLE);
+      throw createValidationError(ERROR_MESSAGES.PRODUCT.NOT_AVAILABLE);
 
     const inventory = await prisma.storeInventory.findUnique({
       where: { storeId_productId: { storeId, productId } },
     });
-    if (!inventory) throw new Error(ERROR_MESSAGES.PRODUCT.NOT_IN_STORE);
+    if (!inventory) throw createValidationError(ERROR_MESSAGES.PRODUCT.NOT_IN_STORE);
     if (inventory.stockQty < qty) {
-      throw new Error(
+      throw createValidationError(
         `${ERROR_MESSAGES.INVENTORY.INSUFFICIENT_STOCK}. Available: ${inventory.stockQty}`
       );
     }
@@ -44,13 +48,13 @@ export class CartValidation {
       where: { id: itemId, cart: { userId, storeId } },
       include: { product: true },
     });
-    if (!cartItem) throw new Error(ERROR_MESSAGES.CART.ITEM_NOT_FOUND);
+    if (!cartItem) throw createNotFoundError("Cart item");
     return cartItem;
   }
 
   static async validateCart(userId: number, storeId: number) {
     const cart = await prisma.cart.findFirst({ where: { userId, storeId } });
-    if (!cart) throw new Error(ERROR_MESSAGES.CART.CART_NOT_FOUND);
+    if (!cart) throw createNotFoundError("Cart");
     return cart;
   }
 
@@ -60,15 +64,15 @@ export class CartValidation {
     inventory: any
   ) {
     if (cartItems.length >= CART_CONSTANTS.MAX_CART_ITEMS) {
-      throw new Error(ERROR_MESSAGES.CART.MAX_ITEMS_EXCEEDED);
+      throw createValidationError(ERROR_MESSAGES.CART.MAX_ITEMS_EXCEEDED);
     }
 
     if (newQty > CART_CONSTANTS.MAX_ITEM_QUANTITY) {
-      throw new Error(ERROR_MESSAGES.CART.TOTAL_QUANTITY_EXCEEDED);
+      throw createValidationError(ERROR_MESSAGES.CART.TOTAL_QUANTITY_EXCEEDED);
     }
 
     if (newQty > inventory.stockQty) {
-      throw new Error(
+      throw createValidationError(
         `Total quantity exceeds available stock: ${inventory.stockQty}`
       );
     }
