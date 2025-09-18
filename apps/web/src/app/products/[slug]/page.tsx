@@ -2,11 +2,36 @@
 
 import { useParams } from "next/navigation";
 import Image from "next/image";
+import { useState, useEffect } from "react";
 import { useProduct } from "@/hooks/useProduct";
+import { useCartStore } from "@/stores/cart-store";
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const { data: product, isLoading, error } = useProduct(slug);
+  const [userId, setUserId] = useState<number | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const { addToCart, isLoading: cartLoading } = useCartStore();
+
+  // Get development user ID from localStorage
+  useEffect(() => {
+    const devUserId = localStorage.getItem("devUserId");
+    if (devUserId && devUserId !== "none") {
+      setUserId(parseInt(devUserId));
+    } else {
+      setUserId(1); // Default user for demo
+    }
+  }, []);
+
+  const handleAddToCart = async () => {
+    if (!product || !userId) return;
+    
+    try {
+      await addToCart(parseInt(product.id), quantity, userId);
+    } catch (error) {
+      console.error("Failed to add to cart:", error);
+    }
+  };
 
   if (isLoading) return <p className="p-6 text-center">Loading...</p>;
   if (error instanceof Error)
@@ -61,13 +86,41 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
+          {/* Quantity Selector */}
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Quantity
+            </label>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                className="w-10 h-10 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition"
+              >
+                -
+              </button>
+              <span className="text-xl font-semibold min-w-[3rem] text-center">
+                {quantity}
+              </span>
+              <button
+                onClick={() => setQuantity(quantity + 1)}
+                className="w-10 h-10 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
           {/* Tombol Aksi */}
           <div className="mt-8 flex gap-4">
             <button className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition">
               Beli Sekarang
             </button>
-            <button className="flex-1 border border-indigo-600 text-indigo-600 py-3 rounded-lg hover:bg-indigo-50 transition">
-              Tambah ke Keranjang
+            <button 
+              onClick={handleAddToCart}
+              disabled={cartLoading || !userId}
+              className="flex-1 border border-indigo-600 text-indigo-600 py-3 rounded-lg hover:bg-indigo-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {cartLoading ? "Menambahkan..." : "Tambah ke Keranjang"}
             </button>
           </div>
         </div>
