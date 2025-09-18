@@ -2,27 +2,35 @@
 
 import { useUpdateCartItem, useRemoveCartItem } from "@/hooks/useCart";
 import type { CartItem as CartItemType } from "@/types/cart.types";
-import { useState, useEffect, useRef } from "react";
-import Image from "next/image";
+import { useState, useEffect, useRef, useMemo } from "react";
+// Image moved to CartItemImage
+import CartItemImage from "./CartItemImage";
+import CategoryBadge from "./CategoryBadge";
 import { toast } from "sonner";
+import formatIDR from "@/utils/formatCurrency";
+import { TrashIcon } from "./CartItemIcons";
+import QuantityControls from "./QuantityControls";
 
 interface CartItemProps {
   item: CartItemType;
   userId: number;
-  stockQty?: number;
+  /** optional store id to use with cart hooks; defaults to 1 */
+  storeId?: number;
   selected?: boolean;
   onToggle?: () => void;
   readOnly?: boolean;
 }
 
+
+
 export default function CartItem({
   item,
   userId,
+  storeId = 1,
   selected = true,
   onToggle,
   readOnly = false,
 }: CartItemProps) {
-  const storeId = 1;
   const [isUpdating, setIsUpdating] = useState(false);
   const [currentQty, setCurrentQty] = useState(item.qty);
   const stockQty = item.storeInventory?.stockQty ?? 9999;
@@ -36,14 +44,28 @@ export default function CartItem({
   const updateCartItemMutation = useUpdateCartItem(userId, storeId);
   const removeCartItemMutation = useRemoveCartItem(userId, storeId);
 
+  const clearPending = () => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    pendingQtyRef.current = null;
+  };
+
+  const getErrorMessage = (error: unknown, defaultMsg: string) => {
+    if (error && typeof error === "object") {
+      const maybe = error as Record<string, unknown>;
+      if ("message" in maybe && typeof maybe.message === "string") {
+        return maybe.message as string;
+      }
+    }
+    return defaultMsg;
+  };
+
   const handleQtyChange = (newQty: number) => {
     if (newQty === currentQty || isUpdating) return;
     if (newQty <= 0) {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-        debounceTimerRef.current = null;
-        pendingQtyRef.current = null;
-      }
+      clearPending();
       void removeCartItem();
       return;
     }
@@ -82,20 +104,13 @@ export default function CartItem({
 
   const removeCartItem = async () => {
     if (isUpdating) return;
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-      pendingQtyRef.current = null;
-    }
+    clearPending();
     setIsUpdating(true);
     try {
       await removeCartItemMutation.mutateAsync(item.id);
       toast.success("Item berhasil dihapus");
     } catch (error) {
-      let msg = "Gagal menghapus item";
-      if (error && typeof error === "object" && "message" in error) {
-        msg = (error as { message?: string }).message ?? msg;
-      }
+      const msg = getErrorMessage(error, "Gagal menghapus item");
       toast.error(msg);
     } finally {
       setIsUpdating(false);
@@ -112,137 +127,77 @@ export default function CartItem({
     };
   }, []);
 
+  const unitPrice = useMemo(
+    () => Number(item.product?.price ?? 0),
+    [item.product]
+  );
+  const totalPrice = useMemo(
+    () => unitPrice * currentQty,
+    [unitPrice, currentQty]
+  );
+
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-start sm:items-center gap-4">
       {/* Checkbox - Outside the card, centered vertically */}
       {!readOnly && (
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center self-center sm:self-auto">
           <input
             type="checkbox"
             checked={selected}
             onChange={onToggle}
             readOnly={!onToggle}
-            className="h-5 w-5 rounded-md text-green-600 focus:ring-green-500 border-gray-300"
+            className="h-5 w-5 rounded-md text-indigo-600 focus:ring-indigo-500 border-gray-300"
           />
         </div>
       )}
 
       {/* Card Container */}
-      <div className="relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 shadow-sm border-4 border-white hover:shadow-md transition-all duration-200 flex-1">
+      <div className="relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-3 sm:p-4 shadow-sm border-2 sm:border-4 border-white hover:shadow-md transition-all duration-200 flex-1">
         {/* Delete Button - Positioned to blend with card border */}
         {!readOnly && (
           <button
             onClick={removeCartItem}
             disabled={isUpdating}
-            className="absolute -top-3 -right-3 w-8 h-8 bg-orange-100 border-2 border-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-orange-600 hover:text-orange-700 transition-all duration-200 z-10"
+            className="absolute -top-3 -right-3 w-8 h-8 sm:w-9 sm:h-9 bg-orange-100 border-2 border-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-orange-600 hover:text-orange-700 transition-all duration-200 z-10"
             aria-label="Remove item"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={3}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
+            <TrashIcon />
           </button>
         )}
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-3">
           {/* Product Image */}
-          <div className="w-16 h-16 bg-white rounded-xl flex-shrink-0 overflow-hidden relative shadow-sm">
-            <Image
-              src={`https://picsum.photos/seed/${item.productId}/200/200`}
-              alt={item.product.name}
-              fill
-              sizes="64px"
-              className="object-cover"
-            />
-          </div>
+          <CartItemImage productId={item.productId} alt={item.product.name} />
 
           {/* Product Details */}
           <div className="flex-1 min-w-0">
             {/* Category Badge */}
-            <div className="mb-2">
-              <span className="inline-block bg-gray-200 text-gray-700 text-xs font-medium px-3 py-1 rounded-full">
-                Fruits & Vegetables
-              </span>
-            </div>
-            
+            <CategoryBadge>Fruits &amp; Vegetables</CategoryBadge>
+
             <h3 className="font-semibold text-gray-900 text-base mb-1 leading-tight">
               {item.product.name}
             </h3>
-            <p className="text-sm text-gray-500 mb-1">
-              ${(Number(item.product?.price ?? 0) / 1000).toFixed(2)}
-            </p>
+            <p className="text-sm text-gray-500 mb-1">{formatIDR(unitPrice)}</p>
           </div>
 
           {/* Centered Price */}
-          <div className="text-center flex-shrink-0">
-            <div className="text-xl font-bold text-gray-900">
-              ${((Number(item.product?.price ?? 0) * currentQty) / 1000).toFixed(2)}
+          <div className="text-center flex-shrink-0 mt-2 sm:mt-0 sm:ml-2">
+            <div className="text-sm sm:text-base md:text-lg font-bold text-gray-900">
+              {formatIDR(totalPrice)}
             </div>
           </div>
 
           {/* Quantity Controls */}
           {!readOnly ? (
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 transition-colors duration-200"
-                onClick={() => handleQtyChange(currentQty - 1)}
-                disabled={isUpdating}
-                aria-label="Decrease quantity"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M20 12H4"
-                  />
-                </svg>
-              </button>
-
-              <span className="w-6 text-center font-semibold text-base text-gray-900">
-                {currentQty}
-              </span>
-
-              <button
-                className="w-8 h-8 rounded-full bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center text-white transition-colors duration-200"
-                onClick={() => handleQtyChange(currentQty + 1)}
-                disabled={isUpdating || currentQty >= stockQty}
-                aria-label="Increase quantity"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                  />
-                </svg>
-              </button>
-            </div>
+            <QuantityControls
+              currentQty={currentQty}
+              onDecrease={() => handleQtyChange(currentQty - 1)}
+              onIncrease={() => handleQtyChange(currentQty + 1)}
+              disabled={isUpdating}
+              maxReached={currentQty >= stockQty}
+            />
           ) : (
-            <div className="text-sm text-gray-600 flex-shrink-0">
-              Quantity: {currentQty}
-            </div>
+            <div className="text-sm text-gray-600 flex-shrink-0">Quantity: {currentQty}</div>
           )}
         </div>
       </div>
