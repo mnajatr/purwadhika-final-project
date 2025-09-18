@@ -21,8 +21,6 @@ interface CartItemProps {
   readOnly?: boolean;
 }
 
-
-
 export default function CartItem({
   item,
   userId,
@@ -197,7 +195,9 @@ export default function CartItem({
               maxReached={currentQty >= stockQty}
             />
           ) : (
-            <div className="text-sm text-gray-600 flex-shrink-0">Quantity: {currentQty}</div>
+            <div className="text-sm text-gray-600 flex-shrink-0">
+              Quantity: {currentQty}
+            </div>
           )}
         </div>
       </div>

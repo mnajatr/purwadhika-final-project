@@ -20,10 +20,6 @@ export function CartPage({ userId }: CartPageProps) {
   const [selectedIds, setSelectedIds] = React.useState<Record<number, boolean>>(
     {}
   );
-
-  const [idempotencyKey, setIdempotencyKey] = React.useState<string | null>(
-    null
-  );
   // do not pass storeId so server can resolve the best store for the order
   const createOrder = useCreateOrder(userId);
   const creating = createOrder.status === "pending";
@@ -131,25 +127,9 @@ export function CartPage({ userId }: CartPageProps) {
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="text"
-                    readOnly
-                    value={idempotencyKey ?? "(no key generated)"}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50"
-                    aria-label="idempotency-key"
-                  />
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      setIdempotencyKey(String(Math.random()).slice(2, 14))
-                    }
-                    className="bg-gray-200 text-gray-700 hover:bg-gray-300 border-0"
-                  >
-                    Generate
-                  </Button>
-                </div>
-
+                {/* Idempotency is intentionally handled at the checkout/order
+                    level (server + checkout UI). Removing cart-level idempotency
+                    input to avoid confusion — users generate/see keys on Checkout. */}
                 <Button
                   className="w-full bg-indigo-600 text-white hover:bg-indigo-700 py-3 rounded-lg font-semibold"
                   size="lg"
@@ -170,27 +150,6 @@ export function CartPage({ userId }: CartPageProps) {
                   disabled={creating}
                 >
                   {creating ? "Processing..." : "Checkout"}
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const selectedIdsArr = Object.keys(selectedIds)
-                      .filter((k) => selectedIds[Number(k)])
-                      .map((k) => Number(k));
-                    try {
-                      sessionStorage.setItem(
-                        "checkout:selectedIds",
-                        JSON.stringify(selectedIdsArr)
-                      );
-                      sessionStorage.setItem("checkout:userId", String(userId));
-                    } catch {}
-                    router.push("/checkout");
-                  }}
-                  className="w-full border-indigo-600 text-indigo-600 hover:bg-indigo-50"
-                >
-                  Go to Checkout (simulate double-submit)
                 </Button>
               </div>
             </div>

@@ -29,7 +29,9 @@ export default function QuantityControls({
         <MinusIcon />
       </button>
 
-      <span className="w-6 text-center font-semibold text-base text-gray-900">{currentQty}</span>
+      <span className="w-6 text-center font-semibold text-base text-gray-900">
+        {currentQty}
+      </span>
 
       <button
         className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center text-white transition-colors duration-200"
