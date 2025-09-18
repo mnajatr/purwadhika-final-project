@@ -32,7 +32,7 @@ export default function UserTable() {
                 Manage Users
               </h2>
               <Link
-                href="/users/create"
+                href="/user/create"
                 className="bg-indigo-500 text-white px-5 py-2 rounded-lg shadow hover:bg-indigo-700 transition text-center"
               >
                 + Tambah User
@@ -85,7 +85,7 @@ export default function UserTable() {
                         </td>
                         <td className="px-4 py-3 text-sm text-center space-x-2">
                           <Link
-                            href={`/users/${u.id}/edit`}
+                            href={`/user/${u.id}/edit`}
                             className="text-indigo-600 hover:underline"
                           >
                             Edit

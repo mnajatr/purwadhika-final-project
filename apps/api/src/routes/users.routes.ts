@@ -1,18 +1,16 @@
 import { Router } from "express";
 import { UsersController } from "../controllers/users.controller.js";
 
-const usersRouter = Router();
+const router = Router();
 
-// GET /api/users - List all users
-usersRouter.get("/", UsersController.getUsers);
+// CRUD User
+router.post("/", UsersController.createUser); // Create
+router.get("/", UsersController.getUsers); // Read all
+router.get("/:id", UsersController.getUserById); // Read by ID
+router.put("/:id", UsersController.updateUser); // Update
+router.delete("/:id", UsersController.deleteUser); // Delete
 
-// GET /api/users/:id - Get single user by ID
-usersRouter.get("/:id", UsersController.getUserById);
+// Get User Addresses
+router.get("/:id/addresses", UsersController.getUserAddresses);
 
-// POST /api/users - Create new user
-usersRouter.post("/", UsersController.createUser);
-
-// GET /api/users/:id/addresses - Get user addresses
-usersRouter.get("/:id/addresses", UsersController.getUserAddresses);
-
-export default usersRouter;
+export default router;

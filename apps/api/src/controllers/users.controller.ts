@@ -1,134 +1,84 @@
 import { Request, Response } from "express";
-import { prisma } from "@repo/database";
-import { CreateUserSchema } from "@repo/schemas";
+import { UsersService } from "../services/user.service.js";
+import { CreateUserSchema, UpdateUserSchema } from "@repo/schemas";
 
 export class UsersController {
-  // GET /api/users - List all users
-  static async getUsers(_request: Request, response: Response) {
+  static async createUser(req: Request, res: Response) {
     try {
-      const users = await prisma.user.findMany({
-        select: {
-          id: true,
-          email: true,
-          role: true,
-          createdAt: true,
-          profile: { select: { fullName: true } },
-        },
-      });
-      response.status(200).json(users);
-    } catch (error) {
-      response.status(500).json({
-        success: false,
-        message:
-          error instanceof Error ? error.message : "Internal server error",
-      });
+      const parsed = CreateUserSchema.safeParse(req.body);
+
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: parsed.error.issues,
+        });
+      }
+
+      const user = await UsersService.createUser(parsed.data);
+      res.status(201).json(user);
+    } catch (err) {
+      res.status(500).json({ message: (err as Error).message });
     }
   }
 
-  // GET /api/users/:id - Get single user by ID
-  static async getUserById(request: Request, response: Response) {
+  static async getUsers(_req: Request, res: Response) {
     try {
-      const { id } = request.params;
-      const user = await prisma.user.findUnique({
-        where: { id: parseInt(id) },
-        select: {
-          id: true,
-          email: true,
-          role: true,
-          createdAt: true,
-          profile: { select: { fullName: true } },
-        },
-      });
-
-      if (!user) {
-        return response.status(404).json({ message: "User not found" });
-      }
-
-      response.status(200).json(user);
-    } catch (error) {
-      response.status(500).json({
-        success: false,
-        message:
-          error instanceof Error ? error.message : "Internal server error",
-      });
+      const users = await UsersService.getUsers();
+      res.json(users);
+    } catch (err) {
+      res.status(500).json({ message: (err as Error).message });
     }
   }
 
-  // POST /api/users - Create new user
-  static async createUser(request: Request, response: Response) {
+  static async getUserById(req: Request, res: Response) {
     try {
-      const parsedData = CreateUserSchema.safeParse(request.body);
-
-      if (!parsedData.success) {
-        return response.status(400).json({ message: parsedData.error });
-      }
-
-      // parsedData.data should already be validated by CreateUserSchema
-      const pd = parsedData.data as {
-        email: string;
-        password?: string;
-        role?: string;
-      };
-
-      // Narrow and validate role to the allowed union to satisfy Prisma types
-      type UserRole = "USER" | "SUPER_ADMIN" | "STORE_ADMIN";
-      const roleCandidate = pd.role;
-      const userRole =
-        roleCandidate === "USER" ||
-        roleCandidate === "SUPER_ADMIN" ||
-        roleCandidate === "STORE_ADMIN"
-          ? (roleCandidate as UserRole)
-          : undefined;
-
-      const userData: any = {
-        email: pd.email,
-        password: pd.password || "",
-      };
-      if (userRole) userData.role = userRole;
-
-      const user = await prisma.user.create({ data: userData });
-      response.status(201).json({ message: "User created", user });
-    } catch (error) {
-      response.status(500).json({
-        success: false,
-        message:
-          error instanceof Error ? error.message : "Internal server error",
-      });
+      const id = Number(req.params.id);
+      const user = await UsersService.getUserById(id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      res.json(user);
+    } catch (err) {
+      res.status(500).json({ message: (err as Error).message });
     }
   }
 
-  // GET /api/users/:id/addresses - Get user addresses
-  static async getUserAddresses(request: Request, response: Response) {
+  static async updateUser(req: Request, res: Response) {
     try {
-      const { id } = request.params;
-      const userId = parseInt(id as string);
+      const id = Number(req.params.id);
+      const parsed = UpdateUserSchema.safeParse(req.body);
 
-      if (!userId) {
-        return response.status(400).json({ message: "Invalid user id" });
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: parsed.error.issues,
+        });
       }
 
-      const addresses = await prisma.userAddress.findMany({
-        where: { userId },
-        select: {
-          id: true,
-          recipientName: true,
-          addressLine: true,
-          province: true,
-          city: true,
-          postalCode: true,
-          latitude: true,
-          longitude: true,
-          isPrimary: true,
-        },
-      });
+      const user = await UsersService.updateUser(id, parsed.data);
+      res.json(user);
+    } catch (err) {
+      res.status(500).json({ message: (err as Error).message });
+    }
+  }
 
-      return response.status(200).json(addresses);
-    } catch (error) {
-      response.status(500).json({
-        success: false,
-        message:
-          error instanceof Error ? error.message : "Internal server error",
-      });
+  static async deleteUser(req: Request, res: Response) {
+    try {
+      const id = Number(req.params.id);
+      await UsersService.deleteUser(id);
+      res.json({ message: "User deleted successfully" });
+    } catch (err) {
+      res.status(500).json({ message: (err as Error).message });
+    }
+  }
+
+  static async getUserAddresses(req: Request, res: Response) {
+    try {
+      const userId = Number(req.params.id);
+      if (!userId) return res.status(400).json({ message: "Invalid user id" });
+
+      const addresses = await UsersService.getUserAddresses(userId);
+      res.json(addresses);
+    } catch (err) {
+      res.status(500).json({ message: (err as Error).message });
     }
   }
 }
