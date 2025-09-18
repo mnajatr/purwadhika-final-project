@@ -1,17 +1,22 @@
 "use client";
 
-import { Button } from "../ui/button";
-import { Card } from "../ui/card";
 import { useUpdateCartItem, useRemoveCartItem } from "@/hooks/useCart";
 import type { CartItem as CartItemType } from "@/types/cart.types";
-import { useState, useEffect, useRef } from "react";
-import Image from "next/image";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+// Image moved to CartItemImage
+import CartItemImage from "./CartItemImage";
+import CategoryBadge from "./CategoryBadge";
 import { toast } from "sonner";
+import formatIDR from "@/utils/formatCurrency";
+import { TrashIcon } from "./CartItemIcons";
+import QuantityControls from "./QuantityControls";
 
 interface CartItemProps {
   item: CartItemType;
   userId: number;
-  stockQty?: number;
+  /** optional store id to use with cart hooks; defaults to 1 */
+  storeId?: number;
   selected?: boolean;
   onToggle?: () => void;
   readOnly?: boolean;
@@ -20,11 +25,11 @@ interface CartItemProps {
 export default function CartItem({
   item,
   userId,
+  storeId = 1,
   selected = true,
   onToggle,
   readOnly = false,
 }: CartItemProps) {
-  const storeId = 1;
   const [isUpdating, setIsUpdating] = useState(false);
   const [currentQty, setCurrentQty] = useState(item.qty);
   const stockQty = item.storeInventory?.stockQty ?? 9999;
@@ -38,14 +43,41 @@ export default function CartItem({
   const updateCartItemMutation = useUpdateCartItem(userId, storeId);
   const removeCartItemMutation = useRemoveCartItem(userId, storeId);
 
+  // Get product details to get the correct category
+  const { data: products } = useQuery({
+    queryKey: ["products"],
+    queryFn: () =>
+      import("@/services/products.service").then((s) =>
+        s.productsService.getProducts()
+      ),
+  });
+
+  // Find the product with matching ID to get category
+  const productDetails = products?.find((p) => parseInt(p.id) === item.productId);
+  const productCategory = productDetails?.category || "General";
+
+  const clearPending = () => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    pendingQtyRef.current = null;
+  };
+
+  const getErrorMessage = (error: unknown, defaultMsg: string) => {
+    if (error && typeof error === "object") {
+      const maybe = error as Record<string, unknown>;
+      if ("message" in maybe && typeof maybe.message === "string") {
+        return maybe.message as string;
+      }
+    }
+    return defaultMsg;
+  };
+
   const handleQtyChange = (newQty: number) => {
     if (newQty === currentQty || isUpdating) return;
     if (newQty <= 0) {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-        debounceTimerRef.current = null;
-        pendingQtyRef.current = null;
-      }
+      clearPending();
       void removeCartItem();
       return;
     }
@@ -84,20 +116,13 @@ export default function CartItem({
 
   const removeCartItem = async () => {
     if (isUpdating) return;
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-      pendingQtyRef.current = null;
-    }
+    clearPending();
     setIsUpdating(true);
     try {
       await removeCartItemMutation.mutateAsync(item.id);
       toast.success("Item berhasil dihapus");
     } catch (error) {
-      let msg = "Gagal menghapus item";
-      if (error && typeof error === "object" && "message" in error) {
-        msg = (error as { message?: string }).message ?? msg;
-      }
+      const msg = getErrorMessage(error, "Gagal menghapus item");
       toast.error(msg);
     } finally {
       setIsUpdating(false);
@@ -114,96 +139,82 @@ export default function CartItem({
     };
   }, []);
 
+  const unitPrice = useMemo(
+    () => Number(item.product?.price ?? 0),
+    [item.product]
+  );
+  const totalPrice = useMemo(
+    () => unitPrice * currentQty,
+    [unitPrice, currentQty]
+  );
+
   return (
-    <Card className="p-3">
-      <div className="flex flex-col md:flex-row items-start md:items-start gap-3 w-full">
-        {!readOnly && (
+    <div className="flex items-start sm:items-center gap-4">
+      {/* Checkbox - Outside the card, centered vertically */}
+      {!readOnly && (
+        <div className="flex items-center justify-center self-center sm:self-auto">
           <input
             type="checkbox"
             checked={selected}
             onChange={onToggle}
             readOnly={!onToggle}
-            className="h-5 w-5 rounded-md accent-primary"
+            className="h-5 w-5 rounded-md text-indigo-600 focus:ring-indigo-500 border-gray-300"
           />
+        </div>
+      )}
+
+      {/* Card Container */}
+      <div className="relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-3 sm:p-4 shadow-sm border-2 sm:border-4 border-white hover:shadow-md transition-all duration-200 flex-1">
+        {/* Delete Button - Positioned to blend with card border */}
+        {!readOnly && (
+          <button
+            onClick={removeCartItem}
+            disabled={isUpdating}
+            className="absolute -top-3 -right-3 w-8 h-8 sm:w-9 sm:h-9 bg-orange-100 border-2 border-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-orange-600 hover:text-orange-700 transition-all duration-200 z-10"
+            aria-label="Remove item"
+          >
+            <TrashIcon />
+          </button>
         )}
 
-        <div className="flex flex-row items-start gap-3 flex-1 ml-2">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-muted rounded-lg flex-shrink-0 overflow-hidden relative">
-            <Image
-              src={`https://picsum.photos/seed/${item.productId}/200/200`}
-              alt={item.product.name}
-              fill
-              sizes="80px"
-              className="object-cover"
-            />
-          </div>
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          {/* Product Image */}
+          <CartItemImage productId={item.productId} alt={item.product.name} />
 
+          {/* Product Details */}
           <div className="flex-1 min-w-0">
-            <div className="font-semibold text-base md:text-lg whitespace-normal break-words">
+            {/* Category Badge */}
+            <CategoryBadge>{productCategory}</CategoryBadge>
+
+            <h3 className="font-semibold text-gray-900 text-base mb-1 leading-tight">
               {item.product.name}
-            </div>
-            <div className="text-sm text-muted-foreground mt-1 whitespace-normal">
-              {item.product.description || "eceran"}
-            </div>
-            <div className="text-sm text-muted-foreground mt-2">
-              Unit: Rp {Number(item.product?.price ?? 0).toLocaleString()}
+            </h3>
+            <p className="text-sm text-gray-500 mb-1">{formatIDR(unitPrice)}</p>
+          </div>
+
+          {/* Centered Price */}
+          <div className="text-center flex-shrink-0 mt-2 sm:mt-0 sm:ml-2">
+            <div className="text-sm sm:text-base md:text-lg font-bold text-gray-900">
+              {formatIDR(totalPrice)}
             </div>
           </div>
-        </div>
 
-        <div className="mt-3 md:mt-0 md:ml-auto flex-shrink-0 w-full md:w-auto">
-          <div className="flex items-center justify-between md:flex-col md:items-start gap-3 w-full md:w-auto">
-            <div className="text-base font-semibold">
-              Rp{" "}
-              {(Number(item.product?.price ?? 0) * currentQty).toLocaleString()}
+          {/* Quantity Controls */}
+          {!readOnly ? (
+            <QuantityControls
+              currentQty={currentQty}
+              onDecrease={() => handleQtyChange(currentQty - 1)}
+              onIncrease={() => handleQtyChange(currentQty + 1)}
+              disabled={isUpdating}
+              maxReached={currentQty >= stockQty}
+            />
+          ) : (
+            <div className="text-sm text-gray-600 flex-shrink-0">
+              Quantity: {currentQty}
             </div>
-
-            {!readOnly ? (
-              <div className="flex items-center gap-2">
-                <button
-                  className="inline-flex items-center justify-center h-8 w-8 rounded-full border border-gray-200 text-sm text-muted-foreground hover:bg-gray-50"
-                  onClick={() => handleQtyChange(currentQty - 1)}
-                  disabled={isUpdating}
-                  aria-label="Decrease quantity"
-                >
-                  -
-                </button>
-                <div className="w-10 text-center font-medium">{currentQty}</div>
-                <button
-                  className="inline-flex items-center justify-center h-8 w-8 rounded-full border border-gray-200 text-sm text-muted-foreground hover:bg-gray-50"
-                  onClick={() => handleQtyChange(currentQty + 1)}
-                  disabled={isUpdating || currentQty >= stockQty}
-                  aria-label="Increase quantity"
-                >
-                  +
-                </button>
-
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={removeCartItem}
-                  disabled={isUpdating}
-                  className="ml-2"
-                  aria-label="Remove item"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    className="w-4 h-4"
-                    fill="currentColor"
-                  >
-                    <path d="M3 6h18v2H3V6zm3 3h12l-1 11H7L6 9zM9 4h6l1 1H8l1-1z" />
-                  </svg>
-                </Button>
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground">
-                Quantity: {currentQty}
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

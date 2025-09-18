@@ -2,11 +2,48 @@
 
 import { useParams } from "next/navigation";
 import Image from "next/image";
+import { useState, useEffect } from "react";
 import { useProduct } from "@/hooks/useProduct";
+import { useAddToCart } from "@/hooks/useCart";
+import { toast } from "sonner";
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const { data: product, isLoading, error } = useProduct(slug);
+  const [userId, setUserId] = useState<number>(1);
+  const [quantity, setQuantity] = useState(1);
+
+  const addToCartMutation = useAddToCart(userId, 1);
+
+  // Get development user ID from localStorage
+  useEffect(() => {
+    const devUserId = localStorage.getItem("devUserId");
+    if (devUserId && devUserId !== "none") {
+      setUserId(parseInt(devUserId));
+    } else {
+      setUserId(1); // Default user for demo
+    }
+  }, []);
+
+  const handleAddToCart = async () => {
+    if (!product || !userId) return;
+
+    try {
+      await addToCartMutation.mutateAsync({
+        productId: parseInt(product.id),
+        qty: quantity,
+        storeId: 1,
+        userId: userId,
+      });
+      toast.success(
+        `${quantity} ${product.name} berhasil ditambahkan ke keranjang!`
+      );
+      setQuantity(1); // Reset quantity after adding
+    } catch (error) {
+      console.error("Failed to add to cart:", error);
+      toast.error("Gagal menambahkan produk ke keranjang");
+    }
+  };
 
   if (isLoading) return <p className="p-6 text-center">Loading...</p>;
   if (error instanceof Error)
@@ -61,13 +98,43 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
+          {/* Quantity Selector */}
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Quantity
+            </label>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                className="w-10 h-10 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition"
+              >
+                -
+              </button>
+              <span className="text-xl font-semibold min-w-[3rem] text-center">
+                {quantity}
+              </span>
+              <button
+                onClick={() => setQuantity(quantity + 1)}
+                className="w-10 h-10 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
           {/* Tombol Aksi */}
           <div className="mt-8 flex gap-4">
             <button className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition">
               Beli Sekarang
             </button>
-            <button className="flex-1 border border-indigo-600 text-indigo-600 py-3 rounded-lg hover:bg-indigo-50 transition">
-              Tambah ke Keranjang
+            <button
+              onClick={handleAddToCart}
+              disabled={addToCartMutation.isPending}
+              className="flex-1 border border-indigo-600 text-indigo-600 py-3 rounded-lg hover:bg-indigo-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {addToCartMutation.isPending
+                ? "Menambahkan..."
+                : "Tambah ke Keranjang"}
             </button>
           </div>
         </div>
