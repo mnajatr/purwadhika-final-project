@@ -43,5 +43,14 @@ export const showCartSuccessMessage = (message: string) => {
 };
 
 export const showCartErrorMessage = (message: string) => {
-  toast.error(message);
+  // Convert technical error messages to user-friendly ones
+  let displayMessage = message;
+  
+  if (message.includes("stock") || message.includes("exceeds available") || message.includes("Insufficient stock")) {
+    displayMessage = "Sorry, not enough stock available for the requested quantity.";
+  } else if (message.includes("out of stock") || message.includes("stock: 0") || message.includes("Available: 0")) {
+    displayMessage = "Sorry, this product is currently out of stock.";
+  }
+  
+  toast.error(displayMessage);
 };

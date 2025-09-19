@@ -46,12 +46,22 @@ export function useAddToCart(userId: number, storeId = 1) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: AddToCartRequest) => {
-      const res = await cartService.addToCart(data);
-      return res.data;
+      try {
+        const res = await cartService.addToCart(data);
+        return res.data;
+      } catch (error) {
+        // Ensure errors are properly caught and don't become unhandled rejections
+        console.warn("Add to cart failed:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: cartQueryKey(userId, storeId) });
       qc.invalidateQueries({ queryKey: cartTotalsQueryKey(userId, storeId) });
+    },
+    onError: (error) => {
+      // This prevents the error from bubbling up as an unhandled promise rejection
+      console.warn("Add to cart mutation error:", error);
     },
   });
 }
