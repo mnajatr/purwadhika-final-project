@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import CartItemImage from "./CartItemImage";
 import CategoryBadge from "./CategoryBadge";
 import { toast } from "sonner";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 import formatIDR from "@/utils/formatCurrency";
 import { TrashIcon } from "./CartItemIcons";
 import QuantityControls from "./QuantityControls";
@@ -31,6 +32,7 @@ export default function CartItem({
   readOnly = false,
 }: CartItemProps) {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [currentQty, setCurrentQty] = useState(item.qty);
   const stockQty = item.storeInventory?.stockQty ?? 9999;
   const pendingQtyRef = useRef<number | null>(null);
@@ -79,13 +81,20 @@ export default function CartItem({
   const handleQtyChange = (newQty: number) => {
     if (newQty === currentQty || isUpdating) return;
     if (newQty <= 0) {
+      // ask for confirmation before removing the item
       clearPending();
-      void removeCartItem();
+      setShowConfirm(true);
       return;
     }
     if (newQty > stockQty) {
-      toast.error(`Qty melebihi stok tersedia (${stockQty})`);
+      toast.error(`Quantity exceeds available stock (${stockQty})`);
       return;
+    }
+
+    // If the user increased the quantity and hit the exact stock limit,
+    // show an informational toast so they know they've reached the max.
+    if (newQty > currentQty && newQty === stockQty) {
+      toast(`You've reached the maximum available stock (${stockQty})`);
     }
 
     setCurrentQty(newQty);
@@ -105,7 +114,7 @@ export default function CartItem({
         });
       } catch (error) {
         setCurrentQty(item.qty);
-        let msg = "Gagal update qty";
+        let msg = "Failed to update quantity";
         if (error && typeof error === "object" && "message" in error) {
           msg = (error as { message?: string }).message ?? msg;
         }
@@ -122,9 +131,9 @@ export default function CartItem({
     setIsUpdating(true);
     try {
       await removeCartItemMutation.mutateAsync(item.id);
-      toast.success("Item berhasil dihapus");
+      toast.success("Item removed");
     } catch (error) {
-      const msg = getErrorMessage(error, "Gagal menghapus item");
+      const msg = getErrorMessage(error, "Failed to remove item");
       toast.error(msg);
     } finally {
       setIsUpdating(false);
@@ -169,14 +178,28 @@ export default function CartItem({
       <div className="relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-3 sm:p-4 shadow-sm border-2 sm:border-4 border-white hover:shadow-md transition-all duration-200 flex-1">
         {/* Delete Button - Positioned to blend with card border */}
         {!readOnly && (
-          <button
-            onClick={removeCartItem}
-            disabled={isUpdating}
-            className="absolute -top-3 -right-3 w-8 h-8 sm:w-9 sm:h-9 bg-orange-100 border-2 border-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-orange-600 hover:text-orange-700 transition-all duration-200 z-10"
-            aria-label="Remove item"
-          >
-            <TrashIcon />
-          </button>
+          <>
+            <button
+              onClick={() => setShowConfirm(true)}
+              disabled={isUpdating}
+              className="absolute -top-3 -right-3 w-8 h-8 sm:w-9 sm:h-9 bg-orange-100 border-2 border-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-orange-600 hover:text-orange-700 transition-all duration-200 z-10"
+              aria-label="Remove item"
+            >
+              <TrashIcon />
+            </button>
+            <ConfirmDialog
+              open={showConfirm}
+              title="Remove item"
+              description={`Remove ${item.product.name} from your cart?`}
+              confirmLabel="Remove"
+              cancelLabel="Cancel"
+              onCancel={() => setShowConfirm(false)}
+              onConfirm={async () => {
+                setShowConfirm(false);
+                await removeCartItem();
+              }}
+            />
+          </>
         )}
 
         <div className="flex flex-col sm:flex-row items-center gap-3">

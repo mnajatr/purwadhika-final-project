@@ -4,6 +4,8 @@ import * as React from "react";
 import CartItem from "./CartItem";
 import { useCart, useClearCart } from "@/hooks/useCart";
 import { Button } from "../ui/button";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
+import { toast } from "sonner";
 import useCreateOrder from "@/hooks/useOrder";
 import { useRouter } from "next/navigation";
 import formatIDR from "@/utils/formatCurrency";
@@ -24,6 +26,7 @@ export function CartPage({ userId }: CartPageProps) {
   const createOrder = useCreateOrder(userId);
   const creating = createOrder.status === "pending";
   const router = useRouter();
+  const [showConfirmAll, setShowConfirmAll] = React.useState(false);
 
   React.useEffect(() => {
     if (!cart) return;
@@ -33,7 +36,23 @@ export function CartPage({ userId }: CartPageProps) {
   }, [cart]);
 
   if (isLoading || !cart) return <div>Loading cart...</div>;
-  if (cart.items.length === 0) return <div>Keranjang kosong.</div>;
+  if (cart.items.length === 0)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
+        <div className="text-center">
+          <p className="text-xl font-semibold text-gray-900 mb-4">
+            Your cart is empty. Start shopping!
+          </p>
+          <Button
+            size="lg"
+            className="bg-indigo-600 text-white hover:bg-indigo-700 px-6 py-3 rounded-lg font-semibold"
+            onClick={() => router.push("/products")}
+          >
+            Shop now
+          </Button>
+        </div>
+      </div>
+    );
 
   const allSelected = cart.items.every((it) => selectedIds[it.id]);
 
@@ -89,17 +108,39 @@ export function CartPage({ userId }: CartPageProps) {
             <div className="mt-6 border-t pt-4">
               <div className="flex w-full items-center justify-end">
                 <div className="w-full sm:w-auto">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => clearCartMutation.mutateAsync()}
-                    disabled={clearCartMutation.isPending}
-                    className="w-full sm:w-auto"
-                  >
-                    {clearCartMutation.isPending
-                      ? "Menghapus..."
-                      : "Clear Cart"}
-                  </Button>
+                  <>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setShowConfirmAll(true)}
+                      disabled={clearCartMutation.isPending}
+                      className="w-full sm:w-auto"
+                    >
+                      {clearCartMutation.isPending
+                        ? "Clearing..."
+                        : "Clear Cart"}
+                    </Button>
+                    <ConfirmDialog
+                      open={showConfirmAll}
+                      title="Clear cart"
+                      description={`Remove all items from your cart?`}
+                      confirmLabel="Clear"
+                      cancelLabel="Cancel"
+                      onCancel={() => setShowConfirmAll(false)}
+                      onConfirm={async () => {
+                        setShowConfirmAll(false);
+                        try {
+                          await clearCartMutation.mutateAsync();
+                          toast.success("Cart cleared");
+                        } catch (err) {
+                          const msg =
+                            (err as { message?: string })?.message ||
+                            "Failed to clear cart";
+                          toast.error(msg);
+                        }
+                      }}
+                    />
+                  </>
                 </div>
               </div>
             </div>

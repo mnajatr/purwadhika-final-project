@@ -45,7 +45,6 @@ export class CartController {
     return 500;
   }
 
-
   getCart = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = this.getUserIdFromReq(req);
@@ -99,7 +98,8 @@ export class CartController {
       const { qty } = req.body;
       const storeId = this.getStoreIdFromReq(req);
 
-      if (!userId) throw createValidationError("Missing userId in request body");
+      if (!userId)
+        throw createValidationError("Missing userId in request body");
       if (!itemId) throw createValidationError("Missing itemId in params");
       if (typeof qty === "undefined")
         throw createValidationError("Missing qty in request body");
@@ -123,7 +123,8 @@ export class CartController {
       const itemId = toNumber(req.params?.itemId, undefined);
       const storeId = this.getStoreIdFromReq(req);
 
-      if (!userId) throw createValidationError("Missing userId in request body");
+      if (!userId)
+        throw createValidationError("Missing userId in request body");
       if (!itemId) throw createValidationError("Missing itemId in params");
 
       const cart = await this.cartService.deleteCartItem(
@@ -143,7 +144,8 @@ export class CartController {
       const userId = this.getUserIdFromReq(req);
       const storeId = this.getStoreIdFromReq(req);
 
-      if (!userId) throw createValidationError("Missing userId in request body");
+      if (!userId)
+        throw createValidationError("Missing userId in request body");
 
       const cart = await this.cartService.clearCart(userId!, storeId);
 

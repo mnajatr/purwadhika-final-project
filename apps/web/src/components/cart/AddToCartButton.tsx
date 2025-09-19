@@ -36,7 +36,7 @@ export function AddToCartButton({
       return (error as { message: string }).message;
     }
     if (typeof error === "string") return error;
-    return "Gagal menambah ke keranjang";
+    return "Failed to add to cart";
   };
 
   const handleClick = async () => {
@@ -56,9 +56,9 @@ export function AddToCartButton({
       onClick={handleClick}
       disabled={disabled || loading}
       className={className}
-      aria-label="Tambah ke keranjang"
+      aria-label="Add to cart"
     >
-      {loading ? "Menambah..." : "Tambah ke Keranjang"}
+      {loading ? "Adding..." : "Add to cart"}
     </Button>
   );
 }

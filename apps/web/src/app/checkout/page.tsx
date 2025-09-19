@@ -112,7 +112,7 @@ export default function CheckoutPage() {
 
   if (isLoading) return <div>Loading...</div>;
   if (!cart || cart.items.length === 0)
-    return <div>Keranjang kosong. Tambahkan barang terlebih dahulu.</div>;
+    return <div>Your cart is empty. Please add items first.</div>;
 
   const items = (
     selectedIds && selectedIds.length > 0
@@ -153,7 +153,7 @@ export default function CheckoutPage() {
       } catch {}
     } catch (err) {
       const msg =
-        (err as { message?: string })?.message || "Gagal membuat pesanan";
+        (err as { message?: string })?.message || "Failed to create order";
       toast.error(msg);
     }
   };
