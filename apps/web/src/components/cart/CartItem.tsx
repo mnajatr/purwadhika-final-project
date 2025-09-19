@@ -1,10 +1,10 @@
 "use client";
 
 import { useUpdateCartItem, useRemoveCartItem } from "@/hooks/useCart";
+import { useStockHandler } from "@/hooks/useStockHandler";
 import type { CartItem as CartItemType } from "@/types/cart.types";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-// Image moved to CartItemImage
 import CartItemImage from "./CartItemImage";
 import CategoryBadge from "./CategoryBadge";
 import { toast } from "sonner";
@@ -37,6 +37,13 @@ export default function CartItem({
   const stockQty = item.storeInventory?.stockQty ?? 9999;
   const pendingQtyRef = useRef<number | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Use stock handler for consistent behavior
+  const stockHandler = useStockHandler({
+    currentQuantity: currentQty,
+    stockQuantity: stockQty,
+    showToasts: true,
+  });
 
   useEffect(() => {
     setCurrentQty(item.qty);
@@ -86,8 +93,9 @@ export default function CartItem({
       setShowConfirm(true);
       return;
     }
-    if (newQty > stockQty) {
-      toast.error(`Quantity exceeds available stock (${stockQty})`);
+
+    // Use stock handler to validate quantity change
+    if (!stockHandler.handleQuantityChange(newQty)) {
       return;
     }
 
@@ -182,7 +190,7 @@ export default function CartItem({
             <button
               onClick={() => setShowConfirm(true)}
               disabled={isUpdating}
-              className="absolute -top-3 -right-3 w-8 h-8 sm:w-9 sm:h-9 bg-orange-100 border-2 border-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-orange-600 hover:text-orange-700 transition-all duration-200 z-10"
+              className={`absolute -top-3 -right-3 w-8 h-8 sm:w-9 sm:h-9 bg-orange-100 border-2 border-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-orange-600 hover:text-orange-700 transition-all duration-200 z-10`}
               aria-label="Remove item"
             >
               <TrashIcon />
@@ -211,9 +219,16 @@ export default function CartItem({
             {/* Category Badge */}
             <CategoryBadge>{productCategory}</CategoryBadge>
 
-            <h3 className="font-semibold text-gray-900 text-base mb-1 leading-tight">
-              {item.product.name}
-            </h3>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold text-gray-900 text-base leading-tight">
+                {item.product.name}
+              </h3>
+              {stockHandler.isOutOfStock && (
+                <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                  Out of Stock
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-500 mb-1">{formatIDR(unitPrice)}</p>
           </div>
 
@@ -226,13 +241,19 @@ export default function CartItem({
 
           {/* Quantity Controls */}
           {!readOnly ? (
-            <QuantityControls
-              currentQty={currentQty}
-              onDecrease={() => handleQtyChange(currentQty - 1)}
-              onIncrease={() => handleQtyChange(currentQty + 1)}
-              disabled={isUpdating}
-              maxReached={currentQty >= stockQty}
-            />
+            stockHandler.isOutOfStock ? (
+              <div className="text-sm text-red-600 flex-shrink-0 font-medium">
+                Out of Stock
+              </div>
+            ) : (
+              <QuantityControls
+                currentQty={currentQty}
+                onDecrease={() => handleQtyChange(currentQty - 1)}
+                onIncrease={() => handleQtyChange(currentQty + 1)}
+                disabled={isUpdating || stockHandler.isOutOfStock}
+                maxReached={stockHandler.isMaxReached}
+              />
+            )
           ) : (
             <div className="text-sm text-gray-600 flex-shrink-0">
               Quantity: {currentQty}

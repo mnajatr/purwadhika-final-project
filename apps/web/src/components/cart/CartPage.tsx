@@ -9,6 +9,10 @@ import { toast } from "sonner";
 import useCreateOrder from "@/hooks/useOrder";
 import { useRouter } from "next/navigation";
 import formatIDR from "@/utils/formatCurrency";
+import {
+  validateCartForCheckout,
+  hasOutOfStockItems,
+} from "@/utils/cartStockUtils";
 
 interface CartPageProps {
   userId: number;
@@ -71,6 +75,43 @@ export function CartPage({ userId }: CartPageProps) {
     if (!selectedIds[item.id]) return sum;
     return sum + Number(item.product?.price ?? 0) * item.qty;
   }, 0);
+
+  // Validate selected items for checkout
+  const selectedItems = cart.items.filter((item) => selectedIds[item.id]);
+  const cartValidation = validateCartForCheckout(selectedItems);
+  const hasOutOfStockInSelection = hasOutOfStockItems(selectedItems);
+
+  const handleCheckout = () => {
+    // Check for out of stock items in selection
+    if (hasOutOfStockInSelection) {
+      toast.error(
+        "Please remove out of stock items from your selection before checkout."
+      );
+      return;
+    }
+
+    if (!cartValidation.isValid) {
+      const itemNames = cartValidation.outOfStockItems
+        .map((item) => item.product.name)
+        .join(", ");
+      toast.error(`The following items are out of stock: ${itemNames}`);
+      return;
+    }
+
+    const selectedIdsArr = Object.keys(selectedIds)
+      .filter((k) => selectedIds[Number(k)])
+      .map((k) => Number(k));
+
+    // store selection + userId in session so Checkout page can read it
+    try {
+      sessionStorage.setItem(
+        "checkout:selectedIds",
+        JSON.stringify(selectedIdsArr)
+      );
+      sessionStorage.setItem("checkout:userId", String(userId));
+    } catch {}
+    router.push("/checkout");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
@@ -168,27 +209,42 @@ export function CartPage({ userId }: CartPageProps) {
               </div>
 
               <div className="space-y-3">
+                {/* Show warning if there are out of stock items in selection */}
+                {hasOutOfStockInSelection && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <svg
+                        className="h-5 w-5 text-red-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span className="text-sm text-red-700 font-medium">
+                        Remove out of stock items to checkout
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Idempotency is intentionally handled at the checkout/order
                     level (server + checkout UI). Removing cart-level idempotency
                     input to avoid confusion — users generate/see keys on Checkout. */}
                 <Button
-                  className="w-full bg-indigo-600 text-white hover:bg-indigo-700 py-3 rounded-lg font-semibold"
+                  className={`w-full py-3 rounded-lg font-semibold ${
+                    hasOutOfStockInSelection
+                      ? "bg-gray-400 text-gray-700 cursor-not-allowed"
+                      : "bg-indigo-600 text-white hover:bg-indigo-700"
+                  }`}
                   size="lg"
-                  onClick={() => {
-                    const selectedIdsArr = Object.keys(selectedIds)
-                      .filter((k) => selectedIds[Number(k)])
-                      .map((k) => Number(k));
-                    // store selection + userId in session so Checkout page can read it
-                    try {
-                      sessionStorage.setItem(
-                        "checkout:selectedIds",
-                        JSON.stringify(selectedIdsArr)
-                      );
-                      sessionStorage.setItem("checkout:userId", String(userId));
-                    } catch {}
-                    router.push("/checkout");
-                  }}
-                  disabled={creating}
+                  onClick={handleCheckout}
+                  disabled={creating || hasOutOfStockInSelection}
                 >
                   {creating ? "Processing..." : "Checkout"}
                 </Button>

@@ -146,6 +146,8 @@ async function cleanDatabase() {
   await prisma.productImage.deleteMany();
   await prisma.stockJournal.deleteMany();
   await prisma.storeInventory.deleteMany();
+  // Delete discounts referencing products first to avoid FK constraint errors
+  await prisma.discount.deleteMany();
   await prisma.product.deleteMany();
   await prisma.productCategory.deleteMany();
   // Delete store locations first to avoid FK constraint errors
@@ -660,6 +662,35 @@ async function seedUserAddresses(users: any[]) {
   console.log(`✅ Seeded 2 addresses for userId=${user.id}`);
 }
 
+async function seedAddressForUser5(users: any[]) {
+  // Create a single address for user with id=5 if present
+  const user5 = users.find((u) => u.id === 5);
+  console.log(`
+📫 Seeding single address for userId=${user5?.id ?? "(not found)"}...`);
+  if (!user5) {
+    console.log("User with id=5 not found — skipping seed for user 5");
+    return;
+  }
+
+  await prisma.userAddress.create({
+    data: {
+      userId: user5.id,
+      label: "Rumah",
+      recipientName: "Budi Pengguna",
+      addressLine: "Jl. Kebon Jeruk No.5",
+      province: "DKI Jakarta",
+      city: "Jakarta",
+      district: "Kebon Jeruk",
+      postalCode: "11530",
+      latitude: -6.1965,
+      longitude: 106.7514,
+      isPrimary: true,
+    },
+  });
+
+  console.log(`✅ Seeded 1 address for userId=${user5.id}`);
+}
+
 async function seed() {
   try {
     console.log("🌱 Starting database seeding...\n");
@@ -669,6 +700,8 @@ async function seed() {
     const users = await seedUsers();
     // Seed user addresses early so seedOrders can find an address for the test user
     await seedUserAddresses(users);
+  // Also ensure user id=5 has at least one address for testing
+  await seedAddressForUser5(users);
     const categories = await seedCategories();
     const stores = await seedStores();
     await seedStoreAssignments(users, stores);
