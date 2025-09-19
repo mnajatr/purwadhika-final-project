@@ -17,7 +17,8 @@ export const UpdateUserSchema = z.object({
   password: z
     .string()
     .min(6, "Password must be at least 6 characters")
-    .optional(),
+    .optional()
+    .or(z.literal("")),
   role: z.enum(["USER", "SUPER_ADMIN", "STORE_ADMIN"]).optional(),
   profile: z
     .object({

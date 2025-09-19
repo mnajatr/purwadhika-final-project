@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UpdateUserSchema } from "@repo/schemas";
@@ -10,26 +11,34 @@ type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
 
 interface UpdateUserFormProps {
   userId: number;
-  initialData: UpdateUserInput; // data user untuk pre-fill
+  initialData: UpdateUserInput;
+  onSuccess?: () => void;
 }
 
 export default function UpdateUserForm({
   userId,
   initialData,
+  onSuccess,
 }: UpdateUserFormProps) {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<UpdateUserInput>({
     resolver: zodResolver(UpdateUserSchema),
     defaultValues: initialData,
   });
 
+  useEffect(() => {
+    reset(initialData);
+  }, [initialData, reset]);
+
   const onSubmit = async (data: UpdateUserInput) => {
     try {
       await updateUser(userId, data);
       alert("✅ User updated successfully!");
+      onSuccess?.();
     } catch (err: any) {
       alert(err.message || "❌ Failed to update user");
     }
@@ -38,17 +47,17 @@ export default function UpdateUserForm({
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="max-w-md mx-auto space-y-4 p-6 bg-white rounded-lg shadow"
+      className="max-w-2xl mx-auto p-6 bg-white shadow rounded-lg space-y-4 mt-10"
     >
-      <h2 className="text-xl font-bold">Update User</h2>
+      <h2 className="text-2xl font-bold mb-4">Update User</h2>
 
       {/* Email */}
       <div>
-        <label className="block font-medium">Email</label>
+        <label className="block font-medium mb-1">Email</label>
         <input
           type="email"
           {...register("email")}
-          className="w-full border p-2 rounded"
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
         />
         {errors.email && (
           <p className="text-red-500 text-sm">{errors.email.message}</p>
@@ -57,11 +66,12 @@ export default function UpdateUserForm({
 
       {/* Password */}
       <div>
-        <label className="block font-medium">Password</label>
+        <label className="block font-medium mb-1">Password</label>
         <input
           type="password"
           {...register("password")}
-          className="w-full border p-2 rounded"
+          placeholder="Leave blank if no change"
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
         />
         {errors.password && (
           <p className="text-red-500 text-sm">{errors.password.message}</p>
@@ -70,8 +80,11 @@ export default function UpdateUserForm({
 
       {/* Role */}
       <div>
-        <label className="block font-medium">Role</label>
-        <select {...register("role")} className="w-full border p-2 rounded">
+        <label className="block font-medium mb-1">Role</label>
+        <select
+          {...register("role")}
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
+        >
           <option value="USER">USER</option>
           <option value="SUPER_ADMIN">SUPER_ADMIN</option>
           <option value="STORE_ADMIN">STORE_ADMIN</option>
@@ -83,11 +96,11 @@ export default function UpdateUserForm({
 
       {/* Full Name */}
       <div>
-        <label className="block font-medium">Full Name</label>
+        <label className="block font-medium mb-1">Full Name</label>
         <input
           type="text"
           {...register("profile.fullName")}
-          className="w-full border p-2 rounded"
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
         />
         {errors.profile?.fullName && (
           <p className="text-red-500 text-sm">
@@ -98,11 +111,11 @@ export default function UpdateUserForm({
 
       {/* Avatar URL */}
       <div>
-        <label className="block font-medium">Avatar URL</label>
+        <label className="block font-medium mb-1">Avatar URL</label>
         <input
           type="text"
           {...register("profile.avatarUrl")}
-          className="w-full border p-2 rounded"
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
         />
         {errors.profile?.avatarUrl && (
           <p className="text-red-500 text-sm">
@@ -114,7 +127,7 @@ export default function UpdateUserForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 disabled:bg-gray-400"
+        className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
       >
         {isSubmitting ? "Updating..." : "Update User"}
       </button>
