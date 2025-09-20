@@ -2,40 +2,56 @@
 
 import { useForm } from "react-hook-form";
 import { useCreateDiscount } from "@/hooks/useDiscount";
-import { DiscountResponse } from "@/types/discount.types";
+import {
+  CreateDiscount,
+  ValueType,
+  DiscountType,
+} from "@/types/discount.types";
+
+interface CreateDiscountForm extends Omit<CreateDiscount, "store" | "product"> {
+  storeId: number;
+  productId: number;
+}
 
 export default function CreateDiscountForm() {
+  const createDiscount = useCreateDiscount();
+
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<DiscountResponse>({
+  } = useForm<CreateDiscountForm>({
     defaultValues: {
-      value: "PRODUCT_DISCOUNT",
-      type: "PERCENTAGE",
+      name: "",
+      value: ValueType.PRODUCT_DISCOUNT,
+      type: DiscountType.PERCENTAGE,
+      minPurchase: undefined,
+      maxDiscount: undefined,
+      expiredAt: "",
+      storeId: undefined,
+      productId: undefined,
     },
   });
 
-  const createDiscount = useCreateDiscount();
+  const onSubmit = (data: CreateDiscountForm) => {
+    const payload: CreateDiscount = {
+      name: data.name,
+      value: data.value,
+      type: data.type,
+      minPurchase: data.minPurchase ? Number(data.minPurchase) : undefined,
+      maxDiscount: data.maxDiscount ? Number(data.maxDiscount) : undefined,
+      expiredAt: new Date(data.expiredAt + "T23:59:59Z").toISOString(),
+      store: { id: Number(data.storeId) },
+      product: { id: Number(data.productId) },
+    };
 
-  const onSubmit = (data: DiscountResponse) => {
-    createDiscount.mutate(
-      {
-        ...data,
-        storeId: Number(data.storeId),
-        productId: Number(data.productId),
-        minPurchase: data.minPurchase ? Number(data.minPurchase) : undefined,
-        maxDiscount: data.maxDiscount ? Number(data.maxDiscount) : undefined,
-        expiredAt: new Date(data.expiredAt + "T23:59:59Z"),
+    createDiscount.mutate(payload, {
+      onSuccess: () => {
+        alert("✅ Discount created successfully!");
+        reset();
       },
-      {
-        onSuccess: () => {
-          alert("✅ Discount created successfully!");
-          reset();
-        },
-      }
-    );
+    });
   };
 
   return (
@@ -45,11 +61,25 @@ export default function CreateDiscountForm() {
     >
       <h2 className="text-2xl font-bold mb-4">Tambah Discount</h2>
 
+      {/* Name */}
+      <input
+        type="text"
+        placeholder="Discount Name"
+        {...register("name", { required: "Name wajib diisi" })}
+        className="w-full p-2 border rounded"
+      />
+      {errors.name && (
+        <p className="text-sm text-red-500">{errors.name.message}</p>
+      )}
+
       {/* Store ID */}
       <input
         type="number"
         placeholder="Store ID"
-        {...register("storeId", { required: "Store ID wajib diisi" })}
+        {...register("storeId", {
+          required: "Store ID wajib diisi",
+          valueAsNumber: true,
+        })}
         className="w-full p-2 border rounded"
       />
       {errors.storeId && (
@@ -60,7 +90,10 @@ export default function CreateDiscountForm() {
       <input
         type="number"
         placeholder="Product ID"
-        {...register("productId", { required: "Product ID wajib diisi" })}
+        {...register("productId", {
+          required: "Product ID wajib diisi",
+          valueAsNumber: true,
+        })}
         className="w-full p-2 border rounded"
       />
       {errors.productId && (
@@ -73,8 +106,8 @@ export default function CreateDiscountForm() {
         {...register("value", { required: true })}
         className="w-full p-2 border rounded"
       >
-        <option value="PRODUCT_DISCOUNT">Product Discount</option>
-        <option value="BUY1GET1">Buy 1 Get 1</option>
+        <option value={ValueType.PRODUCT_DISCOUNT}>Product Discount</option>
+        <option value={ValueType.BUY1GET1}>Buy 1 Get 1</option>
       </select>
 
       {/* Type */}
@@ -83,8 +116,8 @@ export default function CreateDiscountForm() {
         {...register("type", { required: true })}
         className="w-full p-2 border rounded"
       >
-        <option value="PERCENTAGE">Percentage</option>
-        <option value="NOMINAL">Nominal</option>
+        <option value={DiscountType.PERCENTAGE}>Percentage</option>
+        <option value={DiscountType.NOMINAL}>Nominal</option>
       </select>
 
       {/* Min & Max */}
@@ -92,13 +125,13 @@ export default function CreateDiscountForm() {
         <input
           type="number"
           placeholder="Minimum Purchase"
-          {...register("minPurchase")}
+          {...register("minPurchase", { valueAsNumber: true })}
           className="w-full p-2 border rounded"
         />
         <input
           type="number"
           placeholder="Maximum Discount"
-          {...register("maxDiscount")}
+          {...register("maxDiscount", { valueAsNumber: true })}
           className="w-full p-2 border rounded"
         />
       </div>
