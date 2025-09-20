@@ -2,11 +2,19 @@
 
 import * as React from "react";
 import CartItem from "./CartItem";
-import { useCart, useClearCart } from "@/hooks/useCart";
+import { useCart, useClearCart, useUpdateCartItem } from "@/hooks/useCart";
 import { Button } from "../ui/button";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
+import { toast } from "sonner";
 import useCreateOrder from "@/hooks/useOrder";
 import { useRouter } from "next/navigation";
 import formatIDR from "@/utils/formatCurrency";
+import {
+  validateCartForCheckout,
+  hasOutOfStockItems,
+  getItemsNeedingQuantityAdjustment,
+  getAdjustedQuantity,
+} from "@/utils/cartStockUtils";
 
 interface CartPageProps {
   userId: number;
@@ -17,6 +25,7 @@ export function CartPage({ userId }: CartPageProps) {
   const storeId = 1;
   const { data: cart, isLoading } = useCart(userId, storeId);
   const clearCartMutation = useClearCart(userId, storeId);
+  const updateCartItemMutation = useUpdateCartItem(userId, storeId);
   const [selectedIds, setSelectedIds] = React.useState<Record<number, boolean>>(
     {}
   );
@@ -24,6 +33,8 @@ export function CartPage({ userId }: CartPageProps) {
   const createOrder = useCreateOrder(userId);
   const creating = createOrder.status === "pending";
   const router = useRouter();
+  const [showConfirmAll, setShowConfirmAll] = React.useState(false);
+  const [hasAutoAdjusted, setHasAutoAdjusted] = React.useState(false);
 
   React.useEffect(() => {
     if (!cart) return;
@@ -32,8 +43,78 @@ export function CartPage({ userId }: CartPageProps) {
     setSelectedIds(map);
   }, [cart]);
 
+  // Auto-adjust cart quantities when they exceed stock
+  React.useEffect(() => {
+    if (!cart || hasAutoAdjusted) return;
+
+    const itemsNeedingAdjustment = getItemsNeedingQuantityAdjustment(
+      cart.items
+    );
+    if (itemsNeedingAdjustment.length === 0) return;
+
+    setHasAutoAdjusted(true);
+
+    // Process adjustments sequentially
+    const processAdjustments = async () => {
+      for (const item of itemsNeedingAdjustment) {
+        const adjustedQty = getAdjustedQuantity(item);
+
+        try {
+          if (adjustedQty === 0) {
+            // Item is completely out of stock, show specific message
+            toast.warning(
+              `${item.product.name} is out of stock and was removed from your cart`
+            );
+          } else {
+            // Quantity was reduced to match available stock
+            await updateCartItemMutation.mutateAsync({
+              itemId: item.id,
+              qty: adjustedQty,
+            });
+            toast.warning(
+              `Quantity adjusted to available stock: ${adjustedQty} for ${item.product.name}`
+            );
+          }
+        } catch (error) {
+          console.error("Failed to adjust cart item quantity:", error);
+          toast.error(`Failed to adjust quantity for ${item.product.name}`);
+        }
+      }
+    };
+
+    processAdjustments();
+  }, [cart, updateCartItemMutation, hasAutoAdjusted]);
+
+  // Reset auto-adjustment flag when cart data changes (after mutations)
+  React.useEffect(() => {
+    if (cart && hasAutoAdjusted) {
+      const itemsStillNeedingAdjustment = getItemsNeedingQuantityAdjustment(
+        cart.items
+      );
+      if (itemsStillNeedingAdjustment.length === 0) {
+        setHasAutoAdjusted(false);
+      }
+    }
+  }, [cart, hasAutoAdjusted]);
+
   if (isLoading || !cart) return <div>Loading cart...</div>;
-  if (cart.items.length === 0) return <div>Keranjang kosong.</div>;
+  if (cart.items.length === 0)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
+        <div className="text-center">
+          <p className="text-xl font-semibold text-gray-900 mb-4">
+            Your cart is empty. Start shopping!
+          </p>
+          <Button
+            size="lg"
+            className="bg-indigo-600 text-white hover:bg-indigo-700 px-6 py-3 rounded-lg font-semibold"
+            onClick={() => router.push("/products")}
+          >
+            Shop now
+          </Button>
+        </div>
+      </div>
+    );
 
   const allSelected = cart.items.every((it) => selectedIds[it.id]);
 
@@ -52,6 +133,43 @@ export function CartPage({ userId }: CartPageProps) {
     if (!selectedIds[item.id]) return sum;
     return sum + Number(item.product?.price ?? 0) * item.qty;
   }, 0);
+
+  // Validate selected items for checkout
+  const selectedItems = cart.items.filter((item) => selectedIds[item.id]);
+  const cartValidation = validateCartForCheckout(selectedItems);
+  const hasOutOfStockInSelection = hasOutOfStockItems(selectedItems);
+
+  const handleCheckout = () => {
+    // Check for out of stock items in selection
+    if (hasOutOfStockInSelection) {
+      toast.error(
+        "Please remove out of stock items from your selection before checkout."
+      );
+      return;
+    }
+
+    if (!cartValidation.isValid) {
+      const itemNames = cartValidation.outOfStockItems
+        .map((item) => item.product.name)
+        .join(", ");
+      toast.error(`The following items are out of stock: ${itemNames}`);
+      return;
+    }
+
+    const selectedIdsArr = Object.keys(selectedIds)
+      .filter((k) => selectedIds[Number(k)])
+      .map((k) => Number(k));
+
+    // store selection + userId in session so Checkout page can read it
+    try {
+      sessionStorage.setItem(
+        "checkout:selectedIds",
+        JSON.stringify(selectedIdsArr)
+      );
+      sessionStorage.setItem("checkout:userId", String(userId));
+    } catch {}
+    router.push("/checkout");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
@@ -89,17 +207,36 @@ export function CartPage({ userId }: CartPageProps) {
             <div className="mt-6 border-t pt-4">
               <div className="flex w-full items-center justify-end">
                 <div className="w-full sm:w-auto">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => clearCartMutation.mutateAsync()}
-                    disabled={clearCartMutation.isPending}
-                    className="w-full sm:w-auto"
-                  >
-                    {clearCartMutation.isPending
-                      ? "Menghapus..."
-                      : "Clear Cart"}
-                  </Button>
+                  <>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setShowConfirmAll(true)}
+                      disabled={clearCartMutation.isPending}
+                      className="w-full sm:w-auto"
+                    >
+                      {clearCartMutation.isPending
+                        ? "Clearing..."
+                        : "Clear Cart"}
+                    </Button>
+                    <ConfirmDialog
+                      open={showConfirmAll}
+                      title="Clear cart"
+                      description={`Remove all items from your cart?`}
+                      confirmLabel="Clear"
+                      cancelLabel="Cancel"
+                      onCancel={() => setShowConfirmAll(false)}
+                      onConfirm={async () => {
+                        setShowConfirmAll(false);
+                        try {
+                          await clearCartMutation.mutateAsync();
+                          // Success toast handled by hook's onSuccess
+                        } catch {
+                          // Error toast handled by hook's onError
+                        }
+                      }}
+                    />
+                  </>
                 </div>
               </div>
             </div>
@@ -127,27 +264,42 @@ export function CartPage({ userId }: CartPageProps) {
               </div>
 
               <div className="space-y-3">
+                {/* Show warning if there are out of stock items in selection */}
+                {hasOutOfStockInSelection && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <svg
+                        className="h-5 w-5 text-red-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span className="text-sm text-red-700 font-medium">
+                        Remove out of stock items to checkout
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Idempotency is intentionally handled at the checkout/order
                     level (server + checkout UI). Removing cart-level idempotency
                     input to avoid confusion — users generate/see keys on Checkout. */}
                 <Button
-                  className="w-full bg-indigo-600 text-white hover:bg-indigo-700 py-3 rounded-lg font-semibold"
+                  className={`w-full py-3 rounded-lg font-semibold ${
+                    hasOutOfStockInSelection
+                      ? "bg-gray-400 text-gray-700 cursor-not-allowed"
+                      : "bg-indigo-600 text-white hover:bg-indigo-700"
+                  }`}
                   size="lg"
-                  onClick={() => {
-                    const selectedIdsArr = Object.keys(selectedIds)
-                      .filter((k) => selectedIds[Number(k)])
-                      .map((k) => Number(k));
-                    // store selection + userId in session so Checkout page can read it
-                    try {
-                      sessionStorage.setItem(
-                        "checkout:selectedIds",
-                        JSON.stringify(selectedIdsArr)
-                      );
-                      sessionStorage.setItem("checkout:userId", String(userId));
-                    } catch {}
-                    router.push("/checkout");
-                  }}
-                  disabled={creating}
+                  onClick={handleCheckout}
+                  disabled={creating || hasOutOfStockInSelection}
                 >
                   {creating ? "Processing..." : "Checkout"}
                 </Button>

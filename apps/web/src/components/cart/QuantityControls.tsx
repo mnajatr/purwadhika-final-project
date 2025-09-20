@@ -34,7 +34,11 @@ export default function QuantityControls({
       </span>
 
       <button
-        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center text-white transition-colors duration-200"
+        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white transition-colors duration-200 ${
+          disabled || maxReached
+            ? "bg-gray-300 text-gray-500"
+            : "bg-indigo-600 hover:bg-indigo-700"
+        }`}
         onClick={onIncrease}
         disabled={disabled || maxReached}
         aria-label="Increase quantity"

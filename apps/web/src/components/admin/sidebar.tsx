@@ -46,6 +46,7 @@ export default function Sidebar() {
               <option value="2">2 - STORE_ADMIN (Bandung)</option>
               <option value="3">3 - STORE_ADMIN (Jakarta)</option>
               <option value="4">4 - Normal User</option>
+              <option value="5">5 - Normal User 5</option>
             </select>
           </div>
         )}

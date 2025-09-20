@@ -2,14 +2,17 @@
 
 import { Badge } from "../ui/badge";
 import { ShoppingCart } from "lucide-react";
-import { useCartStore } from "@/stores/cart-store";
+import { useCart } from "@/hooks/useCart";
 
 interface CartBadgeProps {
+  userId: number;
+  storeId?: number;
   className?: string;
 }
 
-export function CartBadge({ className }: CartBadgeProps) {
-  const itemCount = useCartStore((state) => state.itemCount);
+export function CartBadge({ userId, storeId = 1, className }: CartBadgeProps) {
+  const { data: cart } = useCart(userId, storeId);
+  const itemCount = cart?.items?.length || 0;
 
   return (
     <Badge

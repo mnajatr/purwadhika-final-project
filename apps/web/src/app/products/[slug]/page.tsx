@@ -25,24 +25,24 @@ export default function ProductDetailPage() {
     }
   }, []);
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = () => {
     if (!product || !userId) return;
 
-    try {
-      await addToCartMutation.mutateAsync({
+    addToCartMutation.mutate(
+      {
         productId: parseInt(product.id),
         qty: quantity,
         storeId: 1,
         userId: userId,
-      });
-      toast.success(
-        `${quantity} ${product.name} berhasil ditambahkan ke keranjang!`
-      );
-      setQuantity(1); // Reset quantity after adding
-    } catch (error) {
-      console.error("Failed to add to cart:", error);
-      toast.error("Gagal menambahkan produk ke keranjang");
-    }
+      },
+      {
+        onSuccess: () => {
+          toast.success(`${quantity} ${product.name} added to cart!`);
+          setQuantity(1); // Reset quantity after adding
+        },
+        // Error handling is already done by the useAddToCart hook
+      }
+    );
   };
 
   if (isLoading) return <p className="p-6 text-center">Loading...</p>;
@@ -125,16 +125,14 @@ export default function ProductDetailPage() {
           {/* Tombol Aksi */}
           <div className="mt-8 flex gap-4">
             <button className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition">
-              Beli Sekarang
+              Buy Now
             </button>
             <button
               onClick={handleAddToCart}
               disabled={addToCartMutation.isPending}
               className="flex-1 border border-indigo-600 text-indigo-600 py-3 rounded-lg hover:bg-indigo-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {addToCartMutation.isPending
-                ? "Menambahkan..."
-                : "Tambah ke Keranjang"}
+              {addToCartMutation.isPending ? "Adding..." : "Add to cart"}
             </button>
           </div>
         </div>

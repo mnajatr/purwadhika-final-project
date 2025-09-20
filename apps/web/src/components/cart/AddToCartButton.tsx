@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "../ui/button";
-import { useCartStore } from "@/stores/cart-store";
+import { useAddToCart } from "@/hooks/useCart";
+import type { AddToCartRequest } from "@/types/cart.types";
 import { toast } from "sonner";
 
 interface AddToCartButtonProps {
@@ -12,6 +12,7 @@ interface AddToCartButtonProps {
   qty?: number;
   disabled?: boolean;
   className?: string;
+  productName?: string; // Optional product name for better toast message
 }
 
 export function AddToCartButton({
@@ -21,44 +22,37 @@ export function AddToCartButton({
   qty = 1,
   disabled = false,
   className,
+  productName,
 }: AddToCartButtonProps) {
-  const [loading, setLoading] = useState(false);
-  const addToCart = useCartStore((state) => state.addToCart);
-  const setStoreId = useCartStore((state) => state.setStoreId);
+  const addToCartMutation = useAddToCart(userId, storeId);
 
-  const getErrorMessage = (error: unknown): string => {
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "message" in error &&
-      typeof (error as { message?: unknown }).message === "string"
-    ) {
-      return (error as { message: string }).message;
-    }
-    if (typeof error === "string") return error;
-    return "Gagal menambah ke keranjang";
-  };
+  const handleClick = () => {
+    const data: AddToCartRequest = {
+      productId,
+      qty,
+      storeId,
+      userId,
+    };
 
-  const handleClick = async () => {
-    setLoading(true);
-    try {
-      setStoreId(storeId);
-      await addToCart(productId, qty, userId);
-    } catch (error) {
-      toast.error(getErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
+    addToCartMutation.mutate(data, {
+      onSuccess: () => {
+        // Show detailed toast if product name is available, otherwise generic
+        const message = productName
+          ? `${qty} ${productName} added to cart!`
+          : "Added to cart";
+        toast.success(message);
+      },
+    });
   };
 
   return (
     <Button
       onClick={handleClick}
-      disabled={disabled || loading}
+      disabled={disabled || addToCartMutation.isPending}
       className={className}
-      aria-label="Tambah ke keranjang"
+      aria-label="Add to cart"
     >
-      {loading ? "Menambah..." : "Tambah ke Keranjang"}
+      {addToCartMutation.isPending ? "Adding..." : "Add to cart"}
     </Button>
   );
 }

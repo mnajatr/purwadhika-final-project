@@ -11,7 +11,8 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import type { Cart } from "@/types/cart.types";
+import type { CartResponse as Cart } from "@repo/schemas";
+import { validateCartForCheckout } from "@/utils/cartStockUtils";
 
 interface Props {
   cart: Cart;
@@ -44,6 +45,11 @@ export default function OrderSummary({
       0;
     return s + Number(p) * it.qty;
   }, 0);
+
+  // Check if cart has any out of stock items
+  const { outOfStockItems } = validateCartForCheckout(cart.items || []);
+
+  const hasOutOfStockItems = outOfStockItems.length > 0;
 
   return (
     <Card className="relative lg:sticky lg:top-6 shadow-lg border border-gray-100 overflow-hidden rounded-lg">
@@ -181,6 +187,16 @@ export default function OrderSummary({
         </div>
       </CardContent>
       <CardFooter className="flex-col gap-2">
+        {hasOutOfStockItems && (
+          <div className="w-full p-3 bg-red-50 border border-red-200 rounded-md mb-2">
+            <div className="text-sm text-red-700 font-medium mb-1">
+              Cannot place order
+            </div>
+            <div className="text-xs text-red-600">
+              Remove out of stock items from your cart to continue
+            </div>
+          </div>
+        )}
         <div className="w-full">
           <div className="mb-1 text-sm text-muted-foreground">
             Payment:{" "}
@@ -190,9 +206,13 @@ export default function OrderSummary({
             onClick={onPlaceOrder}
             size="lg"
             className="w-full"
-            disabled={isProcessing}
+            disabled={isProcessing || hasOutOfStockItems}
           >
-            {isProcessing ? "Processing..." : "Place Order"}
+            {isProcessing
+              ? "Processing..."
+              : hasOutOfStockItems
+              ? "Remove Out of Stock Items"
+              : "Place Order"}
           </Button>
           <div className="mt-2 text-xs text-muted-foreground">
             Secure checkout • No extra charges • Idempotency prevents duplicates
