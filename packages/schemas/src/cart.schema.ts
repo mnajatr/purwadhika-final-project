@@ -37,3 +37,52 @@ export type AddToCartInput = z.infer<typeof AddToCartSchema>;
 export type UpdateCartItemInput = z.infer<typeof UpdateCartItemSchema>;
 export type CartItemParams = z.infer<typeof CartItemParamsSchema>;
 export type UserQuery = z.infer<typeof UserQuerySchema>;
+
+// Response shapes (useful for FE typings)
+export const ProductSummarySchema = z.object({
+  id: idSchema,
+  name: z.string(),
+  slug: z.string(),
+  description: z.string().nullable(),
+  price: z.number(),
+  isActive: z.boolean(),
+});
+
+export const CartItemResponseSchema = z.object({
+  id: idSchema,
+  productId: idSchema,
+  qty: z.number(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  product: ProductSummarySchema,
+  storeInventory: z.object({ stockQty: z.number() }).optional(),
+});
+
+export const CartResponseSchema = z.object({
+  id: idSchema,
+  userId: idSchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  items: z.array(CartItemResponseSchema),
+});
+
+export const CartTotalsSchema = z.object({
+  totalItems: z.number(),
+  totalQuantity: z.number(),
+  subtotal: z.number(),
+  items: z.array(
+    z.object({
+      id: idSchema,
+      productId: idSchema,
+      productName: z.string(),
+      quantity: z.number(),
+      unitPrice: z.number(),
+      total: z.number(),
+    })
+  ),
+});
+
+export type ProductSummary = z.infer<typeof ProductSummarySchema>;
+export type CartItemResponse = z.infer<typeof CartItemResponseSchema>;
+export type CartResponse = z.infer<typeof CartResponseSchema>;
+export type CartTotals = z.infer<typeof CartTotalsSchema>;

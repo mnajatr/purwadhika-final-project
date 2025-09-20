@@ -4,12 +4,12 @@ import {
   createValidationError,
   createNotFoundError,
 } from "../errors/app.error.js";
-
-function toNumber(value: unknown, fallback?: number) {
-  if (value === undefined || value === null) return fallback;
-  const n = Number(value);
-  return Number.isNaN(n) ? fallback : n;
-}
+import {
+  AddToCartInput,
+  UpdateCartItemInput,
+  AddToCartSchema,
+  UpdateCartItemSchema,
+} from "@repo/schemas";
 
 export class CartService {
   // Data helpers (merged from CartData)
@@ -202,8 +202,14 @@ export class CartService {
     }
   }
 
-  // Public service API
+  // Public service API with input validation
   async getCartByUserIdAndStoreId(userId: number, storeId: number) {
+    if (!userId || userId <= 0) {
+      throw createValidationError("Invalid user");
+    }
+    if (!storeId || storeId <= 0) {
+      throw createValidationError("Invalid store");
+    }
     return this.getCartWithItems(userId, storeId);
   }
 
@@ -213,25 +219,50 @@ export class CartService {
     qty: number,
     storeId: number
   ) {
-    this.validateQuantity(qty);
-    const inventory = await this.validateProductAndInventory(
+    // Validate input using Zod schema
+    const validatedData = AddToCartSchema.parse({
+      userId,
       productId,
+      qty,
       storeId,
-      qty
+    });
+
+    const inventory = await this.validateProductAndInventory(
+      validatedData.productId,
+      validatedData.storeId,
+      validatedData.qty
     );
-    const cart = await this.getOrCreateCart(userId, storeId);
+    const cart = await this.getOrCreateCart(
+      validatedData.userId!,
+      validatedData.storeId
+    );
 
-    this.validateCartItemLimits(cart.items, qty, inventory);
+    this.validateCartItemLimits(cart.items, validatedData.qty, inventory);
 
-    const existingItem = this.findExistingCartItem(cart.items, productId);
+    const existingItem = this.findExistingCartItem(
+      cart.items,
+      validatedData.productId
+    );
     if (existingItem) {
-      const newQty = existingItem.qty + qty;
+      const newQty = existingItem.qty + validatedData.qty;
       this.validateCartItemLimits([], newQty, inventory);
-      return this.updateCartItem(userId, existingItem.id, newQty, storeId);
+      return this.updateCartItem(
+        validatedData.userId!,
+        existingItem.id,
+        newQty,
+        validatedData.storeId
+      );
     }
 
-    await this.createCartItem(cart.id, productId, qty);
-    return this.getCartByUserIdAndStoreId(userId, storeId);
+    await this.createCartItem(
+      cart.id,
+      validatedData.productId,
+      validatedData.qty
+    );
+    return this.getCartByUserIdAndStoreId(
+      validatedData.userId!,
+      validatedData.storeId
+    );
   }
 
   async updateCartItem(
@@ -240,37 +271,74 @@ export class CartService {
     qty: number,
     storeId: number
   ) {
-    this.validateQuantity(qty);
+    // Validate input using Zod schema
+    const validatedData = UpdateCartItemSchema.parse({
+      userId,
+      qty,
+    });
+
+    if (!itemId || itemId <= 0) {
+      throw createValidationError("Invalid item");
+    }
+    if (!storeId || storeId <= 0) {
+      throw createValidationError("Invalid store");
+    }
+
     const cartItem = await this.validateCartItem(userId, itemId, storeId);
 
     const inventory = await prisma.storeInventory.findFirst({
       where: { productId: cartItem.productId, storeId: storeId },
     });
-    if (!inventory)
+    if (!inventory) {
       throw createValidationError(ERROR_MESSAGES.INVENTORY.NO_INVENTORY);
-    if (inventory.stockQty < qty) {
+    }
+    if (inventory.stockQty < validatedData.qty) {
       throw createValidationError(
         `${ERROR_MESSAGES.INVENTORY.INSUFFICIENT_STOCK}. Available: ${inventory.stockQty}`
       );
     }
 
-    await this.updateCartItemRow(itemId, qty);
+    await this.updateCartItemRow(itemId, validatedData.qty);
     return this.getCartByUserIdAndStoreId(userId, storeId);
   }
 
   async deleteCartItem(userId: number, itemId: number, storeId: number) {
+    if (!userId || userId <= 0) {
+      throw createValidationError("Invalid user");
+    }
+    if (!itemId || itemId <= 0) {
+      throw createValidationError("Invalid item");
+    }
+    if (!storeId || storeId <= 0) {
+      throw createValidationError("Invalid store");
+    }
+
     await this.validateCartItem(userId, itemId, storeId);
     await this.deleteCartItemRow(itemId);
     return this.getCartByUserIdAndStoreId(userId, storeId);
   }
 
   async clearCart(userId: number, storeId: number) {
+    if (!userId || userId <= 0) {
+      throw createValidationError("Invalid user");
+    }
+    if (!storeId || storeId <= 0) {
+      throw createValidationError("Invalid store");
+    }
+
     const cart = await this.validateCart(userId, storeId);
     await this.clearAllCartItems(cart.id);
     return this.getCartByUserIdAndStoreId(userId, storeId);
   }
 
   async getCartTotals(userId: number, storeId: number) {
+    if (!userId || userId <= 0) {
+      throw createValidationError("Invalid user");
+    }
+    if (!storeId || storeId <= 0) {
+      throw createValidationError("Invalid store");
+    }
+
     const cart = await this.getCartWithTotals(userId, storeId);
 
     if (!cart) {

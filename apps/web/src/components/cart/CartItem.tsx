@@ -2,7 +2,8 @@
 
 import { useUpdateCartItem, useRemoveCartItem } from "@/hooks/useCart";
 import { useStockHandler } from "@/hooks/useStockHandler";
-import type { CartItem as CartItemType } from "@/types/cart.types";
+import { getRemainingStock } from "@/utils/cartStockUtils";
+import type { CartItemResponse as CartItemType } from "@repo/schemas";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import CartItemImage from "./CartItemImage";
@@ -34,6 +35,10 @@ export default function CartItem({
   const [isUpdating, setIsUpdating] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [currentQty, setCurrentQty] = useState(item.qty);
+  const [hasManuallyUpdated, setHasManuallyUpdated] = useState(false);
+  const [lastKnownStock, setLastKnownStock] = useState(
+    item.storeInventory?.stockQty ?? 9999
+  );
   const stockQty = item.storeInventory?.stockQty ?? 9999;
   const pendingQtyRef = useRef<number | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -48,6 +53,16 @@ export default function CartItem({
   useEffect(() => {
     setCurrentQty(item.qty);
   }, [item.qty]);
+
+  // Track stock changes and reset warning dismissal when stock increases significantly
+  useEffect(() => {
+    const currentStock = item.storeInventory?.stockQty ?? 9999;
+    if (currentStock > lastKnownStock && currentStock > 5) {
+      // Stock increased and is no longer limited, reset manual update flag
+      setHasManuallyUpdated(false);
+    }
+    setLastKnownStock(currentStock);
+  }, [item.storeInventory?.stockQty, lastKnownStock]);
 
   const updateCartItemMutation = useUpdateCartItem(userId, storeId);
   const removeCartItemMutation = useRemoveCartItem(userId, storeId);
@@ -75,15 +90,7 @@ export default function CartItem({
     pendingQtyRef.current = null;
   };
 
-  const getErrorMessage = (error: unknown, defaultMsg: string) => {
-    if (error && typeof error === "object") {
-      const maybe = error as Record<string, unknown>;
-      if ("message" in maybe && typeof maybe.message === "string") {
-        return maybe.message as string;
-      }
-    }
-    return defaultMsg;
-  };
+  // ...existing code... (removed getErrorMessage helper)
 
   const handleQtyChange = (newQty: number) => {
     if (newQty === currentQty || isUpdating) return;
@@ -98,6 +105,9 @@ export default function CartItem({
     if (!stockHandler.handleQuantityChange(newQty)) {
       return;
     }
+
+    // Mark as manually updated when user changes quantity via +/- buttons
+    setHasManuallyUpdated(true);
 
     // If the user increased the quantity and hit the exact stock limit,
     // show an informational toast so they know they've reached the max.
@@ -120,13 +130,10 @@ export default function CartItem({
           itemId: item.id,
           qty: qtyToSend,
         });
-      } catch (error) {
+      } catch {
+        // Reset local qty to server value; detailed error toast will be
+        // handled centrally by the hook's onError handler (handleCartError).
         setCurrentQty(item.qty);
-        let msg = "Failed to update quantity";
-        if (error && typeof error === "object" && "message" in error) {
-          msg = (error as { message?: string }).message ?? msg;
-        }
-        toast.error(msg);
       } finally {
         setIsUpdating(false);
       }
@@ -139,10 +146,10 @@ export default function CartItem({
     setIsUpdating(true);
     try {
       await removeCartItemMutation.mutateAsync(item.id);
-      toast.success("Item removed");
-    } catch (error) {
-      const msg = getErrorMessage(error, "Failed to remove item");
-      toast.error(msg);
+      // Show contextual success toast for user-initiated removal.
+      toast.success(`${item.product.name} removed from cart`);
+    } catch {
+      // Hook handles error toasts; nothing to do here besides local state reset
     } finally {
       setIsUpdating(false);
     }
@@ -230,6 +237,39 @@ export default function CartItem({
               )}
             </div>
             <p className="text-sm text-gray-500 mb-1">{formatIDR(unitPrice)}</p>
+
+            {/* Stock warning - show when stock is low or item quantity was high, but hide if user manually updated */}
+            {!stockHandler.isOutOfStock &&
+              !hasManuallyUpdated &&
+              (() => {
+                const remainingStock = getRemainingStock(item);
+                const showStockWarning =
+                  remainingStock <= 5 || currentQty >= remainingStock;
+
+                if (showStockWarning) {
+                  return (
+                    <div className="flex items-center gap-1 text-xs">
+                      <svg
+                        className="h-3 w-3 text-orange-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span className="text-orange-600 font-medium">
+                        Only {remainingStock} left in stock
+                      </span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
           </div>
 
           {/* Centered Price */}

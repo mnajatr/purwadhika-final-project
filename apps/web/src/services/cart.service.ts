@@ -1,11 +1,13 @@
 import { apiClient } from "../lib/axios-client";
 import { ApiResponse } from "../types/api";
-import type {
-  Cart,
+import {
+  CartResponse as Cart,
   CartTotals,
-  AddToCartRequest,
-  UpdateCartItemRequest,
-} from "../types/cart.types";
+  AddToCartInput,
+  UpdateCartItemInput,
+  AddToCartSchema,
+  UpdateCartItemSchema,
+} from "@repo/schemas";
 
 export class CartService {
   private readonly basePath = "/cart";
@@ -14,6 +16,14 @@ export class CartService {
     userId: number,
     storeId: number
   ): Promise<ApiResponse<Cart | null>> {
+    // Validate inputs
+    if (!userId || userId <= 0) {
+      throw new Error("Invalid user");
+    }
+    if (!storeId || storeId <= 0) {
+      throw new Error("Invalid store");
+    }
+
     const params = { userId: userId.toString(), storeId: storeId.toString() };
     return apiClient.get<ApiResponse<Cart | null>>(this.basePath, params);
   }
@@ -22,6 +32,14 @@ export class CartService {
     userId: number,
     storeId: number
   ): Promise<ApiResponse<CartTotals>> {
+    // Validate inputs
+    if (!userId || userId <= 0) {
+      throw new Error("Invalid user");
+    }
+    if (!storeId || storeId <= 0) {
+      throw new Error("Invalid store");
+    }
+
     const params = { userId: userId.toString(), storeId: storeId.toString() };
     return apiClient.get<ApiResponse<CartTotals>>(
       `${this.basePath}/totals`,
@@ -29,17 +47,26 @@ export class CartService {
     );
   }
 
-  async addToCart(data: AddToCartRequest): Promise<ApiResponse<Cart>> {
-    return apiClient.post<ApiResponse<Cart>>(this.basePath, data);
+  async addToCart(data: AddToCartInput): Promise<ApiResponse<Cart>> {
+    // Validate data using Zod schema
+    const validatedData = AddToCartSchema.parse(data);
+    return apiClient.post<ApiResponse<Cart>>(this.basePath, validatedData);
   }
 
   async updateCartItem(
     itemId: number,
-    data: UpdateCartItemRequest
+    data: UpdateCartItemInput
   ): Promise<ApiResponse<Cart>> {
+    // Validate inputs
+    if (!itemId || itemId <= 0) {
+      throw new Error("Invalid item");
+    }
+
+    // Validate data using Zod schema
+    const validatedData = UpdateCartItemSchema.parse(data);
     return apiClient.patch<ApiResponse<Cart>>(
       `${this.basePath}/${itemId}`,
-      data
+      validatedData
     );
   }
 
@@ -48,6 +75,17 @@ export class CartService {
     userId: number,
     storeId: number
   ): Promise<ApiResponse<Cart>> {
+    // Validate inputs
+    if (!itemId || itemId <= 0) {
+      throw new Error("Invalid item");
+    }
+    if (!userId || userId <= 0) {
+      throw new Error("Invalid user");
+    }
+    if (!storeId || storeId <= 0) {
+      throw new Error("Invalid store");
+    }
+
     return apiClient.delete<ApiResponse<Cart>>(`${this.basePath}/${itemId}`, {
       userId,
       storeId,
@@ -55,6 +93,14 @@ export class CartService {
   }
 
   async clearCart(userId: number, storeId: number): Promise<ApiResponse<Cart>> {
+    // Validate inputs
+    if (!userId || userId <= 0) {
+      throw new Error("Invalid user");
+    }
+    if (!storeId || storeId <= 0) {
+      throw new Error("Invalid store");
+    }
+
     return apiClient.delete<ApiResponse<Cart>>(this.basePath, {
       userId,
       storeId,

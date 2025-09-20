@@ -1,16 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { CartService } from "../services/cart.service.js";
-import { successResponse, errorResponse } from "../utils/helpers.js";
-import {
-  createValidationError,
-  createNotFoundError,
-} from "../errors/app.error.js";
-
-function toNumber(value: unknown, fallback?: number) {
-  if (value === undefined || value === null) return fallback;
-  const n = Number(value);
-  return Number.isNaN(n) ? fallback : n;
-}
+import { successResponse } from "../utils/helpers.js";
+import { createValidationError } from "../errors/app.error.js";
 
 export class CartController {
   private cartService: CartService;
@@ -20,29 +11,27 @@ export class CartController {
   }
 
   // helper to read authenticated user id set by auth middleware
-  private getUserIdFromReq(req: Request): number | undefined {
+  private getUserIdFromReq(req: Request): number {
     // auth middleware attaches user: { id }
     const anyReq = req as Request & { user?: { id?: number } };
-    return toNumber(anyReq.user?.id, undefined);
+    const userId = anyReq.user?.id;
+
+    if (!userId) {
+      throw createValidationError("Authentication required");
+    }
+
+    return userId;
   }
 
   private getStoreIdFromReq(req: Request): number {
-    return toNumber(req.query?.storeId, toNumber(req.body?.storeId, 1)) ?? 1;
-  }
+    const storeId = req.query?.storeId || req.body?.storeId || 1;
+    const parsedStoreId = Number(storeId);
 
-  private mapErrorStatus(error: unknown): number {
-    const msg = error instanceof Error ? error.message : String(error);
-    const lowered = msg.toLowerCase();
-    if (
-      lowered.includes("not found") ||
-      lowered.includes("not available") ||
-      lowered.includes("insufficient") ||
-      lowered.includes("exceed") ||
-      lowered.includes("cannot")
-    ) {
-      return 400;
+    if (isNaN(parsedStoreId) || parsedStoreId <= 0) {
+      throw createValidationError("Invalid store");
     }
-    return 500;
+
+    return parsedStoreId;
   }
 
   getCart = async (req: Request, res: Response, next: NextFunction) => {
@@ -50,12 +39,8 @@ export class CartController {
       const userId = this.getUserIdFromReq(req);
       const storeId = this.getStoreIdFromReq(req);
 
-      if (!userId) {
-        throw createValidationError("Missing userId in request");
-      }
-
       const cart = await this.cartService.getCartByUserIdAndStoreId(
-        userId!,
+        userId,
         storeId
       );
 
@@ -71,15 +56,8 @@ export class CartController {
       const { productId, qty } = req.body;
       const storeId = this.getStoreIdFromReq(req);
 
-      if (!userId) {
-        throw createValidationError("Missing userId in request body");
-      }
-      if (!productId) {
-        throw createValidationError("Missing productId in request body");
-      }
-
       const cart = await this.cartService.addToCart(
-        userId!,
+        userId,
         productId,
         qty,
         storeId
@@ -94,19 +72,17 @@ export class CartController {
   updateCartItem = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = this.getUserIdFromReq(req);
-      const itemId = toNumber(req.params?.itemId, undefined);
+      const itemId = Number(req.params?.itemId);
       const { qty } = req.body;
       const storeId = this.getStoreIdFromReq(req);
 
-      if (!userId)
-        throw createValidationError("Missing userId in request body");
-      if (!itemId) throw createValidationError("Missing itemId in params");
-      if (typeof qty === "undefined")
-        throw createValidationError("Missing qty in request body");
+      if (isNaN(itemId) || itemId <= 0) {
+        throw createValidationError("Invalid item");
+      }
 
       const cart = await this.cartService.updateCartItem(
-        userId!,
-        itemId!,
+        userId,
+        itemId,
         qty,
         storeId
       );
@@ -120,16 +96,16 @@ export class CartController {
   deleteCartItem = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = this.getUserIdFromReq(req);
-      const itemId = toNumber(req.params?.itemId, undefined);
+      const itemId = Number(req.params?.itemId);
       const storeId = this.getStoreIdFromReq(req);
 
-      if (!userId)
-        throw createValidationError("Missing userId in request body");
-      if (!itemId) throw createValidationError("Missing itemId in params");
+      if (isNaN(itemId) || itemId <= 0) {
+        throw createValidationError("Invalid item");
+      }
 
       const cart = await this.cartService.deleteCartItem(
-        userId!,
-        itemId!,
+        userId,
+        itemId,
         storeId
       );
 
@@ -144,10 +120,7 @@ export class CartController {
       const userId = this.getUserIdFromReq(req);
       const storeId = this.getStoreIdFromReq(req);
 
-      if (!userId)
-        throw createValidationError("Missing userId in request body");
-
-      const cart = await this.cartService.clearCart(userId!, storeId);
+      const cart = await this.cartService.clearCart(userId, storeId);
 
       res.json(successResponse(cart, "Cart cleared successfully"));
     } catch (error) {
@@ -160,9 +133,7 @@ export class CartController {
       const userId = this.getUserIdFromReq(req);
       const storeId = this.getStoreIdFromReq(req);
 
-      if (!userId) throw createValidationError("Missing userId in query");
-
-      const totals = await this.cartService.getCartTotals(userId!, storeId);
+      const totals = await this.cartService.getCartTotals(userId, storeId);
 
       res.json(successResponse(totals, "Cart totals retrieved successfully"));
     } catch (error) {

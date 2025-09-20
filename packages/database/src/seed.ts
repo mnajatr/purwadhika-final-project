@@ -454,13 +454,11 @@ async function seedShippingMethods() {
 }
 async function seedOrders(users: any[], stores: any[], products: any[]) {
   console.log("📦 Seeding sample orders for Feature 3 testing...");
+  // We'll create sample orders for both user id 4 and user id 5 (if present).
+  // This makes user 5 mirror user 4 for testing while keeping user 5 only a
+  // single address (seedAddressForUser5 handles that).
 
-  // Use a test user that has addresses (seedUserAddresses targets id=4)
-  const testUser = users.find((u) => u.id === 4) ?? users[0];
-  if (!testUser) {
-    console.log("No users available — skipping orders");
-    return [];
-  }
+  const targetUserIds = [4, 5];
 
   const store = stores[0];
   if (!store) {
@@ -468,20 +466,12 @@ async function seedOrders(users: any[], stores: any[], products: any[]) {
     return [];
   }
 
-  // Ensure the test user has an address
-  const address = await prisma.userAddress.findFirst({
-    where: { userId: testUser.id },
-  });
-  if (!address) {
-    console.log("No address found for test user — skipping orders");
-    return [];
-  }
-  const addressId = address.id;
-
   const createdOrders: any[] = [];
 
-  // helper to create a simple order with one item
-  async function createSimpleOrder(
+  // helper to create a simple order for a specific user and address
+  async function createSimpleOrderForUser(
+    targetUserId: number,
+    addressId: number,
     status: string,
     withPayment = false,
     withShipment = false
@@ -496,7 +486,7 @@ async function seedOrders(users: any[], stores: any[], products: any[]) {
 
     const order = await prisma.order.create({
       data: {
-        userId: testUser.id,
+        userId: targetUserId,
         storeId: store.id,
         addressId,
         status: status as any,
@@ -526,21 +516,16 @@ async function seedOrders(users: any[], stores: any[], products: any[]) {
     });
 
     if (withPayment) {
-      // create payment record
       await prisma.payment.create({
         data: {
           orderId: order.id,
           status: status === "PAYMENT_REVIEW" ? "PENDING" : "PAID",
           amount: grandTotal,
           proofImageUrl:
-            status === "PAYMENT_REVIEW"
-              ? "https://example.com/proof.jpg"
-              : null,
+            status === "PAYMENT_REVIEW" ? "https://example.com/proof.jpg" : null,
           reviewedAt: status === "PAYMENT_REVIEW" ? null : new Date(),
           paidAt:
-            status === "CONFIRMED" ||
-            status === "SHIPPED" ||
-            status === "PROCESSING"
+            status === "CONFIRMED" || status === "SHIPPED" || status === "PROCESSING"
               ? new Date()
               : null,
         },
@@ -564,13 +549,28 @@ async function seedOrders(users: any[], stores: any[], products: any[]) {
     return order;
   }
 
-  // Create sample orders across statuses
-  await createSimpleOrder("PENDING_PAYMENT", false, false);
-  await createSimpleOrder("PAYMENT_REVIEW", true, false);
-  await createSimpleOrder("PROCESSING", true, false);
-  await createSimpleOrder("SHIPPED", true, true);
-  await createSimpleOrder("CONFIRMED", true, false);
-  await createSimpleOrder("CANCELLED", false, false);
+  for (const uid of targetUserIds) {
+    const targetUser = users.find((u) => u.id === uid);
+    if (!targetUser) {
+      console.log(`User with id=${uid} not found — skipping orders for this user`);
+      continue;
+    }
+
+    // find one address for this user (seedUserAddresses/seedAddressForUser5 created them)
+    const address = await prisma.userAddress.findFirst({ where: { userId: targetUser.id } });
+    if (!address) {
+      console.log(`No address found for user id=${targetUser.id} — skipping orders for this user`);
+      continue;
+    }
+
+    // create sample orders across statuses for this user
+    await createSimpleOrderForUser(targetUser.id, address.id, "PENDING_PAYMENT", false, false);
+    await createSimpleOrderForUser(targetUser.id, address.id, "PAYMENT_REVIEW", true, false);
+    await createSimpleOrderForUser(targetUser.id, address.id, "PROCESSING", true, false);
+    await createSimpleOrderForUser(targetUser.id, address.id, "SHIPPED", true, true);
+    await createSimpleOrderForUser(targetUser.id, address.id, "CONFIRMED", true, false);
+    await createSimpleOrderForUser(targetUser.id, address.id, "CANCELLED", false, false);
+  }
 
   console.log(`✅ Created ${createdOrders.length} sample orders`);
   return createdOrders;
@@ -700,8 +700,8 @@ async function seed() {
     const users = await seedUsers();
     // Seed user addresses early so seedOrders can find an address for the test user
     await seedUserAddresses(users);
-  // Also ensure user id=5 has at least one address for testing
-  await seedAddressForUser5(users);
+    // Also ensure user id=5 has at least one address for testing
+    await seedAddressForUser5(users);
     const categories = await seedCategories();
     const stores = await seedStores();
     await seedStoreAssignments(users, stores);

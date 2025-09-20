@@ -40,27 +40,7 @@ export default function ProductDetailPage() {
           toast.success(`${quantity} ${product.name} added to cart!`);
           setQuantity(1); // Reset quantity after adding
         },
-        onError: (error) => {
-          console.warn("Failed to add to cart:", error);
-          
-          // Extract meaningful error message from ApiError
-          let errorMessage = "Failed to add product to cart";
-          
-          if (error && typeof error === "object" && "message" in error) {
-            errorMessage = String(error.message);
-          } else if (typeof error === "string") {
-            errorMessage = error;
-          }
-          
-          // Show user-friendly message for common stock issues
-          if (errorMessage.includes("stock") || errorMessage.includes("exceeds available") || errorMessage.includes("Insufficient stock")) {
-            errorMessage = "Sorry, not enough stock available for the requested quantity.";
-          } else if (errorMessage.includes("out of stock") || errorMessage.includes("stock: 0") || errorMessage.includes("Available: 0")) {
-            errorMessage = "Sorry, this product is currently out of stock.";
-          }
-          
-          toast.error(errorMessage);
-        }
+        // Error handling is already done by the useAddToCart hook
       }
     );
   };

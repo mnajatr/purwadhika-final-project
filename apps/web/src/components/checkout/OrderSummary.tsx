@@ -11,7 +11,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import type { Cart } from "@/types/cart.types";
+import type { CartResponse as Cart } from "@repo/schemas";
 import { validateCartForCheckout } from "@/utils/cartStockUtils";
 
 interface Props {

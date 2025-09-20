@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import CartItem from "./CartItem";
-import { useCart, useClearCart } from "@/hooks/useCart";
+import { useCart, useClearCart, useUpdateCartItem } from "@/hooks/useCart";
 import { Button } from "../ui/button";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
@@ -12,6 +12,8 @@ import formatIDR from "@/utils/formatCurrency";
 import {
   validateCartForCheckout,
   hasOutOfStockItems,
+  getItemsNeedingQuantityAdjustment,
+  getAdjustedQuantity,
 } from "@/utils/cartStockUtils";
 
 interface CartPageProps {
@@ -23,6 +25,7 @@ export function CartPage({ userId }: CartPageProps) {
   const storeId = 1;
   const { data: cart, isLoading } = useCart(userId, storeId);
   const clearCartMutation = useClearCart(userId, storeId);
+  const updateCartItemMutation = useUpdateCartItem(userId, storeId);
   const [selectedIds, setSelectedIds] = React.useState<Record<number, boolean>>(
     {}
   );
@@ -31,6 +34,7 @@ export function CartPage({ userId }: CartPageProps) {
   const creating = createOrder.status === "pending";
   const router = useRouter();
   const [showConfirmAll, setShowConfirmAll] = React.useState(false);
+  const [hasAutoAdjusted, setHasAutoAdjusted] = React.useState(false);
 
   React.useEffect(() => {
     if (!cart) return;
@@ -38,6 +42,60 @@ export function CartPage({ userId }: CartPageProps) {
     cart.items.forEach((it) => (map[it.id] = true));
     setSelectedIds(map);
   }, [cart]);
+
+  // Auto-adjust cart quantities when they exceed stock
+  React.useEffect(() => {
+    if (!cart || hasAutoAdjusted) return;
+
+    const itemsNeedingAdjustment = getItemsNeedingQuantityAdjustment(
+      cart.items
+    );
+    if (itemsNeedingAdjustment.length === 0) return;
+
+    setHasAutoAdjusted(true);
+
+    // Process adjustments sequentially
+    const processAdjustments = async () => {
+      for (const item of itemsNeedingAdjustment) {
+        const adjustedQty = getAdjustedQuantity(item);
+
+        try {
+          if (adjustedQty === 0) {
+            // Item is completely out of stock, show specific message
+            toast.warning(
+              `${item.product.name} is out of stock and was removed from your cart`
+            );
+          } else {
+            // Quantity was reduced to match available stock
+            await updateCartItemMutation.mutateAsync({
+              itemId: item.id,
+              qty: adjustedQty,
+            });
+            toast.warning(
+              `Quantity adjusted to available stock: ${adjustedQty} for ${item.product.name}`
+            );
+          }
+        } catch (error) {
+          console.error("Failed to adjust cart item quantity:", error);
+          toast.error(`Failed to adjust quantity for ${item.product.name}`);
+        }
+      }
+    };
+
+    processAdjustments();
+  }, [cart, updateCartItemMutation, hasAutoAdjusted]);
+
+  // Reset auto-adjustment flag when cart data changes (after mutations)
+  React.useEffect(() => {
+    if (cart && hasAutoAdjusted) {
+      const itemsStillNeedingAdjustment = getItemsNeedingQuantityAdjustment(
+        cart.items
+      );
+      if (itemsStillNeedingAdjustment.length === 0) {
+        setHasAutoAdjusted(false);
+      }
+    }
+  }, [cart, hasAutoAdjusted]);
 
   if (isLoading || !cart) return <div>Loading cart...</div>;
   if (cart.items.length === 0)
@@ -172,12 +230,9 @@ export function CartPage({ userId }: CartPageProps) {
                         setShowConfirmAll(false);
                         try {
                           await clearCartMutation.mutateAsync();
-                          toast.success("Cart cleared");
-                        } catch (err) {
-                          const msg =
-                            (err as { message?: string })?.message ||
-                            "Failed to clear cart";
-                          toast.error(msg);
+                          // Success toast handled by hook's onSuccess
+                        } catch {
+                          // Error toast handled by hook's onError
                         }
                       }}
                     />
