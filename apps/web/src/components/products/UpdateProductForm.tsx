@@ -4,7 +4,25 @@ import { useUpdateProduct } from "@/hooks/useProduct";
 import { useForm, Controller } from "react-hook-form";
 import { useEffect } from "react";
 
-export default function UpdateProductForm({ product }: { product: any }) {
+type InventoryInput = { stockQty: number; storeId: number };
+type ImageInput = { imageUrl: string };
+
+type ProductForEdit = {
+  id?: number;
+  name?: string;
+  slug?: string;
+  description?: string;
+  price?: number;
+  weight?: number;
+  width?: number;
+  height?: number;
+  length?: number;
+  categoryId?: number;
+  images?: ImageInput[];
+  inventories?: InventoryInput[];
+};
+
+export default function UpdateProductForm({ product }: { product: ProductForEdit | null }) {
   const categories = [
     { id: 1, name: "Fruits & Vegetables" },
     { id: 2, name: "Dairy & Eggs" },
@@ -16,9 +34,10 @@ export default function UpdateProductForm({ product }: { product: any }) {
     { id: 8, name: "Snacks" },
   ];
 
+  // Hooks must be called unconditionally
   const updateProduct = useUpdateProduct();
 
-  const { register, handleSubmit, reset, control, watch } = useForm({
+  const { register, handleSubmit, reset, control, watch } = useForm<ProductForEdit>({
     defaultValues: {
       name: "",
       slug: "",
@@ -55,9 +74,11 @@ export default function UpdateProductForm({ product }: { product: any }) {
     }
   }, [product, reset]);
 
-  const selectedCategoryId = watch("categoryId");
+  // read full form values and access categoryId to avoid typed overloads
+  const formValues = watch();
+  const selectedCategoryId = formValues?.categoryId as number | undefined;
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: ProductForEdit) => {
     const payload = {
       name: data.name,
       slug: data.slug,
@@ -70,12 +91,17 @@ export default function UpdateProductForm({ product }: { product: any }) {
       categoryId: Number(data.categoryId),
       images: data.images?.length ? data.images : [{ imageUrl: "" }],
       inventories: data.inventories?.length
-        ? data.inventories.map((i: any) => ({
+        ? data.inventories.map((i: InventoryInput) => ({
             stockQty: Number(i.stockQty),
             storeId: Number(i.storeId),
           }))
         : [{ stockQty: 0, storeId: 1 }],
     };
+
+    if (!product?.slug) {
+      alert("Produk tidak valid: slug tidak tersedia");
+      return;
+    }
 
     updateProduct.mutate(
       { slug: product.slug, data: payload },
@@ -83,7 +109,7 @@ export default function UpdateProductForm({ product }: { product: any }) {
         onSuccess: () => {
           alert("Produk berhasil diperbarui!");
         },
-        onError: (err: any) => {
+        onError: (err: Error) => {
           alert("Gagal memperbarui produk: " + err.message);
         },
       }
@@ -223,10 +249,10 @@ export default function UpdateProductForm({ product }: { product: any }) {
 
       <button
         type="submit"
-        disabled={updateProduct.isLoading}
+        disabled={updateProduct.isPending}
         className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
       >
-        {updateProduct.isLoading ? "Menyimpan..." : "Update Produk"}
+        {updateProduct.isPending ? "Menyimpan..." : "Update Produk"}
       </button>
     </form>
   );

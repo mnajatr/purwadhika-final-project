@@ -6,13 +6,19 @@ import Link from "next/link";
 import { useProducts } from "@/hooks/useProduct";
 import Sidebar from "@/components/admin/sidebar";
 import DeleteProductButton from "@/components/products/DeleteButtonProduct";
+import DeactivateButtonProduct from "@/components/products/DeactivateButtonProduct";
+import ActivateButtonProduct from "@/components/products/ActivateButtonProduct";
 
 export default function ProductsList() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedStore, setSelectedStore] = useState("All");
 
-  const { data: products = [], isLoading, error } = useProducts();
+  // Fetch products without location to get all products for admin
+  const { data, isLoading, error } = useProducts();
+  
+  // Extract products array from the response
+  const products = data?.products || [];
 
   if (isLoading)
     return <p className="text-center py-10">Loading products...</p>;
@@ -21,10 +27,12 @@ export default function ProductsList() {
       <p className="text-center text-red-500 py-10">Error: {error.message}</p>
     );
 
-  const categories = ["All", ...new Set(products.map((p) => p.category))];
-  const stores = ["All", ...new Set(products.map((p) => p.store))];
+  // Ensure products is an array before using map
+  const safeProducts = Array.isArray(products) ? products : [];
+  const categories = ["All", ...new Set(safeProducts.map((p) => p.category))];
+  const stores = ["All", ...new Set(safeProducts.map((p) => p.store))];
 
-  const filtered = products.filter((product) => {
+  const filtered = safeProducts.filter((product) => {
     const matchCategory =
       selectedCategory === "All" || product.category === selectedCategory;
     const matchSearch = product.name
@@ -169,6 +177,13 @@ export default function ProductsList() {
                         Edit
                       </Link>
                       <DeleteProductButton slug={product.slug} />
+                      <DeactivateButtonProduct slug={product.slug} />
+                      {!product.isActive && (
+                        <>
+                          <span className="mx-1">|</span>
+                          <ActivateButtonProduct slug={product.slug} />
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}

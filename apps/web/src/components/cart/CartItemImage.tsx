@@ -11,7 +11,7 @@ interface Props {
 
 export default function CartItemImage({ productId, alt }: Props) {
   // Get product details to get the correct image
-  const { data: products } = useQuery({
+  const { data: productsData } = useQuery({
     queryKey: ["products"],
     queryFn: () =>
       import("@/services/products.service").then((s) =>
@@ -20,7 +20,7 @@ export default function CartItemImage({ productId, alt }: Props) {
   });
 
   // Find the product with matching ID
-  const product = products?.find((p) => parseInt(p.id) === productId);
+  const product = productsData?.products?.find((p) => parseInt(p.id) === productId);
   const imageUrl =
     product?.imageUrl || `https://picsum.photos/seed/${productId}/200/200`;
 

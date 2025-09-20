@@ -1,9 +1,10 @@
 "use client";
 
-import { useDeleteProduct } from "@/hooks/useProduct";
+import { useDeleteProduct, useDeactivateProduct } from "@/hooks/useProduct";
 
 export default function DeleteProductButton({ slug }: { slug: string }) {
   const deleteProduct = useDeleteProduct();
+  const deactivateProduct = useDeactivateProduct();
 
   const handleDelete = () => {
     if (confirm("Yakin ingin menghapus produk ini?")) {
@@ -11,8 +12,24 @@ export default function DeleteProductButton({ slug }: { slug: string }) {
         onSuccess: () => {
           alert("Produk berhasil dihapus");
         },
-        onError: (err: any) => {
-          alert("Gagal menghapus produk: " + err.message);
+        onError: (err: Error) => {
+          if (err.message?.includes("Cannot delete product that has been ordered")) {
+            const deactivateConfirm = confirm(
+              "Produk ini tidak dapat dihapus karena sudah pernah dipesan. Apakah Anda ingin menonaktifkan produk ini sebagai gantinya?"
+            );
+            if (deactivateConfirm) {
+              deactivateProduct.mutate(slug, {
+                onSuccess: () => {
+                  alert("Produk berhasil dinonaktifkan");
+                },
+                onError: (e: Error) => {
+                  alert("Gagal menonaktifkan produk: " + e.message);
+                },
+              });
+            }
+          } else {
+            alert("Gagal menghapus produk: " + err.message);
+          }
         },
       });
     }
@@ -22,10 +39,10 @@ export default function DeleteProductButton({ slug }: { slug: string }) {
     <button
       type="button"
       onClick={handleDelete}
-      disabled={deleteProduct.isLoading}
+      disabled={deleteProduct.isPending || deactivateProduct.isPending}
       className="text-red-600 hover:underline"
     >
-      {deleteProduct.isLoading ? "Deleting..." : "Delete"}
+      {deleteProduct.isPending || deactivateProduct.isPending ? "Processing..." : "Delete"}
     </button>
   );
 }

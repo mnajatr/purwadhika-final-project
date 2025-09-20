@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 interface GeolocationState {
   latitude: number | null;
@@ -23,9 +23,9 @@ export function useGeolocation(options: GeolocationOptions = {}) {
 
   useEffect(() => {
     if (!navigator.geolocation) {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
-        error: 'Geolocation is not supported by this browser',
+        error: "Geolocation is not supported by this browser",
         loading: false,
       }));
       return;
@@ -41,21 +41,21 @@ export function useGeolocation(options: GeolocationOptions = {}) {
     };
 
     const handleError = (error: GeolocationPositionError) => {
-      let errorMessage = 'Unknown location error';
-      
+      let errorMessage = "Unknown location error";
+
       switch (error.code) {
         case error.PERMISSION_DENIED:
-          errorMessage = 'Location access denied by user';
+          errorMessage = "Location access denied by user";
           break;
         case error.POSITION_UNAVAILABLE:
-          errorMessage = 'Location information unavailable';
+          errorMessage = "Location information unavailable";
           break;
         case error.TIMEOUT:
-          errorMessage = 'Location request timed out';
+          errorMessage = "Location request timed out";
           break;
       }
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         error: errorMessage,
         loading: false,
@@ -76,8 +76,8 @@ export function useGeolocation(options: GeolocationOptions = {}) {
   }, [options.enableHighAccuracy, options.timeout, options.maximumAge]);
 
   const refetch = () => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
-    
+    setState((prev) => ({ ...prev, loading: true, error: null }));
+
     const handleSuccess = (position: GeolocationPosition) => {
       setState({
         latitude: position.coords.latitude,
@@ -88,21 +88,21 @@ export function useGeolocation(options: GeolocationOptions = {}) {
     };
 
     const handleError = (error: GeolocationPositionError) => {
-      let errorMessage = 'Unknown location error';
-      
+      let errorMessage = "Unknown location error";
+
       switch (error.code) {
         case error.PERMISSION_DENIED:
-          errorMessage = 'Location access denied by user';
+          errorMessage = "Location access denied by user";
           break;
         case error.POSITION_UNAVAILABLE:
-          errorMessage = 'Location information unavailable';
+          errorMessage = "Location information unavailable";
           break;
         case error.TIMEOUT:
-          errorMessage = 'Location request timed out';
+          errorMessage = "Location request timed out";
           break;
       }
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         error: errorMessage,
         loading: false,

@@ -1,5 +1,5 @@
-import React from 'react';
-import { MapPin, Store, AlertCircle } from 'lucide-react';
+import React from "react";
+import { MapPin, Store, AlertCircle } from "lucide-react";
 
 interface NearestStoreIndicatorProps {
   nearestStore: {
@@ -23,7 +23,7 @@ export default function NearestStoreIndicator({
   message,
   isLocationLoading = false,
   locationError = null,
-  onRetryLocation
+  onRetryLocation,
 }: NearestStoreIndicatorProps) {
   if (isLocationLoading) {
     return (
@@ -33,8 +33,12 @@ export default function NearestStoreIndicator({
             <MapPin className="h-5 w-5 text-blue-600" />
           </div>
           <div>
-            <p className="text-blue-800 font-medium">Detecting your location...</p>
-            <p className="text-blue-600 text-sm">Finding the nearest store for you</p>
+            <p className="text-blue-800 font-medium">
+              Detecting your location...
+            </p>
+            <p className="text-blue-600 text-sm">
+              Finding the nearest store for you
+            </p>
           </div>
         </div>
       </div>
@@ -48,7 +52,9 @@ export default function NearestStoreIndicator({
           <div className="flex items-center gap-3">
             <AlertCircle className="h-5 w-5 text-yellow-600" />
             <div>
-              <p className="text-yellow-800 font-medium">Location access needed</p>
+              <p className="text-yellow-800 font-medium">
+                Location access needed
+              </p>
               <p className="text-yellow-600 text-sm">{locationError}</p>
             </div>
           </div>
@@ -87,7 +93,9 @@ export default function NearestStoreIndicator({
         <Store className="h-5 w-5 text-gray-600" />
         <div>
           <p className="text-gray-800 font-medium">{message}</p>
-          <p className="text-gray-600 text-sm">Enable location access to see products from your nearest store</p>
+          <p className="text-gray-600 text-sm">
+            Enable location access to see products from your nearest store
+          </p>
         </div>
       </div>
     </div>

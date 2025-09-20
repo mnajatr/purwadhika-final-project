@@ -8,26 +8,26 @@ import NearestStoreIndicator from "@/components/products/NearestStoreIndicator";
 
 export default function Home() {
   // Get user location
-  const { 
-    latitude, 
-    longitude, 
-    loading: locationLoading, 
+  const {
+    latitude,
+    longitude,
+    loading: locationLoading,
     error: locationError,
-    refetch: refetchLocation 
+    refetch: refetchLocation,
   } = useGeolocation();
 
   // Fetch products with location if available
-  const { data } = useProducts(
-    latitude ?? undefined, 
-    longitude ?? undefined
-  );
+  const { data } = useProducts(latitude ?? undefined, longitude ?? undefined);
 
   const products = data?.products || [];
   const nearestStore = data?.nearestStore || null;
   const storeMessage = data?.message || "Loading...";
 
-  // Show only first 6 products for featured section
-  const featuredProducts = products.slice(0, 6);
+  // Only show products that are active. Treat undefined as active.
+  const visibleProducts = products.filter((p) => p.isActive !== false);
+
+  // Show only first 6 visible products for featured section
+  const featuredProducts = visibleProducts.slice(0, 6);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100">
@@ -99,7 +99,9 @@ export default function Home() {
                     />
                   </div>
                   <div className="p-4">
-                    <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                      {product.name}
+                    </h3>
                     <p className="text-gray-600 text-sm mb-3 line-clamp-2">
                       {product.description}
                     </p>
