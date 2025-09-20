@@ -13,23 +13,26 @@ export default function ProductsList() {
   const [selectedStore, setSelectedStore] = useState("All");
 
   // Get user location
-  const { 
-    latitude, 
-    longitude, 
-    loading: locationLoading, 
+  const {
+    latitude,
+    longitude,
+    loading: locationLoading,
     error: locationError,
-    refetch: refetchLocation 
+    refetch: refetchLocation,
   } = useGeolocation();
 
   // Fetch products with location if available
   const { data, isLoading, error } = useProducts(
-    latitude ?? undefined, 
+    latitude ?? undefined,
     longitude ?? undefined
   );
 
   const products = data?.products || [];
   const nearestStore = data?.nearestStore || null;
   const storeMessage = data?.message || "Loading...";
+
+  // Only show products that are active. Treat undefined as active (backwards compat).
+  const visibleProducts = products.filter((p) => p.isActive !== false);
 
   if (isLoading && !locationLoading)
     return <p className="text-center py-10">Loading products...</p>;
@@ -38,12 +41,12 @@ export default function ProductsList() {
       <p className="text-center text-red-500 py-10">Error: {error.message}</p>
     );
 
-  // Kategori dan store unik
-  const categories = ["All", ...new Set(products.map((p) => p.category))];
-  const stores = ["All", ...new Set(products.map((p) => p.store))];
+  // Kategori dan store unik (only from visible products)
+  const categories = ["All", ...new Set(visibleProducts.map((p) => p.category))];
+  const stores = ["All", ...new Set(visibleProducts.map((p) => p.store))];
 
   // Filter produk
-  const filtered = products.filter((product) => {
+  const filtered = visibleProducts.filter((product) => {
     const matchCategory =
       selectedCategory === "All" || product.category === selectedCategory;
     const matchSearch = product.name

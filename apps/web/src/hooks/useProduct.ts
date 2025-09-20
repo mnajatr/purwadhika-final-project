@@ -36,14 +36,10 @@ export function useCreateProduct() {
 export function useUpdateProduct() {
   const queryClient = useQueryClient();
 
+  type UpdatePayload = { slug: string; data: Record<string, unknown> };
+
   return useMutation({
-    mutationFn: ({
-      slug,
-      data,
-    }: {
-      slug: string;
-      data: Partial<ProductResponse>;
-    }) => updateProduct(slug, data),
+    mutationFn: ({ slug, data }: UpdatePayload) => updateProduct(slug, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["product", variables.slug] });
@@ -56,6 +52,28 @@ export function useDeleteProduct() {
 
   return useMutation({
     mutationFn: (slug: string) => deleteProduct(slug),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
+export function useDeactivateProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (slug: string) => productsService.deactivateProduct(slug),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
+export function useActivateProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (slug: string) => productsService.activateProduct(slug),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
     },

@@ -6,11 +6,11 @@ const service = new ProductService();
 export class ProductController {
   static async getAll(req: Request, res: Response) {
     const { lat, lon } = req.query;
-    
+
     if (lat && lon) {
       const userLat = parseFloat(lat as string);
       const userLon = parseFloat(lon as string);
-      
+
       if (!isNaN(userLat) && !isNaN(userLon)) {
         const result = await service.getByNearestStore(userLat, userLon);
         return res.json(result);
@@ -22,7 +22,7 @@ export class ProductController {
     const response = {
       products,
       nearestStore: null,
-      message: "Showing all available products"
+      message: "Showing all available products",
     };
     res.json(response);
   }
@@ -55,7 +55,9 @@ export class ProductController {
 
       res.json(updated);
     } catch (e) {
-      res.status(400).json({ message: "Failed to update product" });
+      console.error("Update product error:", e);
+      const message = e instanceof Error ? e.message : "Failed to update product";
+      res.status(400).json({ message });
     }
   }
   static async delete(req: Request, res: Response) {
@@ -69,7 +71,43 @@ export class ProductController {
 
       res.json({ message: "Product deleted successfully" });
     } catch (e) {
-      res.status(400).json({ message: "Failed to delete product" });
+      console.error("Delete product error:", e);
+      const message = e instanceof Error ? e.message : "Failed to delete product";
+      res.status(400).json({ message });
+    }
+  }
+
+  static async deactivate(req: Request, res: Response) {
+    try {
+      const { slug } = req.params;
+      const deactivated = await service.deactivateProduct(slug);
+
+      if (!deactivated) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      res.json({ message: "Product deactivated successfully", product: deactivated });
+    } catch (e) {
+      console.error("Deactivate product error:", e);
+      const message = e instanceof Error ? e.message : "Failed to deactivate product";
+      res.status(400).json({ message });
+    }
+  }
+
+  static async activate(req: Request, res: Response) {
+    try {
+      const { slug } = req.params;
+      const activated = await service.activateProduct(slug);
+
+      if (!activated) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      res.json({ message: "Product activated successfully", product: activated });
+    } catch (e) {
+      console.error("Activate product error:", e);
+      const message = e instanceof Error ? e.message : "Failed to activate product";
+      res.status(400).json({ message });
     }
   }
 }
