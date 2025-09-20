@@ -7,6 +7,7 @@ import adminRouter from "./routes/admin.routes.js";
 import usersRouter from "./routes/users.routes.js";
 import storesRouter from "./routes/stores.routes.js";
 import discountRouter from "./routes/admin/discount.routes.js";
+import categoryRouter from "./routes/admin/category.routes.js";
 import { setupCloudinary } from "./configs/cloudinary.config.js";
 import logger from "./utils/logger.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
@@ -47,6 +48,7 @@ export class App {
     this.app.use("/api/users", usersRouter);
     this.app.use("/api/stores", storesRouter);
     this.app.use("/api/discounts", discountRouter);
+    this.app.use("/api/category", categoryRouter);
     // Debug routes removed for production; keep local/dev-only debug routes out of main app.
 
     this.app.get("/api/health", (request: Request, response: Response) =>
