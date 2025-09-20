@@ -6,7 +6,11 @@ import {
   updateDiscount,
   deleteDiscount,
 } from "../services/discount.service";
-import { DiscountResponse } from "../types/discount.types";
+import {
+  DiscountResponse,
+  CreateDiscount,
+  UpdateDiscount,
+} from "../types/discount.types";
 
 export function useDiscounts() {
   return useQuery({
@@ -27,7 +31,7 @@ export function useCreateDiscount() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: DiscountResponse) => createDiscount(data),
+    mutationFn: (data: CreateDiscount) => createDiscount(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["discounts"] });
     },
@@ -38,13 +42,8 @@ export function useUpdateDiscount() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: number;
-      data: Partial<DiscountResponse>;
-    }) => updateDiscount(id, data),
+    mutationFn: ({ id, data }: { id: number; data: UpdateDiscount }) =>
+      updateDiscount(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["discounts"] });
       queryClient.invalidateQueries({ queryKey: ["discount", variables.id] });

@@ -95,7 +95,7 @@ model User {
 
 model UserProfile {
   id        Int      @id @default(autoincrement())
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    Int      @unique
   fullName  String?
   avatarUrl String?
@@ -252,6 +252,7 @@ model StockJournal {
 
 model Discount {
   id          Int          @id @default(autoincrement())
+  name        String
   store       Store        @relation(fields: [storeId], references: [id])
   storeId     Int
   product     Product      @relation(fields: [productId], references: [id])
@@ -266,20 +267,20 @@ model Discount {
 }
 
 model Voucher {
-  id     Int       @id @default(autoincrement())
-  user   User      @relation(fields: [userId], references: [id])
-  userId Int
-  discount Discount @relation(fields: [discountId], references: [id])
+  id         Int       @id @default(autoincrement())
+  user       User      @relation(fields: [userId], references: [id])
+  userId     Int
+  discount   Discount  @relation(fields: [discountId], references: [id])
   discountId Int
-  isUsed Boolean   @default(false)
-  usedAt DateTime?
+  isUsed     Boolean   @default(false)
+  usedAt     DateTime?
 }
 
 model Cart {
   id        Int      @id @default(autoincrement())
   user      User     @relation(fields: [userId], references: [id])
   userId    Int
-  store     Store   @relation(fields: [storeId], references: [id])
+  store     Store    @relation(fields: [storeId], references: [id])
   storeId   Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -372,6 +372,7 @@ async function seedDiscounts(stores: any[], products: any[]) {
       data: {
         storeId: store.id,
         productId: product.id,
+        name: faker.word.adjective(),
         value: faker.helpers.arrayElement(["PRODUCT_DISCOUNT", "BUY1GET1"]),
         type: faker.helpers.arrayElement(["PERCENTAGE", "NOMINAL"]),
         minPurchase: faker.datatype.boolean()

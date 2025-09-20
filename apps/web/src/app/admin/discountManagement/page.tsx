@@ -45,6 +45,9 @@ export default function ManageDiscounts() {
                   Store
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                  Name
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
                   Product
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
@@ -67,6 +70,7 @@ export default function ManageDiscounts() {
                   <td className="px-4 py-3 text-sm text-gray-800">
                     {d.store?.name}
                   </td>
+                  <td className="px-4 py-3 text-sm text-gray-800">{d.name}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {d.product?.name}
                   </td>
