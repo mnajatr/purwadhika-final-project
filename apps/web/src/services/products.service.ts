@@ -1,26 +1,77 @@
 import apiClient from "@/lib/axios-client";
 import { ProductResponse } from "@/types/products.type";
 
+interface NearestStoreResponse {
+  products: ProductResponse[];
+  nearestStore: {
+    id: number;
+    name: string;
+    locations: Array<{
+      id: number;
+      latitude: number;
+      longitude: number;
+      storeId: number;
+    }>;
+  } | null;
+  message: string;
+}
+
 class ProductsService {
   private readonly basePath = "/products";
 
-  async getProducts() {
-    // langsung array of ProductResponse
-    const products = await apiClient.get<ProductResponse[]>(this.basePath);
+  async getProducts(lat?: number, lon?: number) {
+    let url = this.basePath;
+    const params = new URLSearchParams();
+    
+    if (lat !== undefined && lon !== undefined) {
+      params.append('lat', lat.toString());
+      params.append('lon', lon.toString());
+      url += `?${params.toString()}`;
+    }
 
-    return products.map((product) => {
-      const inventory = product.inventories?.[0];
+    if (lat !== undefined && lon !== undefined) {
+      // When coordinates are provided, expect the new response format
+      const response = await apiClient.get<NearestStoreResponse>(url);
+      
       return {
-        id: product.id,
-        slug: product.slug,
-        name: product.name,
-        description: product.description,
-        price: Number(product.price),
-        category: product.category.name,
-        store: inventory?.store?.name || "Unknown",
-        imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
+        products: response.products.map((product) => {
+          const inventory = product.inventories?.[0];
+          return {
+            id: product.id,
+            slug: product.slug,
+            name: product.name,
+            description: product.description,
+            price: Number(product.price),
+            category: product.category.name,
+            store: inventory?.store?.name || "Unknown",
+            imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
+          };
+        }),
+        nearestStore: response.nearestStore,
+        message: response.message
       };
-    });
+    } else {
+      // Fallback to original format when no coordinates
+      const products = await apiClient.get<ProductResponse[]>(url);
+      
+      return {
+        products: products.map((product) => {
+          const inventory = product.inventories?.[0];
+          return {
+            id: product.id,
+            slug: product.slug,
+            name: product.name,
+            description: product.description,
+            price: Number(product.price),
+            category: product.category.name,
+            store: inventory?.store?.name || "Unknown",
+            imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
+          };
+        }),
+        nearestStore: null,
+        message: "Showing all products"
+      };
+    }
   }
   async getProductBySlug(slug: string) {
     const product = await apiClient.get<ProductResponse>(
@@ -91,7 +142,7 @@ class ProductsService {
 }
 
 export const productsService = new ProductsService();
-export const getProducts = () => productsService.getProducts();
+export const getProducts = (lat?: number, lon?: number) => productsService.getProducts(lat, lon);
 export const getProductBySlug = (slug: string) =>
   productsService.getProductBySlug(slug);
 export const createProduct = (data: ProductResponse) =>

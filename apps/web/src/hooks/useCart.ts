@@ -142,7 +142,8 @@ export function useUpdateCartItem(userId: number, storeId = 1) {
       handleCartError(err);
     },
     onSuccess: () => {
-      toast.success("Cart updated");
+      // No generic success toast here; components can show a toast when
+      // the update was initiated directly by the user to avoid spam.
     },
     // Intentionally no onSettled invalidation: we keep optimistic local state
     // and avoid immediate refetch on quantity changes per assignment requirements.
