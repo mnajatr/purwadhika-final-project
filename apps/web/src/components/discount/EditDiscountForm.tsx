@@ -34,7 +34,6 @@ export default function EditDiscountForm({
     },
   });
 
-  // Prefill form saat discount tersedia
   useEffect(() => {
     if (discount) {
       reset({
