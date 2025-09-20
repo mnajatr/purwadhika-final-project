@@ -4,15 +4,34 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useProducts } from "@/hooks/useProduct";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import NearestStoreIndicator from "./NearestStoreIndicator";
 
 export default function ProductsList() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedStore, setSelectedStore] = useState("All");
 
-  const { data: products = [], isLoading, error } = useProducts();
+  // Get user location
+  const { 
+    latitude, 
+    longitude, 
+    loading: locationLoading, 
+    error: locationError,
+    refetch: refetchLocation 
+  } = useGeolocation();
 
-  if (isLoading)
+  // Fetch products with location if available
+  const { data, isLoading, error } = useProducts(
+    latitude ?? undefined, 
+    longitude ?? undefined
+  );
+
+  const products = data?.products || [];
+  const nearestStore = data?.nearestStore || null;
+  const storeMessage = data?.message || "Loading...";
+
+  if (isLoading && !locationLoading)
     return <p className="text-center py-10">Loading products...</p>;
   if (error instanceof Error)
     return (
@@ -42,6 +61,15 @@ export default function ProductsList() {
           Our Products
         </h2>
       </div>
+
+      {/* Nearest Store Indicator */}
+      <NearestStoreIndicator
+        nearestStore={nearestStore}
+        message={storeMessage}
+        isLocationLoading={locationLoading}
+        locationError={locationError}
+        onRetryLocation={refetchLocation}
+      />
 
       {/* Search */}
       <div className="flex justify-center mb-6">

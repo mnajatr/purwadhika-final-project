@@ -68,7 +68,7 @@ export default function CartItem({
   const removeCartItemMutation = useRemoveCartItem(userId, storeId);
 
   // Get product details to get the correct category
-  const { data: products } = useQuery({
+  const { data: productsData } = useQuery({
     queryKey: ["products"],
     queryFn: () =>
       import("@/services/products.service").then((s) =>
@@ -77,8 +77,8 @@ export default function CartItem({
   });
 
   // Find the product with matching ID to get category
-  const productDetails = products?.find(
-    (p) => parseInt(p.id) === item.productId
+  const productDetails = productsData?.products?.find(
+    (p: { id: string; category: string }) => parseInt(p.id) === item.productId
   );
   const productCategory = productDetails?.category || "General";
 
@@ -130,6 +130,9 @@ export default function CartItem({
           itemId: item.id,
           qty: qtyToSend,
         });
+        // Do not show a toast for quantity updates (they can be frequent).
+        // Keep hasManuallyUpdated for internal UI decisions only.
+        if (hasManuallyUpdated) setHasManuallyUpdated(false);
       } catch {
         // Reset local qty to server value; detailed error toast will be
         // handled centrally by the hook's onError handler (handleCartError).

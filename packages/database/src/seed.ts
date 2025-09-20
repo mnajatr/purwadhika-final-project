@@ -522,10 +522,14 @@ async function seedOrders(users: any[], stores: any[], products: any[]) {
           status: status === "PAYMENT_REVIEW" ? "PENDING" : "PAID",
           amount: grandTotal,
           proofImageUrl:
-            status === "PAYMENT_REVIEW" ? "https://example.com/proof.jpg" : null,
+            status === "PAYMENT_REVIEW"
+              ? "https://example.com/proof.jpg"
+              : null,
           reviewedAt: status === "PAYMENT_REVIEW" ? null : new Date(),
           paidAt:
-            status === "CONFIRMED" || status === "SHIPPED" || status === "PROCESSING"
+            status === "CONFIRMED" ||
+            status === "SHIPPED" ||
+            status === "PROCESSING"
               ? new Date()
               : null,
         },
@@ -552,24 +556,66 @@ async function seedOrders(users: any[], stores: any[], products: any[]) {
   for (const uid of targetUserIds) {
     const targetUser = users.find((u) => u.id === uid);
     if (!targetUser) {
-      console.log(`User with id=${uid} not found — skipping orders for this user`);
+      console.log(
+        `User with id=${uid} not found — skipping orders for this user`
+      );
       continue;
     }
 
     // find one address for this user (seedUserAddresses/seedAddressForUser5 created them)
-    const address = await prisma.userAddress.findFirst({ where: { userId: targetUser.id } });
+    const address = await prisma.userAddress.findFirst({
+      where: { userId: targetUser.id },
+    });
     if (!address) {
-      console.log(`No address found for user id=${targetUser.id} — skipping orders for this user`);
+      console.log(
+        `No address found for user id=${targetUser.id} — skipping orders for this user`
+      );
       continue;
     }
 
     // create sample orders across statuses for this user
-    await createSimpleOrderForUser(targetUser.id, address.id, "PENDING_PAYMENT", false, false);
-    await createSimpleOrderForUser(targetUser.id, address.id, "PAYMENT_REVIEW", true, false);
-    await createSimpleOrderForUser(targetUser.id, address.id, "PROCESSING", true, false);
-    await createSimpleOrderForUser(targetUser.id, address.id, "SHIPPED", true, true);
-    await createSimpleOrderForUser(targetUser.id, address.id, "CONFIRMED", true, false);
-    await createSimpleOrderForUser(targetUser.id, address.id, "CANCELLED", false, false);
+    await createSimpleOrderForUser(
+      targetUser.id,
+      address.id,
+      "PENDING_PAYMENT",
+      false,
+      false
+    );
+    await createSimpleOrderForUser(
+      targetUser.id,
+      address.id,
+      "PAYMENT_REVIEW",
+      true,
+      false
+    );
+    await createSimpleOrderForUser(
+      targetUser.id,
+      address.id,
+      "PROCESSING",
+      true,
+      false
+    );
+    await createSimpleOrderForUser(
+      targetUser.id,
+      address.id,
+      "SHIPPED",
+      true,
+      true
+    );
+    await createSimpleOrderForUser(
+      targetUser.id,
+      address.id,
+      "CONFIRMED",
+      true,
+      false
+    );
+    await createSimpleOrderForUser(
+      targetUser.id,
+      address.id,
+      "CANCELLED",
+      false,
+      false
+    );
   }
 
   console.log(`✅ Created ${createdOrders.length} sample orders`);

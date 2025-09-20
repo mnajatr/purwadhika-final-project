@@ -7,10 +7,10 @@ import {
 } from "../services/products.service";
 import { ProductResponse } from "@/types/products.type";
 
-export function useProducts() {
+export function useProducts(lat?: number, lon?: number) {
   return useQuery({
-    queryKey: ["products"],
-    queryFn: () => productsService.getProducts(),
+    queryKey: ["products", lat, lon],
+    queryFn: () => productsService.getProducts(lat, lon),
   });
 }
 
@@ -25,7 +25,7 @@ export function useProduct(slug: string) {
 export function useCreateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) =>
+    mutationFn: (data: ProductResponse) =>
       productsService.createProduct(data).then((res) => res),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });

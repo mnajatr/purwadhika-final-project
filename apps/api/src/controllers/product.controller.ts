@@ -5,8 +5,26 @@ const service = new ProductService();
 
 export class ProductController {
   static async getAll(req: Request, res: Response) {
-    const products = await service.getAll();
-    res.json(products);
+    const { lat, lon } = req.query;
+    
+    if (lat && lon) {
+      const userLat = parseFloat(lat as string);
+      const userLon = parseFloat(lon as string);
+      
+      if (!isNaN(userLat) && !isNaN(userLon)) {
+        const result = await service.getByNearestStore(userLat, userLon);
+        return res.json(result);
+      }
+    }
+
+    // When no coordinates provided, show only products with stock
+    const products = await service.getAllWithStock();
+    const response = {
+      products,
+      nearestStore: null,
+      message: "Showing all available products"
+    };
+    res.json(response);
   }
 
   static async getBySlug(req: Request, res: Response) {
