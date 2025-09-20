@@ -2,18 +2,30 @@
 
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { DiscountResponse } from "@/types/discount.types";
+import {
+  DiscountResponse,
+  UpdateDiscount,
+  ValueType,
+  DiscountType,
+} from "@/types/discount.types";
 import { useUpdateDiscount } from "@/hooks/useDiscount";
 
-interface EditDiscountFormProps {
-  discount?: DiscountResponse;
-  onClose?: () => void;
-}
+type FormValues = {
+  name?: string;
+  value?: ValueType;
+  type?: DiscountType;
+  minPurchase?: number;
+  maxDiscount?: number;
+  expiredAt?: string; // YYYY-MM-DD for input[type=date]
+  storeId?: number;
+  productId?: number;
+};
 
 export default function EditDiscountForm({
   discount,
-  onClose,
-}: EditDiscountFormProps) {
+}: {
+  discount: DiscountResponse;
+}) {
   const updateDiscount = useUpdateDiscount();
 
   const {
@@ -21,59 +33,62 @@ export default function EditDiscountForm({
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<DiscountResponse>({
+  } = useForm<FormValues>({
     defaultValues: {
-      id: 0,
-      storeId: 0,
-      productId: 0,
-      value: "PRODUCT_DISCOUNT",
-      type: "PERCENTAGE",
-      minPurchase: 0,
-      maxDiscount: 0,
+      name: "",
+      value: ValueType.PRODUCT_DISCOUNT,
+      type: DiscountType.PERCENTAGE,
+      minPurchase: undefined,
+      maxDiscount: undefined,
       expiredAt: "",
+      storeId: undefined,
+      productId: undefined,
     },
   });
 
   useEffect(() => {
-    if (discount) {
-      reset({
-        id: discount.id,
-        storeId: discount.storeId,
-        productId: discount.productId,
-        value: discount.value,
-        type: discount.type,
-        minPurchase: discount.minPurchase ?? 0,
-        maxDiscount: discount.maxDiscount ?? 0,
-        expiredAt: discount.expiredAt
-          ? new Date(discount.expiredAt).toISOString().split("T")[0]
-          : "",
-      });
-    }
+    if (!discount) return;
+
+    const expiredRaw = (discount as any).expiredAt;
+    const expired = expiredRaw
+      ? typeof expiredRaw === "string"
+        ? expiredRaw.split("T")[0]
+        : new Date(expiredRaw).toISOString().split("T")[0]
+      : "";
+
+    reset({
+      name: discount.name ?? "",
+      value: discount.value ?? ValueType.PRODUCT_DISCOUNT,
+      type: discount.type ?? DiscountType.PERCENTAGE,
+      minPurchase: discount.minPurchase ?? undefined,
+      maxDiscount: discount.maxDiscount ?? undefined,
+      expiredAt: expired,
+      storeId: discount.store?.id ?? undefined,
+      productId: discount.product?.id ?? undefined,
+    });
   }, [discount, reset]);
 
-  const onSubmit = (data: DiscountResponse) => {
-    console.log("SUBMIT", data);
-    if (!discount?.id) return;
-
-    const payload = {
-      ...data,
-      storeId: Number(data.storeId),
-      productId: Number(data.productId),
-      minPurchase: data.minPurchase !== null ? Number(data.minPurchase) : null,
-      maxDiscount: data.maxDiscount !== null ? Number(data.maxDiscount) : null,
-      expiredAt: data.expiredAt ? new Date(data.expiredAt).toISOString() : null,
+  const onSubmit = (data: FormValues) => {
+    const payload: UpdateDiscount = {
+      name: data.name,
+      value: data.value,
+      type: data.type,
+      minPurchase:
+        data.minPurchase !== undefined ? Number(data.minPurchase) : undefined,
+      maxDiscount:
+        data.maxDiscount !== undefined ? Number(data.maxDiscount) : undefined,
+      expiredAt: data.expiredAt
+        ? new Date(data.expiredAt + "T23:59:59Z").toISOString()
+        : undefined,
+      store: data.storeId ? { id: Number(data.storeId) } : undefined,
+      product: data.productId ? { id: Number(data.productId) } : undefined,
     };
 
     updateDiscount.mutate(
       { id: discount.id, data: payload },
       {
-        onSuccess: () => {
-          alert("Discount berhasil diperbarui!");
-          onClose?.();
-        },
-        onError: (err: any) => {
-          alert("Gagal memperbarui discount: " + err.message);
-        },
+        onSuccess: () => alert("✅ Discount updated"),
+        onError: (err: any) => alert("Update failed: " + (err?.message ?? err)),
       }
     );
   };
@@ -84,6 +99,17 @@ export default function EditDiscountForm({
       className="max-w-2xl mx-auto p-6 bg-white shadow rounded-lg space-y-4"
     >
       <h2 className="text-2xl font-bold mb-4">Edit Discount</h2>
+
+      {/* Name */}
+      <input
+        type="text"
+        placeholder="Discount Name"
+        {...register("name", { required: "Name wajib diisi" })}
+        className="w-full p-2 border rounded"
+      />
+      {errors.name && (
+        <p className="text-sm text-red-500">{errors.name.message}</p>
+      )}
 
       {/* Store ID */}
       <input
@@ -116,28 +142,22 @@ export default function EditDiscountForm({
       {/* Value */}
       <p className="text-sm font-semibold">Value</p>
       <select
-        {...register("value", { required: "Value wajib dipilih" })}
+        {...register("value", { required: true })}
         className="w-full p-2 border rounded"
       >
-        <option value="PRODUCT_DISCOUNT">Product Discount</option>
-        <option value="BUY1GET1">Buy 1 Get 1</option>
+        <option value={ValueType.PRODUCT_DISCOUNT}>Product Discount</option>
+        <option value={ValueType.BUY1GET1}>Buy 1 Get 1</option>
       </select>
-      {errors.value && (
-        <p className="text-sm text-red-500">{errors.value.message}</p>
-      )}
 
       {/* Type */}
       <p className="text-sm font-semibold">Type</p>
       <select
-        {...register("type", { required: "Type wajib dipilih" })}
+        {...register("type", { required: true })}
         className="w-full p-2 border rounded"
       >
-        <option value="PERCENTAGE">Percentage</option>
-        <option value="NOMINAL">Nominal</option>
+        <option value={DiscountType.PERCENTAGE}>Percentage</option>
+        <option value={DiscountType.NOMINAL}>Nominal</option>
       </select>
-      {errors.type && (
-        <p className="text-sm text-red-500">{errors.type.message}</p>
-      )}
 
       {/* Min & Max */}
       <div className="grid grid-cols-2 gap-4">
@@ -169,10 +189,10 @@ export default function EditDiscountForm({
       {/* Submit */}
       <button
         type="submit"
-        disabled={updateDiscount.isLoading}
+        disabled={updateDiscount.isPending}
         className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
       >
-        {updateDiscount.isLoading ? "Menyimpan..." : "Update Discount"}
+        {updateDiscount.isPending ? "Menyimpan..." : "Update Discount"}
       </button>
     </form>
   );
