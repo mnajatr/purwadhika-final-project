@@ -14,7 +14,8 @@ export default function ProductDetailPage() {
   const [userId, setUserId] = useState<number>(1);
   const [quantity, setQuantity] = useState(1);
 
-  const addToCartMutation = useAddToCart(userId, 1);
+  const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? 1;
+  const addToCartMutation = useAddToCart(userId, nearestStoreId);
 
   const nearestStoreName = useLocationStore((s) => s.nearestStoreName);
 
@@ -31,11 +32,11 @@ export default function ProductDetailPage() {
   const handleAddToCart = () => {
     if (!product || !userId) return;
 
-    addToCartMutation.mutate(
+        addToCartMutation.mutate(
       {
         productId: parseInt(product.id),
         qty: quantity,
-        storeId: 1,
+            storeId: nearestStoreId,
         userId: userId,
       },
       {

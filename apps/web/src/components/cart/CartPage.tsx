@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import useLocationStore from "@/stores/locationStore";
 import CartItem from "./CartItem";
 import { useCart, useClearCart, useUpdateCartItem } from "@/hooks/useCart";
 import { Button } from "../ui/button";
@@ -21,8 +22,9 @@ interface CartPageProps {
 }
 
 export function CartPage({ userId }: CartPageProps) {
-  // TODO: derive `storeId` from the route, user session, or app context instead of hardcoding.
-  const storeId = 1;
+  // Derive storeId from location store so cart follows nearest store selection
+  const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? 1;
+  const storeId = nearestStoreId;
   const { data: cart, isLoading } = useCart(userId, storeId);
   const clearCartMutation = useClearCart(userId, storeId);
   const updateCartItemMutation = useUpdateCartItem(userId, storeId);

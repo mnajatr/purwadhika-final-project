@@ -2,6 +2,7 @@
 
 import { useCreateProduct } from "@/hooks/useProduct";
 import { useForm, Controller } from "react-hook-form";
+import useLocationStore from "@/stores/locationStore";
 
 export default function AddProductForm() {
   const categories = [
@@ -17,6 +18,7 @@ export default function AddProductForm() {
 
   const createProduct = useCreateProduct();
 
+  const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? 1;
   const { register, handleSubmit, reset, control, watch } = useForm({
     defaultValues: {
       name: "",
@@ -29,7 +31,7 @@ export default function AddProductForm() {
       length: 0,
       categoryId: 1,
       images: [{ imageUrl: "" }],
-      inventories: [{ stockQty: 0, storeId: 1 }],
+      inventories: [{ stockQty: 0, storeId: nearestStoreId }],
     },
   });
 

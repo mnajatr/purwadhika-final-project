@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import React from "react";
 import { cartService } from "@/services/cart.service";
 import type {
   Cart,
@@ -8,18 +9,11 @@ import type {
   UpdateCartItemRequest,
 } from "@/types/cart.types";
 import { toast } from "sonner";
+import useLocationStore from "@/stores/locationStore";
+import { validateCartForCheckout } from "@/utils/cartStockUtils";
 
-const cartQueryKey = (userId: number, storeId: number) => [
-  "cart",
-  userId,
-  storeId,
-];
-const cartTotalsQueryKey = (userId: number, storeId: number) => [
-  "cart",
-  "totals",
-  userId,
-  storeId,
-];
+const cartQueryKey = (userId: number) => ["cart", userId];
+const cartTotalsQueryKey = (userId: number) => ["cart", "totals", userId];
 
 const handleCartError = (error: unknown) => {
   const message = error instanceof Error ? error.message : "An error occurred";
@@ -56,52 +50,91 @@ const handleCartError = (error: unknown) => {
   }
 };
 
-export function useCart(userId: number, storeId = 1) {
-  return useQuery<Cart | null>({
-    queryKey: cartQueryKey(userId, storeId),
-    queryFn: async () => {
-      const res = await cartService.getCart(userId, storeId);
-      return res.data;
-    },
-    enabled: Boolean(userId),
-    retry: (failureCount, error) => {
-      // Don't retry on validation errors
-      if (error instanceof Error && error.message.includes("Invalid")) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-  });
-}
-
-export function useCartTotals(userId: number, storeId = 1) {
-  return useQuery({
-    queryKey: cartTotalsQueryKey(userId, storeId),
-    queryFn: async () => {
-      const res = await cartService.getCartTotals(userId, storeId);
-      return res.data;
-    },
-    enabled: Boolean(userId),
-    retry: (failureCount, error) => {
-      // Don't retry on validation errors
-      if (error instanceof Error && error.message.includes("Invalid")) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-  });
-}
-
-export function useAddToCart(userId: number, storeId = 1) {
+export function useCart(userId: number, storeId?: number) {
+  const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? undefined;
+  const effectiveStoreId = storeId ?? nearestStoreId;
   const qc = useQueryClient();
+
+  const query = useQuery<Cart | null>({
+    queryKey: cartQueryKey(userId),
+    queryFn: async () => {
+      const res = await cartService.getCart(userId, effectiveStoreId);
+      return res.data;
+    },
+    enabled: Boolean(userId),
+    retry: (failureCount, error) => {
+      // Don't retry on validation errors
+      if (error instanceof Error && error.message.includes("Invalid")) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+  });
+
+  // When the resolved store for this user changes, refetch cart and totals
+  // for the user (server will resolve cart contents for that store). After
+  // refetch completes, run local validation and notify the user if items
+  // are out of stock. This keeps the same per-user cart key and avoids
+  // creating separate client-side carts per store.
+  React.useEffect(() => {
+    if (!userId) return;
+    // Only trigger when effective store id is defined (we rely on server)
+    // to resolve when it's omitted.
+    (async () => {
+      try {
+        await qc.refetchQueries({ queryKey: cartQueryKey(userId), exact: true });
+        await qc.refetchQueries({ queryKey: cartTotalsQueryKey(userId), exact: true });
+
+        const cached = qc.getQueryData<Cart | null>(cartQueryKey(userId));
+        const items = cached?.items ?? [];
+        const result = validateCartForCheckout(items);
+        if (!result.isValid) {
+          toast.error(`${result.outOfStockItems.length} item(s) are out of stock for the selected store. Please review your cart.`);
+        }
+      } catch (err) {
+        // Non-fatal: avoid throwing from effect. Let existing handlers show errors.
+        if (process.env.NODE_ENV === "development") console.warn("Failed refetch/validate cart on store change:", err);
+      }
+    })();
+  }, [effectiveStoreId, userId, qc]);
+
+  return query;
+}
+
+export function useCartTotals(userId: number, storeId?: number) {
+  const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? undefined;
+  const effectiveStoreId = storeId ?? nearestStoreId;
+
+  return useQuery({
+    queryKey: cartTotalsQueryKey(userId),
+    queryFn: async () => {
+      const res = await cartService.getCartTotals(userId, effectiveStoreId);
+      return res.data;
+    },
+    enabled: Boolean(userId),
+    retry: (failureCount, error) => {
+      // Don't retry on validation errors
+      if (error instanceof Error && error.message.includes("Invalid")) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+  });
+}
+
+export function useAddToCart(userId: number, storeId?: number) {
+  const qc = useQueryClient();
+  const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? undefined;
+  const effectiveStoreId = storeId ?? nearestStoreId;
+
   return useMutation({
     mutationFn: async (data: AddToCartRequest) => {
       const res = await cartService.addToCart(data);
       return res.data;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: cartQueryKey(userId, storeId) });
-      qc.invalidateQueries({ queryKey: cartTotalsQueryKey(userId, storeId) });
+      qc.invalidateQueries({ queryKey: cartQueryKey(userId) });
+      qc.invalidateQueries({ queryKey: cartTotalsQueryKey(userId) });
       // Toast will be handled by the calling component
     },
     onError: (error) => {
@@ -110,8 +143,11 @@ export function useAddToCart(userId: number, storeId = 1) {
   });
 }
 
-export function useUpdateCartItem(userId: number, storeId = 1) {
+export function useUpdateCartItem(userId: number, storeId?: number) {
   const qc = useQueryClient();
+  const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? undefined;
+  const effectiveStoreId = storeId ?? nearestStoreId;
+
   return useMutation({
     mutationFn: async (payload: { itemId: number; qty: number }) => {
       const data: UpdateCartItemRequest = { qty: payload.qty, userId };
@@ -120,12 +156,10 @@ export function useUpdateCartItem(userId: number, storeId = 1) {
     },
     // optimistic update: apply local change immediately, rollback on error
     onMutate: async (payload: { itemId: number; qty: number }) => {
-      await qc.cancelQueries({ queryKey: cartQueryKey(userId, storeId) });
-      const previous = qc.getQueryData<Cart | null>(
-        cartQueryKey(userId, storeId)
-      );
+      await qc.cancelQueries({ queryKey: cartQueryKey(userId) });
+      const previous = qc.getQueryData<Cart | null>(cartQueryKey(userId));
 
-      qc.setQueryData<Cart | null>(cartQueryKey(userId, storeId), (old) => {
+      qc.setQueryData<Cart | null>(cartQueryKey(userId), (old) => {
         if (!old) return old;
         const items = old.items?.map((it) =>
           it.id === payload.itemId ? { ...it, qty: payload.qty } : it
@@ -137,7 +171,7 @@ export function useUpdateCartItem(userId: number, storeId = 1) {
     },
     onError: (err, _vars, context?: { previous?: Cart | null }) => {
       if (context?.previous) {
-        qc.setQueryData(cartQueryKey(userId, storeId), context.previous);
+        qc.setQueryData(cartQueryKey(userId), context.previous);
       }
       handleCartError(err);
     },
@@ -150,16 +184,18 @@ export function useUpdateCartItem(userId: number, storeId = 1) {
   });
 }
 
-export function useRemoveCartItem(userId: number, storeId = 1) {
+export function useRemoveCartItem(userId: number, storeId?: number) {
   const qc = useQueryClient();
+  const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? undefined;
+  const effectiveStoreId = storeId ?? nearestStoreId;
   return useMutation({
     mutationFn: async (itemId: number) => {
-      const res = await cartService.removeCartItem(itemId, userId, storeId);
+      const res = await cartService.removeCartItem(itemId, userId, effectiveStoreId);
       return res.data;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: cartQueryKey(userId, storeId) });
-      qc.invalidateQueries({ queryKey: cartTotalsQueryKey(userId, storeId) });
+      qc.invalidateQueries({ queryKey: cartQueryKey(userId) });
+      qc.invalidateQueries({ queryKey: cartTotalsQueryKey(userId) });
       // Intentionally no generic success toast here. Components (which
       // initiated the action) should show contextual messages to avoid
       // duplicate notifications when removals are triggered by background
@@ -171,16 +207,18 @@ export function useRemoveCartItem(userId: number, storeId = 1) {
   });
 }
 
-export function useClearCart(userId: number, storeId = 1) {
+export function useClearCart(userId: number, storeId?: number) {
   const qc = useQueryClient();
+  const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? undefined;
+  const effectiveStoreId = storeId ?? nearestStoreId;
   return useMutation({
     mutationFn: async () => {
-      const res = await cartService.clearCart(userId, storeId);
+      const res = await cartService.clearCart(userId, effectiveStoreId);
       return res.data;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: cartQueryKey(userId, storeId) });
-      qc.invalidateQueries({ queryKey: cartTotalsQueryKey(userId, storeId) });
+      qc.invalidateQueries({ queryKey: cartQueryKey(userId) });
+      qc.invalidateQueries({ queryKey: cartTotalsQueryKey(userId) });
       toast.success("Cart cleared");
     },
     onError: (error) => {

@@ -2,12 +2,13 @@
 
 import { Button } from "../ui/button";
 import { useAddToCart } from "@/hooks/useCart";
+import useLocationStore from "@/stores/locationStore";
 import type { AddToCartRequest } from "@/types/cart.types";
 import { toast } from "sonner";
 
 interface AddToCartButtonProps {
   productId: number;
-  storeId: number;
+  storeId?: number;
   userId: number;
   qty?: number;
   disabled?: boolean;
@@ -24,13 +25,16 @@ export function AddToCartButton({
   className,
   productName,
 }: AddToCartButtonProps) {
-  const addToCartMutation = useAddToCart(userId, storeId);
+  // derive storeId from prop or global nearest store
+  const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? 1;
+  const effectiveStoreId = storeId ?? nearestStoreId;
+  const addToCartMutation = useAddToCart(userId, effectiveStoreId);
 
   const handleClick = () => {
     const data: AddToCartRequest = {
       productId,
       qty,
-      storeId,
+      storeId: effectiveStoreId,
       userId,
     };
 

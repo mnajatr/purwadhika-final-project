@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useCart } from "@/hooks/useCart";
+import useLocationStore from "@/stores/locationStore";
 
 export default function Navbar() {
   const [userId, setUserId] = useState<number>(1);
-  const { data: cart } = useCart(userId, 1);
+  const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? 1;
+  const { data: cart } = useCart(userId, nearestStoreId);
 
   // Calculate cart totals from cart data
   const itemCount = cart?.items?.reduce((sum, item) => sum + item.qty, 0) || 0;
