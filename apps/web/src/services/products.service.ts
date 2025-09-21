@@ -19,22 +19,31 @@ interface NearestStoreResponse {
 class ProductsService {
   private readonly basePath = "/products";
 
-  async getProducts(lat?: number, lon?: number) {
-    let url = this.basePath;
-    const params = new URLSearchParams();
-
-    if (lat !== undefined && lon !== undefined) {
-      params.append("lat", lat.toString());
-      params.append("lon", lon.toString());
-      url += `?${params.toString()}`;
+  async getProducts(storeId?: number, lat?: number, lon?: number) {
+    const params: Record<string, unknown> = {};
+    if (typeof storeId === "number") params.storeId = storeId;
+    else if (lat !== undefined && lon !== undefined) {
+      params.lat = lat;
+      params.lon = lon;
     }
 
-    // Always expect the new response format since API now always returns it
-    const response = await apiClient.get<NearestStoreResponse>(url);
+    // Use apiClient.get(url, params) so axios handles querystring safely
+    try {
+      console.debug("products.getProducts params:", params);
+    } catch {}
+    const response = await apiClient.get<NearestStoreResponse>(this.basePath, params);
+    try {
+      console.debug("products.getProducts nearest:", response.nearestStore, "message:", response.message);
+    } catch {}
+
+    // apiClient returns response data directly (see axios-client wrapper)
+    const nearest = response.nearestStore ?? null;
 
     return {
       products: response.products.map((product) => {
         const inventory = product.inventories?.[0];
+        // Prefer the nearest store name (if the backend returned it) for consistency
+        const storeName = nearest?.name ?? inventory?.store?.name ?? "Unknown";
         return {
           id: product.id,
           slug: product.slug,
@@ -43,11 +52,11 @@ class ProductsService {
           price: Number(product.price),
           isActive: Object.prototype.hasOwnProperty.call(product, "isActive") ? (product as unknown as { isActive?: boolean }).isActive : true,
           category: product.category.name,
-          store: inventory?.store?.name || "Unknown",
+          store: storeName,
           imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
         };
       }),
-      nearestStore: response.nearestStore,
+      nearestStore: nearest,
       message: response.message,
     };
   }
@@ -134,8 +143,8 @@ class ProductsService {
 }
 
 export const productsService = new ProductsService();
-export const getProducts = (lat?: number, lon?: number) =>
-  productsService.getProducts(lat, lon);
+export const getProducts = (storeId?: number, lat?: number, lon?: number) =>
+  productsService.getProducts(storeId, lat, lon);
 export const getProductBySlug = (slug: string) =>
   productsService.getProductBySlug(slug);
 export const createProduct = (data: ProductResponse) =>

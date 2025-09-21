@@ -10,20 +10,10 @@ type Addr = {
   province: string;
   city: string;
   postalCode: string;
-  latitude: number;
-  longitude: number;
   isPrimary: boolean;
 };
 
-export default function AddressCard({
-  onSelect,
-}: {
-  onSelect?: (addr: {
-    id: number;
-    latitude: number;
-    longitude: number;
-  }) => void;
-}) {
+export default function AddressCard({ onSelect }: { onSelect?: (addr: { id: number }) => void }) {
   const [addrs, setAddrs] = React.useState<Addr[] | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [selectedId, setSelectedId] = React.useState<number | null>(null);
@@ -33,11 +23,13 @@ export default function AddressCard({
   const loadedRef = React.useRef(false);
   React.useEffect(() => {
     if (loadedRef.current) return;
+    const devUser = typeof window !== "undefined" ? localStorage.getItem("devUserId") : null;
     const storedUserId =
       typeof window !== "undefined"
         ? sessionStorage.getItem("checkout:userId")
         : null;
-    const userId = storedUserId ? Number(storedUserId) : 1;
+    // Prefer admin dev user selector (localStorage.devUserId) when set, otherwise sessionStorage, then seeded 4
+    const userId = devUser && devUser !== "none" ? Number(devUser) : storedUserId ? Number(storedUserId) : 4;
     let mounted = true;
     (async () => {
       try {
@@ -47,11 +39,7 @@ export default function AddressCard({
         const primary = res.find((a) => a.isPrimary) ?? res[0];
         if (primary) {
           setSelectedId(primary.id);
-          onSelect?.({
-            id: primary.id,
-            latitude: Number(primary.latitude),
-            longitude: Number(primary.longitude),
-          });
+          onSelect?.({ id: primary.id });
         }
       } catch {
         setAddrs([]);
@@ -67,11 +55,7 @@ export default function AddressCard({
 
   const handleSelect = (a: Addr) => {
     setSelectedId(a.id);
-    onSelect?.({
-      id: a.id,
-      latitude: Number(a.latitude),
-      longitude: Number(a.longitude),
-    });
+    onSelect?.({ id: a.id });
   };
 
   return (

@@ -1,33 +1,37 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useProducts } from "@/hooks/useProduct";
-import { useGeolocation } from "@/hooks/useGeolocation";
+import useLocationStore from "@/stores/locationStore";
 import NearestStoreIndicator from "@/components/products/NearestStoreIndicator";
+import dynamic from "next/dynamic";
+
+const AddressPicker = dynamic(() => import("@/components/AddressPicker"), { ssr: false });
 
 export default function Home() {
-  // Get user location
-  const {
-    latitude,
-    longitude,
-    loading: locationLoading,
-    error: locationError,
-    refetch: refetchLocation,
-  } = useGeolocation();
+  // Location from global store (address picker)
+  const nearestStoreId = useLocationStore((s) => s.nearestStoreId);
 
-  // Fetch products with location if available
-  const { data } = useProducts(latitude ?? undefined, longitude ?? undefined);
+  // Fetch products by nearest store id (preferred)
+  const { data } = useProducts(nearestStoreId ?? undefined);
 
   const products = data?.products || [];
   const nearestStore = data?.nearestStore || null;
   const storeMessage = data?.message || "Loading...";
 
+  React.useEffect(() => {
+    try {
+      console.debug("Home: nearestStoreId from store:", nearestStoreId, "products fetched:", data);
+    } catch {}
+  }, [nearestStoreId, data]);
+
   // Only show products that are active. Treat undefined as active.
   const visibleProducts = products.filter((p) => p.isActive !== false);
 
-  // Show only first 6 visible products for featured section
-  const featuredProducts = visibleProducts.slice(0, 6);
+  // Show all visible products on the landing page (use product list card design)
+  const featuredProducts = visibleProducts;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100">
@@ -57,15 +61,12 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Nearest Store Section */}
+        {/* Address picker and Nearest Store Section */}
         <div className="mb-16">
-          <NearestStoreIndicator
-            nearestStore={nearestStore}
-            message={storeMessage}
-            isLocationLoading={locationLoading}
-            locationError={locationError}
-            onRetryLocation={refetchLocation}
-          />
+          <NearestStoreIndicator nearestStore={nearestStore} message={storeMessage} />
+            <div className="mt-6">
+              <AddressPicker />
+            </div>
         </div>
 
         {/* Featured Products Section */}
@@ -88,7 +89,7 @@ export default function Home() {
               {featuredProducts.map((product) => (
                 <div
                   key={product.id}
-                  className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition"
+                  className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition flex flex-col"
                 >
                   <div className="relative w-full h-48">
                     <Image
@@ -98,27 +99,15 @@ export default function Home() {
                       className="object-cover"
                     />
                   </div>
-                  <div className="p-4">
-                    <h3 className="text-lg font-semibold mb-2">
-                      {product.name}
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                      {product.description}
-                    </p>
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-indigo-600 font-bold">
-                        Rp {Number(product.price || 0).toLocaleString("id-ID")}
-                      </p>
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                        {product.category}
-                      </span>
+                  <div className="p-6 flex flex-col flex-grow">
+                    <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-grow">{product.description}</p>
+                    <p className="text-indigo-600 font-bold mb-3">Rp {Number(product.price || 0).toLocaleString("id-ID")}</p>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="inline-block px-3 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">{product.category}</span>
+                      <span className="text-xs text-gray-500">{product.store}</span>
                     </div>
-                    <Link
-                      href={`/products/${product.slug}`}
-                      className="block text-center bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition"
-                    >
-                      View Details
-                    </Link>
+                    <Link href={`/products/${product.slug}`} className="block text-center bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition mt-auto">Lihat Detail</Link>
                   </div>
                 </div>
               ))}

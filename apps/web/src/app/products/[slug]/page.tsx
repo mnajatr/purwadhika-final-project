@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { useProduct } from "@/hooks/useProduct";
 import { useAddToCart } from "@/hooks/useCart";
 import { toast } from "sonner";
+import useLocationStore from "@/stores/locationStore";
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -14,6 +15,8 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
 
   const addToCartMutation = useAddToCart(userId, 1);
+
+  const nearestStoreName = useLocationStore((s) => s.nearestStoreName);
 
   // Get development user ID from localStorage
   useEffect(() => {
@@ -93,7 +96,7 @@ export default function ProductDetailPage() {
               </div>
               <div className="flex justify-between border-b pb-2">
                 <span className="text-gray-500">Toko</span>
-                <span className="font-medium">{product.store}</span>
+                <span className="font-medium">{nearestStoreName ?? product.store}</span>
               </div>
             </div>
           </div>

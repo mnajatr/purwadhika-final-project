@@ -11,14 +11,17 @@ import OrderSummary from "@/components/checkout/OrderSummary";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import usersService from "@/services/users.service";
+import useLocationStore from "@/stores/locationStore";
+import apiClient from "@/lib/axios-client";
 
 export default function CheckoutPage() {
-  // read user id from sessionStorage (saved by CartPage) — fallback for dev
+  // Prefer admin dev user selector (localStorage.devUserId) when set, otherwise sessionStorage, then seeded 4
+  const devUser = typeof window !== "undefined" ? localStorage.getItem("devUserId") : null;
   const storedUserId =
     typeof window !== "undefined"
       ? sessionStorage.getItem("checkout:userId")
       : null;
-  const userId = storedUserId ? Number(storedUserId) : 1;
+  const userId = devUser && devUser !== "none" ? Number(devUser) : storedUserId ? Number(storedUserId) : 4;
   const storeId = 1;
   const { data: cart, isLoading } = useCart(userId, storeId);
   // do not pass storeId to createOrder so backend can resolve nearest store
@@ -28,21 +31,14 @@ export default function CheckoutPage() {
     null
   );
 
-  // selected address from AddressCard (id + coords)
+  // selected address from AddressCard (id only)
   const [selectedAddress, setSelectedAddress] = React.useState<{
     id: number;
-    latitude: number;
-    longitude: number;
   } | null>(null);
 
   // stable callback to pass to AddressCard to avoid re-creating the function
   // each render which caused AddressCard.useEffect to re-run and refetch.
-  const handleSelectAddress = React.useCallback(
-    (a: { id: number; latitude: number; longitude: number }) => {
-      setSelectedAddress(a);
-    },
-    []
-  );
+  const handleSelectAddress = React.useCallback((a: { id: number }) => setSelectedAddress(a), []);
 
   // read selection saved by CartPage (sessionStorage key: checkout:selectedIds)
   const [selectedIds, setSelectedIds] = React.useState<number[] | null>(null);
@@ -128,21 +124,34 @@ export default function CheckoutPage() {
         sessionStorage.setItem("checkout:idempotencyKey", key);
       } catch {}
 
-      // use selected address coords (preferred) instead of device geolocation
-      let userLat: number | undefined;
-      let userLon: number | undefined;
+      // use selected address id
       let addressId: number | undefined;
-      if (selectedAddress) {
-        userLat = selectedAddress.latitude;
-        userLon = selectedAddress.longitude;
-        addressId = selectedAddress.id;
+      if (selectedAddress) addressId = selectedAddress.id;
+
+      // Validate against nearest store in global state (if present)
+      const nearestStoreId = useLocationStore.getState().nearestStoreId;
+      if (nearestStoreId) {
+        if (!addressId) {
+          toast.error("Please select an address");
+          return;
+        }
+        const resp = await apiClient.get<{ success: boolean; data: { nearestStore: { id: number } | null } }>(
+          `/stores/resolve?userId=${userId}&addressId=${addressId}`
+        );
+        const resolved = resp.data?.nearestStore?.id ?? null;
+        if (!resolved) {
+          toast.error("Selected address is outside service area for any store");
+          return;
+        }
+        if (resolved !== nearestStoreId) {
+          toast.error("Selected address is not served by the chosen store. Please pick an address within the store's delivery area.");
+          return;
+        }
       }
 
       await createOrder.mutateAsync({
         items,
         idempotencyKey: key,
-        userLat,
-        userLon,
         addressId,
       });
       toast.success("Order created — redirecting...");

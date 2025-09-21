@@ -5,7 +5,16 @@ const service = new ProductService();
 
 export class ProductController {
   static async getAll(req: Request, res: Response) {
-    const { lat, lon } = req.query;
+    const { lat, lon, storeId } = req.query;
+
+    // If explicit storeId provided, fetch products for that store
+    if (storeId) {
+      const sid = Number(storeId);
+      if (!Number.isNaN(sid)) {
+        const result = await service.getByStoreId(sid);
+        return res.json(result);
+      }
+    }
 
     if (lat && lon) {
       const userLat = parseFloat(lat as string);
@@ -17,7 +26,7 @@ export class ProductController {
       }
     }
 
-    // When no coordinates provided, show only products with stock
+    // When no coordinates or storeId provided, show only products with stock
     const products = await service.getAllWithStock();
     const response = {
       products,
