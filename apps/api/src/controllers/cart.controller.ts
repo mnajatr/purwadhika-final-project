@@ -39,12 +39,12 @@ export class CartController {
       const userId = this.getUserIdFromReq(req);
       const storeId = this.getStoreIdFromReq(req);
 
-      const cart = await this.cartService.getCartByUserIdAndStoreId(
+      const result = await this.cartService.getCartByUserIdAndStoreId(
         userId,
         storeId
       );
 
-      res.json(successResponse(cart, "Cart retrieved successfully"));
+      res.json(successResponse(result.data, "Cart retrieved successfully"));
     } catch (error) {
       next(error);
     }
@@ -56,14 +56,14 @@ export class CartController {
       const { productId, qty } = req.body;
       const storeId = this.getStoreIdFromReq(req);
 
-      const cart = await this.cartService.addToCart(
+      const result = await this.cartService.addToCart(
         userId,
         productId,
         qty,
         storeId
       );
 
-      res.json(successResponse(cart, "Item added to cart successfully"));
+      res.json(successResponse(result.data, "Item added to cart successfully"));
     } catch (error) {
       next(error);
     }
@@ -80,14 +80,14 @@ export class CartController {
         throw createValidationError("Invalid item");
       }
 
-      const cart = await this.cartService.updateCartItem(
+      const result = await this.cartService.updateCartItem(
         userId,
         itemId,
         qty,
         storeId
       );
 
-      res.json(successResponse(cart, "Cart item updated successfully"));
+      res.json(successResponse(result.data, "Cart item updated successfully"));
     } catch (error) {
       next(error);
     }
@@ -103,13 +103,13 @@ export class CartController {
         throw createValidationError("Invalid item");
       }
 
-      const cart = await this.cartService.deleteCartItem(
+      const result = await this.cartService.deleteCartItem(
         userId,
         itemId,
         storeId
       );
 
-      res.json(successResponse(cart, "Item removed from cart successfully"));
+      res.json(successResponse(result.data, "Item removed from cart successfully"));
     } catch (error) {
       next(error);
     }
@@ -120,9 +120,9 @@ export class CartController {
       const userId = this.getUserIdFromReq(req);
       const storeId = this.getStoreIdFromReq(req);
 
-      const cart = await this.cartService.clearCart(userId, storeId);
+      const result = await this.cartService.clearCart(userId, storeId);
 
-      res.json(successResponse(cart, "Cart cleared successfully"));
+      res.json(successResponse(result.data, "Cart cleared successfully"));
     } catch (error) {
       next(error);
     }
@@ -133,9 +133,9 @@ export class CartController {
       const userId = this.getUserIdFromReq(req);
       const storeId = this.getStoreIdFromReq(req);
 
-      const totals = await this.cartService.getCartTotals(userId, storeId);
+      const result = await this.cartService.getCartTotals(userId, storeId);
 
-      res.json(successResponse(totals, "Cart totals retrieved successfully"));
+      res.json(successResponse(result.data, "Cart totals retrieved successfully"));
     } catch (error) {
       next(error);
     }

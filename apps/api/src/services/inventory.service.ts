@@ -1,10 +1,42 @@
 import { prisma } from "@repo/database";
 import { ERROR_MESSAGES } from "../utils/helpers.js";
+import { createValidationError, createNotFoundError } from "../errors/app.error.js";
 import type { Prisma } from "@repo/database/generated/prisma/index.js";
 
 type OrderItemInput = { productId: number; qty: number };
 
 export class InventoryService {
+//cart operations
+  async checkCartStock(storeId: number, productId: number, qty: number) {
+    // First check if product exists and is active
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+    });
+    
+    if (!product) {
+      throw createNotFoundError("Product");
+    }
+    
+    if (!product.isActive) {
+      throw createValidationError(ERROR_MESSAGES.PRODUCT.NOT_AVAILABLE);
+    }
+
+    const inventory = await prisma.storeInventory.findUnique({
+      where: { storeId_productId: { storeId, productId } },
+    });
+    
+    if (!inventory) {
+      throw createValidationError(ERROR_MESSAGES.PRODUCT.NOT_IN_STORE);
+    }
+    
+    if (inventory.stockQty < qty) {
+      throw createValidationError(
+        `${ERROR_MESSAGES.INVENTORY.INSUFFICIENT_STOCK}. Available: ${inventory.stockQty}`
+      );
+    }
+
+    return inventory;
+  }
   async validateInventoryAvailability(
     storeId: number,
     items: OrderItemInput[]
