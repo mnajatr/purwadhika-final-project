@@ -3,18 +3,16 @@ import useLocationStore from "@/stores/locationStore";
 import { Store } from "lucide-react";
 
 interface NearestStoreIndicatorProps {
-  nearestStore:
-    | {
-        id: number;
-        name: string;
-        locations: Array<{
-          id: number;
-          latitude: number;
-          longitude: number;
-          storeId: number;
-        }>;
-      }
-    | null;
+  nearestStore: {
+    id: number;
+    name: string;
+    locations: Array<{
+      id: number;
+      latitude: number;
+      longitude: number;
+      storeId: number;
+    }>;
+  } | null;
   message: string;
 }
 
@@ -30,7 +28,7 @@ export default function NearestStoreIndicator({
         <div className="flex items-center gap-3">
           <Store className="h-5 w-5 text-green-600" />
           <div>
-              <p className="text-green-800 font-medium">
+            <p className="text-green-800 font-medium">
               Showing products from: {displayName}
             </p>
             <p className="text-green-600 text-sm">{message}</p>

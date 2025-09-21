@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 export type ActiveAddress = {
   id: number | null;
@@ -12,17 +12,24 @@ type LocationState = {
   setActiveAddress: (a: ActiveAddress | null) => void;
   setNearestStoreId: (id: number | null) => void;
   setNearestStoreName: (name: string | null) => void;
- clearAddress: () => void;
+  clearAddress: () => void;
 };
 
 const useLocationStore = create<LocationState>((set) => ({
   activeAddress: null,
   nearestStoreId: null,
   nearestStoreName: null,
-  setActiveAddress: (a: ActiveAddress | null) => set(() => ({ activeAddress: a })),
+  setActiveAddress: (a: ActiveAddress | null) =>
+    set(() => ({ activeAddress: a })),
   setNearestStoreId: (id: number | null) => set(() => ({ nearestStoreId: id })),
-  setNearestStoreName: (name: string | null) => set(() => ({ nearestStoreName: name })),
-  clearAddress: () => set(() => ({ activeAddress: null, nearestStoreId: null, nearestStoreName: null })),
+  setNearestStoreName: (name: string | null) =>
+    set(() => ({ nearestStoreName: name })),
+  clearAddress: () =>
+    set(() => ({
+      activeAddress: null,
+      nearestStoreId: null,
+      nearestStoreName: null,
+    })),
 }));
 
 export default useLocationStore;

@@ -31,9 +31,17 @@ class ProductsService {
     try {
       console.debug("products.getProducts params:", params);
     } catch {}
-    const response = await apiClient.get<NearestStoreResponse>(this.basePath, params);
+    const response = await apiClient.get<NearestStoreResponse>(
+      this.basePath,
+      params
+    );
     try {
-      console.debug("products.getProducts nearest:", response.nearestStore, "message:", response.message);
+      console.debug(
+        "products.getProducts nearest:",
+        response.nearestStore,
+        "message:",
+        response.message
+      );
     } catch {}
 
     // apiClient returns response data directly (see axios-client wrapper)
@@ -50,7 +58,9 @@ class ProductsService {
           name: product.name,
           description: product.description,
           price: Number(product.price),
-          isActive: Object.prototype.hasOwnProperty.call(product, "isActive") ? (product as unknown as { isActive?: boolean }).isActive : true,
+          isActive: Object.prototype.hasOwnProperty.call(product, "isActive")
+            ? (product as unknown as { isActive?: boolean }).isActive
+            : true,
           category: product.category.name,
           store: storeName,
           imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
@@ -128,16 +138,18 @@ class ProductsService {
   }
 
   async deactivateProduct(slug: string) {
-    const resp = await apiClient.patch<{ message: string; product?: ProductResponse }>(
-      `${this.basePath}/${slug}/deactivate`
-    );
+    const resp = await apiClient.patch<{
+      message: string;
+      product?: ProductResponse;
+    }>(`${this.basePath}/${slug}/deactivate`);
     return resp;
   }
 
   async activateProduct(slug: string) {
-    const resp = await apiClient.patch<{ message: string; product?: ProductResponse }>(
-      `${this.basePath}/${slug}/activate`
-    );
+    const resp = await apiClient.patch<{
+      message: string;
+      product?: ProductResponse;
+    }>(`${this.basePath}/${slug}/activate`);
     return resp;
   }
 }

@@ -56,7 +56,8 @@ export class StoresController {
     try {
       // Accept userId and addressId from either query or body
       const userIdRaw = (request.query.userId ?? request.body?.userId) as any;
-      const addressIdRaw = (request.query.addressId ?? request.body?.addressId) as any;
+      const addressIdRaw = (request.query.addressId ??
+        request.body?.addressId) as any;
       const latRaw = (request.query.lat ?? request.body?.lat) as any;
       const lonRaw = (request.query.lon ?? request.body?.lon) as any;
 
@@ -65,9 +66,26 @@ export class StoresController {
 
       // If addressId provided, prefer it
       if (addressId && userId) {
-        const resolved = await locationService.resolveStoreId(undefined, userId, undefined, undefined, addressId);
-        const store = await prisma.store.findUnique({ where: { id: resolved }, select: { id: true, name: true, locations: true } });
-        return response.status(200).json({ success: true, data: { nearestStore: store, message: `Nearest store: ${store?.name ?? "unknown"}` } });
+        const resolved = await locationService.resolveStoreId(
+          undefined,
+          userId,
+          undefined,
+          undefined,
+          addressId
+        );
+        const store = await prisma.store.findUnique({
+          where: { id: resolved },
+          select: { id: true, name: true, locations: true },
+        });
+        return response
+          .status(200)
+          .json({
+            success: true,
+            data: {
+              nearestStore: store,
+              message: `Nearest store: ${store?.name ?? "unknown"}`,
+            },
+          });
       }
 
       // If lat/lon provided (legacy), still resolve using coords
@@ -75,20 +93,48 @@ export class StoresController {
         const userLat = Number(latRaw);
         const userLon = Number(lonRaw);
         if (Number.isNaN(userLat) || Number.isNaN(userLon)) {
-          return response.status(400).json({ success: false, message: "invalid coordinates" });
+          return response
+            .status(400)
+            .json({ success: false, message: "invalid coordinates" });
         }
-        const storeId = await locationService.findNearestStoreId(userLat, userLon);
+        const storeId = await locationService.findNearestStoreId(
+          userLat,
+          userLon
+        );
         if (!storeId) {
-          return response.status(200).json({ success: true, data: { nearestStore: null, message: "No nearby store" } });
+          return response
+            .status(200)
+            .json({
+              success: true,
+              data: { nearestStore: null, message: "No nearby store" },
+            });
         }
-        const store = await prisma.store.findUnique({ where: { id: storeId }, select: { id: true, name: true, locations: true } });
-        return response.status(200).json({ success: true, data: { nearestStore: store, message: `Nearest store: ${store?.name ?? "unknown"}` } });
+        const store = await prisma.store.findUnique({
+          where: { id: storeId },
+          select: { id: true, name: true, locations: true },
+        });
+        return response
+          .status(200)
+          .json({
+            success: true,
+            data: {
+              nearestStore: store,
+              message: `Nearest store: ${store?.name ?? "unknown"}`,
+            },
+          });
       }
 
-      return response.status(400).json({ success: false, message: "Provide userId+addressId or lat+lon" });
+      return response
+        .status(400)
+        .json({
+          success: false,
+          message: "Provide userId+addressId or lat+lon",
+        });
     } catch (err) {
       console.error(err);
-      return response.status(500).json({ success: false, message: "Failed to resolve nearest store" });
+      return response
+        .status(500)
+        .json({ success: false, message: "Failed to resolve nearest store" });
     }
   }
 }

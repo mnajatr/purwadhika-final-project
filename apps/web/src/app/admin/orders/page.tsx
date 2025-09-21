@@ -3,7 +3,7 @@
 import Sidebar from "@/components/admin/sidebar";
 import { useState, useEffect } from "react";
 import { useOrders } from "@/hooks/useOrders";
-import { ordersService } from "@/services/orders.service";
+import { adminOrdersService as ordersService } from "@/services/adminOrders.service";
 import { storesService } from "@/services/stores.service";
 import Link from "next/link";
 
@@ -39,8 +39,10 @@ export default function AdminOrdersPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [storeIdFilter, setStoreIdFilter] = useState<number | undefined>(undefined);
-  const pageSize = 20;
+  const [storeIdFilter, setStoreIdFilter] = useState<number | undefined>(
+    undefined
+  );
+  const pageSize = 10;
   const { items, loading, error, reload, meta } = useOrders({
     page,
     pageSize,
@@ -49,7 +51,11 @@ export default function AdminOrdersPage() {
     storeId: storeIdFilter,
   });
   const [stores, setStores] = useState<Array<{ id: number; name: string }>>([]);
-  const [profile, setProfile] = useState<{ id: number; role: string; storeId?: number | null } | null>(null);
+  const [profile, setProfile] = useState<{
+    id: number;
+    role: string;
+    storeId?: number | null;
+  } | null>(null);
   const [devUserId, setDevUserId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>(
     {}
@@ -70,12 +76,19 @@ export default function AdminOrdersPage() {
     let mounted = true;
     (async () => {
       try {
-        const [storeList, profileResp] = await Promise.all([storesService.list(), storesService.getProfile().catch(() => null)]);
+        const [storeList, profileResp] = await Promise.all([
+          storesService.list(),
+          storesService.getProfile().catch(() => null),
+        ]);
         if (mounted) {
           setStores(storeList);
           setProfile(profileResp ?? null);
           // if current profile is store admin, default the store filter to their store
-          if (profileResp && profileResp.role === "STORE_ADMIN" && profileResp.storeId) {
+          if (
+            profileResp &&
+            profileResp.role === "STORE_ADMIN" &&
+            profileResp.storeId
+          ) {
             setStoreIdFilter(profileResp.storeId);
           }
         }
@@ -134,11 +147,11 @@ export default function AdminOrdersPage() {
         return "bg-indigo-100 text-indigo-800";
       case "PAYMENT_REVIEW":
         return "bg-blue-100 text-blue-800";
-  case "CONFIRMED":
+      case "CONFIRMED":
         return "bg-green-100 text-green-800";
       case "SHIPPED":
         return "bg-purple-100 text-purple-800";
-  // "DELIVERED" is not used in the backend status enum; keep CONFIRMED as final delivered state
+      // "DELIVERED" is not used in the backend status enum; keep CONFIRMED as final delivered state
       case "CANCELLED":
         return "bg-red-100 text-red-800";
       default:
@@ -218,10 +231,16 @@ export default function AdminOrdersPage() {
             {/* Show store selector only when profile is loaded and it's SUPER_ADMIN */}
             {profile?.role === "SUPER_ADMIN" && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Store</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Store
+                </label>
                 <select
                   value={storeIdFilter ?? ""}
-                  onChange={(e) => setStoreIdFilter(e.target.value ? Number(e.target.value) : undefined)}
+                  onChange={(e) =>
+                    setStoreIdFilter(
+                      e.target.value ? Number(e.target.value) : undefined
+                    )
+                  }
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                 >
                   <option value="">All stores</option>
@@ -233,7 +252,7 @@ export default function AdminOrdersPage() {
                 </select>
               </div>
             )}
-            
+
             <div className="flex items-end">
               <button
                 onClick={() => {

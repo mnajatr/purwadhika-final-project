@@ -8,7 +8,9 @@ import useLocationStore from "@/stores/locationStore";
 import NearestStoreIndicator from "@/components/products/NearestStoreIndicator";
 import dynamic from "next/dynamic";
 
-const AddressPicker = dynamic(() => import("@/components/AddressPicker"), { ssr: false });
+const AddressPicker = dynamic(() => import("@/components/AddressPicker"), {
+  ssr: false,
+});
 
 export default function Home() {
   // Location from global store (address picker)
@@ -23,7 +25,12 @@ export default function Home() {
 
   React.useEffect(() => {
     try {
-      console.debug("Home: nearestStoreId from store:", nearestStoreId, "products fetched:", data);
+      console.debug(
+        "Home: nearestStoreId from store:",
+        nearestStoreId,
+        "products fetched:",
+        data
+      );
     } catch {}
   }, [nearestStoreId, data]);
 
@@ -63,10 +70,13 @@ export default function Home() {
 
         {/* Address picker and Nearest Store Section */}
         <div className="mb-16">
-          <NearestStoreIndicator nearestStore={nearestStore} message={storeMessage} />
-            <div className="mt-6">
-              <AddressPicker />
-            </div>
+          <NearestStoreIndicator
+            nearestStore={nearestStore}
+            message={storeMessage}
+          />
+          <div className="mt-6">
+            <AddressPicker />
+          </div>
         </div>
 
         {/* Featured Products Section */}
@@ -100,14 +110,29 @@ export default function Home() {
                     />
                   </div>
                   <div className="p-6 flex flex-col flex-grow">
-                    <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-grow">{product.description}</p>
-                    <p className="text-indigo-600 font-bold mb-3">Rp {Number(product.price || 0).toLocaleString("id-ID")}</p>
+                    <h3 className="text-lg font-semibold mb-2">
+                      {product.name}
+                    </h3>
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-grow">
+                      {product.description}
+                    </p>
+                    <p className="text-indigo-600 font-bold mb-3">
+                      Rp {Number(product.price || 0).toLocaleString("id-ID")}
+                    </p>
                     <div className="flex items-center justify-between mb-4">
-                      <span className="inline-block px-3 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">{product.category}</span>
-                      <span className="text-xs text-gray-500">{product.store}</span>
+                      <span className="inline-block px-3 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                        {product.category}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {product.store}
+                      </span>
                     </div>
-                    <Link href={`/products/${product.slug}`} className="block text-center bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition mt-auto">Lihat Detail</Link>
+                    <Link
+                      href={`/products/${product.slug}`}
+                      className="block text-center bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition mt-auto"
+                    >
+                      Lihat Detail
+                    </Link>
                   </div>
                 </div>
               ))}

@@ -1,4 +1,4 @@
-import apiClient from '@/lib/axios-client';
+import apiClient from "@/lib/axios-client";
 
 type ResolveResp = {
   success: boolean;
@@ -14,7 +14,9 @@ type ResolveResp = {
 
 export const locationService = {
   resolveNearest: async (lat: number, lon: number): Promise<ResolveResp> => {
-    const resp = await apiClient.get<ResolveResp>(`/stores/resolve?lat=${lat}&lon=${lon}`);
+    const resp = await apiClient.get<ResolveResp>(
+      `/stores/resolve?lat=${lat}&lon=${lon}`
+    );
     return resp;
   },
 };

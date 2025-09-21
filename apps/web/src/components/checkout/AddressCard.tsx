@@ -13,7 +13,11 @@ type Addr = {
   isPrimary: boolean;
 };
 
-export default function AddressCard({ onSelect }: { onSelect?: (addr: { id: number }) => void }) {
+export default function AddressCard({
+  onSelect,
+}: {
+  onSelect?: (addr: { id: number }) => void;
+}) {
   const [addrs, setAddrs] = React.useState<Addr[] | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [selectedId, setSelectedId] = React.useState<number | null>(null);
@@ -23,13 +27,19 @@ export default function AddressCard({ onSelect }: { onSelect?: (addr: { id: numb
   const loadedRef = React.useRef(false);
   React.useEffect(() => {
     if (loadedRef.current) return;
-    const devUser = typeof window !== "undefined" ? localStorage.getItem("devUserId") : null;
+    const devUser =
+      typeof window !== "undefined" ? localStorage.getItem("devUserId") : null;
     const storedUserId =
       typeof window !== "undefined"
         ? sessionStorage.getItem("checkout:userId")
         : null;
     // Prefer admin dev user selector (localStorage.devUserId) when set, otherwise sessionStorage, then seeded 4
-    const userId = devUser && devUser !== "none" ? Number(devUser) : storedUserId ? Number(storedUserId) : 4;
+    const userId =
+      devUser && devUser !== "none"
+        ? Number(devUser)
+        : storedUserId
+        ? Number(storedUserId)
+        : 4;
     let mounted = true;
     (async () => {
       try {

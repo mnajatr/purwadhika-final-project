@@ -96,7 +96,9 @@ export default function ProductDetailPage() {
               </div>
               <div className="flex justify-between border-b pb-2">
                 <span className="text-gray-500">Toko</span>
-                <span className="font-medium">{nearestStoreName ?? product.store}</span>
+                <span className="font-medium">
+                  {nearestStoreName ?? product.store}
+                </span>
               </div>
             </div>
           </div>

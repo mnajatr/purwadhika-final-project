@@ -269,7 +269,7 @@ export class ProductService {
         await tx.productImage.deleteMany({
           where: { productId: product.id },
         });
-        
+
         // Create new images
         await tx.productImage.createMany({
           data: data.images.map((img) => ({
@@ -347,7 +347,9 @@ export class ProductService {
     });
 
     if (orderItems) {
-      throw new Error("Cannot delete product that has been ordered. You can deactivate it instead.");
+      throw new Error(
+        "Cannot delete product that has been ordered. You can deactivate it instead."
+      );
     }
 
     // Use transaction to ensure all deletes succeed or fail together
@@ -363,10 +365,10 @@ export class ProductService {
 
       // Delete vouchers first, then discounts
       await tx.voucher.deleteMany({
-        where: { 
+        where: {
           discount: {
-            productId: product.id
-          }
+            productId: product.id,
+          },
         },
       });
 
@@ -377,9 +379,9 @@ export class ProductService {
       await tx.storeInventory.deleteMany({
         where: { productId: product.id },
       });
-      
-      await tx.productImage.deleteMany({ 
-        where: { productId: product.id } 
+
+      await tx.productImage.deleteMany({
+        where: { productId: product.id },
       });
 
       return tx.product.delete({
