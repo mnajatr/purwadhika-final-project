@@ -3,6 +3,7 @@
 import { useUsers } from "@/hooks/useUsers";
 import Link from "next/link";
 import Sidebar from "@/components/admin/sidebar";
+import DeleteUserButton from "@/components/users/DeleteButtonUser";
 
 export default function UserTable() {
   const { data: users, isLoading, isError } = useUsers();
@@ -90,12 +91,7 @@ export default function UserTable() {
                           >
                             Edit
                           </Link>
-                          <Link
-                            href={`/users/${u.id}`}
-                            className="text-red-600 hover:underline"
-                          >
-                            Delete
-                          </Link>
+                          <DeleteUserButton id={u.id} />
                         </td>
                       </tr>
                     ))}
