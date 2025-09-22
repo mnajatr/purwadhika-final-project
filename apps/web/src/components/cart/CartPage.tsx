@@ -200,6 +200,7 @@ export function CartPage({ userId }: CartPageProps) {
                   key={item.id}
                   item={item}
                   userId={userId}
+                  storeId={storeId}
                   selected={!!selectedIds[item.id]}
                   onToggle={() => toggleSelect(item.id)}
                 />

@@ -689,6 +689,24 @@ async function seedUserAddresses(users: any[]) {
     },
   });
 
+  // Bandung - Secondary nearby address (within ~5-8 km of store) for testing
+  // Chosen coords: latitude -6.8740, longitude 107.6170 (~4.9 km NE of -6.9175,107.6191)
+  await prisma.userAddress.create({
+    data: {
+      userId: user.id,
+      label: "Kost/Second",
+      recipientName: "Siti Pelanggan",
+      addressLine: "Komplek Cikutra No.5",
+      province: "Jawa Barat",
+      city: "Bandung",
+      district: "Coblong",
+      postalCode: "40115",
+      latitude: -6.8740,
+      longitude: 107.6170,
+      isPrimary: false,
+    },
+  });
+
   // Jakarta - Office
   await prisma.userAddress.create({
     data: {

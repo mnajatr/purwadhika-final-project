@@ -151,7 +151,11 @@ export function useUpdateCartItem(userId: number, storeId?: number) {
   return useMutation({
     mutationFn: async (payload: { itemId: number; qty: number }) => {
       const data: UpdateCartItemRequest = { qty: payload.qty, userId };
-      const res = await cartService.updateCartItem(payload.itemId, data);
+      const res = await cartService.updateCartItem(
+        payload.itemId,
+        data,
+        effectiveStoreId
+      );
       return res.data;
     },
     // optimistic update: apply local change immediately, rollback on error

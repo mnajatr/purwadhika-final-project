@@ -66,26 +66,17 @@ export class StoresController {
 
       // If addressId provided, prefer it
       if (addressId && userId) {
-        const resolved = await locationService.resolveStoreId(
-          undefined,
-          userId,
-          undefined,
-          undefined,
-          addressId
-        );
-        const store = await prisma.store.findUnique({
-          where: { id: resolved },
-          select: { id: true, name: true, locations: true },
-        });
-        return response
-          .status(200)
-          .json({
-            success: true,
-            data: {
-              nearestStore: store,
-              message: `Nearest store: ${store?.name ?? "unknown"}`,
-            },
-          });
+        // Resolve using address coordinates and compute distance
+        const addr = await prisma.userAddress.findUnique({ where: { id: addressId } });
+        if (!addr || !addr.latitude || !addr.longitude) {
+          return response.status(200).json({ success: true, data: { nearestStore: null, message: "Address has no coordinates" } });
+        }
+        const computed = await locationService.computeNearestWithDistance(Number(addr.latitude), Number(addr.longitude));
+        if (!computed) {
+          return response.status(200).json({ success: true, data: { nearestStore: null, message: "No nearby store" } });
+        }
+        const store = await prisma.store.findUnique({ where: { id: computed.storeId }, select: { id: true, name: true, locations: true } });
+        return response.status(200).json({ success: true, data: { nearestStore: store, distanceMeters: computed.distanceMeters, maxRadiusKm: computed.maxRadiusKm, inRange: computed.inRange, message: `Nearest store: ${store?.name ?? "unknown"}` } });
       }
 
       // If lat/lon provided (legacy), still resolve using coords
@@ -97,31 +88,12 @@ export class StoresController {
             .status(400)
             .json({ success: false, message: "invalid coordinates" });
         }
-        const storeId = await locationService.findNearestStoreId(
-          userLat,
-          userLon
-        );
-        if (!storeId) {
-          return response
-            .status(200)
-            .json({
-              success: true,
-              data: { nearestStore: null, message: "No nearby store" },
-            });
+        const computed = await locationService.computeNearestWithDistance(userLat, userLon);
+        if (!computed) {
+          return response.status(200).json({ success: true, data: { nearestStore: null, message: "No nearby store" } });
         }
-        const store = await prisma.store.findUnique({
-          where: { id: storeId },
-          select: { id: true, name: true, locations: true },
-        });
-        return response
-          .status(200)
-          .json({
-            success: true,
-            data: {
-              nearestStore: store,
-              message: `Nearest store: ${store?.name ?? "unknown"}`,
-            },
-          });
+        const store = await prisma.store.findUnique({ where: { id: computed.storeId }, select: { id: true, name: true, locations: true } });
+        return response.status(200).json({ success: true, data: { nearestStore: store, distanceMeters: computed.distanceMeters, maxRadiusKm: computed.maxRadiusKm, inRange: computed.inRange, message: `Nearest store: ${store?.name ?? "unknown"}` } });
       }
 
       return response

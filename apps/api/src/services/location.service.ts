@@ -4,7 +4,7 @@ export class LocationService {
 
   async findNearestStoreId(lat: number, lon: number): Promise<number | undefined> {
     const toRad = (deg: number) => (deg * Math.PI) / 180;
-    const R = 6371;
+    const R = 6371; // earth radius km
 
     // Load all store locations (small number expected) and compute distance
     const locations = await prisma.storeLocation.findMany({
@@ -13,7 +13,7 @@ export class LocationService {
     
     if (!locations || locations.length === 0) return undefined;
 
-    let best: { storeId: number; distKm: number } | null = null;
+    let best: { storeId: number; distKm: number; loc: any } | null = null;
     
     for (const loc of locations) {
       const dLat = toRad(Number(loc.latitude) - lat);
@@ -28,7 +28,7 @@ export class LocationService {
       const distKm = R * c;
 
       if (!best || distKm < best.distKm) {
-        best = { storeId: loc.storeId, distKm };
+        best = { storeId: loc.storeId, distKm, loc };
       }
     }
 
@@ -36,6 +36,39 @@ export class LocationService {
     const MAX_KM = Number(process.env.MAX_STORE_RADIUS_KM ?? 10);
     if (best && best.distKm <= MAX_KM) return best.storeId;
     return undefined;
+  }
+
+  // New helper to compute nearest store + distance details
+  async computeNearestWithDistance(lat: number, lon: number) {
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const R = 6371;
+    const locations = await prisma.storeLocation.findMany({ include: { store: true } });
+    if (!locations || locations.length === 0) return null;
+    let best: { storeId: number; distKm: number; loc: any } | null = null;
+    for (const loc of locations) {
+      const dLat = toRad(Number(loc.latitude) - lat);
+      const dLon = toRad(Number(loc.longitude) - lon);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat)) *
+          Math.cos(toRad(Number(loc.latitude))) *
+          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const distKm = R * c;
+      if (!best || distKm < best.distKm) {
+        best = { storeId: loc.storeId, distKm, loc };
+      }
+    }
+    if (!best) return null;
+    const MAX_KM = Number(process.env.MAX_STORE_RADIUS_KM ?? 10);
+    return {
+      storeId: best.storeId,
+      distanceMeters: Math.round(best.distKm * 1000),
+      distanceKm: best.distKm,
+      maxRadiusKm: MAX_KM,
+      inRange: best.distKm <= MAX_KM,
+      storeLocation: best.loc,
+    };
   }
 
   async resolveStoreId(

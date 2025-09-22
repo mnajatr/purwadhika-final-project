@@ -42,7 +42,8 @@ export class CartService {
 
   async updateCartItem(
     itemId: number,
-    data: UpdateCartItemInput
+    data: UpdateCartItemInput,
+    storeId?: number
   ): Promise<ApiResponse<Cart>> {
     // Validate inputs
     if (!itemId || itemId <= 0) {
@@ -51,10 +52,11 @@ export class CartService {
 
     // Validate data using Zod schema
     const validatedData = UpdateCartItemSchema.parse(data);
-    return apiClient.patch<ApiResponse<Cart>>(
-      `${this.basePath}/${itemId}`,
-      validatedData
-    );
+    const url =
+      storeId && storeId > 0
+        ? `${this.basePath}/${itemId}?storeId=${storeId}`
+        : `${this.basePath}/${itemId}`;
+    return apiClient.patch<ApiResponse<Cart>>(url, validatedData);
   }
 
   async removeCartItem(itemId: number, userId: number, storeId?: number): Promise<ApiResponse<Cart>> {

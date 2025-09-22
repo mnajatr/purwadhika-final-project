@@ -13,12 +13,24 @@ type Addr = {
   isPrimary: boolean;
 };
 
-export default function AddressCard({
-  onSelect,
-}: {
+type AddressCardProps = {
   onSelect?: (addr: { id: number }) => void;
-}) {
+  // If provided, component will validate each address against this store id
+  // and disable addresses that are out-of-range or served by a different store.
+  checkoutStoreId?: number | null;
+  userId?: number;
+};
+
+export default function AddressCard({ onSelect, checkoutStoreId, userId }: AddressCardProps) {
   const [addrs, setAddrs] = React.useState<Addr[] | null>(null);
+  // per-address resolve info: map addressId -> { inRange, distanceMeters, maxRadiusKm, nearestStoreId }
+  type ResolveInfo = {
+    inRange: boolean;
+    distanceMeters?: number | null;
+    maxRadiusKm?: number | null;
+    nearestStoreId?: number | null;
+  };
+  const [resolveMap, setResolveMap] = React.useState<Record<number, ResolveInfo>>({});
   const [loading, setLoading] = React.useState(true);
   const [selectedId, setSelectedId] = React.useState<number | null>(null);
 
@@ -51,6 +63,31 @@ export default function AddressCard({
           setSelectedId(primary.id);
           onSelect?.({ id: primary.id });
         }
+        // If checkoutStoreId is provided, resolve each address's coverage status
+        if (checkoutStoreId && Array.isArray(res) && res.length > 0) {
+          (async () => {
+            const map: Record<number, ResolveInfo> = {};
+            for (const a of res) {
+              try {
+                const uid = userId ?? 4;
+                // apiClient.get returns the response data directly in this project
+                const rr = await apiClient.get(`/stores/resolve?userId=${uid}&addressId=${a.id}`);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const data: any = rr ?? {};
+                map[a.id] = {
+                  inRange: Boolean(data.inRange ?? data.data?.inRange),
+                  distanceMeters: data.distanceMeters ?? data.data?.distanceMeters ?? null,
+                  maxRadiusKm: data.maxRadiusKm ?? data.data?.maxRadiusKm ?? null,
+                  nearestStoreId: data.nearestStore?.id ?? data.data?.nearestStore?.id ?? null,
+                } as ResolveInfo;
+              } catch {
+                // fallback: mark as out-of-range on any error
+                map[a.id] = { inRange: false };
+              }
+            }
+            setResolveMap(map);
+          })();
+        }
       } catch {
         setAddrs([]);
       } finally {
@@ -61,7 +98,7 @@ export default function AddressCard({
     return () => {
       mounted = false;
     };
-  }, [onSelect]);
+  }, [onSelect, checkoutStoreId, userId]);
 
   const handleSelect = (a: Addr) => {
     setSelectedId(a.id);
@@ -98,25 +135,41 @@ export default function AddressCard({
           <div>Loading addresses…</div>
         ) : addrs && addrs.length > 0 ? (
           <div className="space-y-3">
-            {addrs.map((a) => (
-              <label
-                key={a.id}
-                className="block cursor-pointer p-3 border rounded-md"
-              >
-                <input
-                  type="radio"
-                  name="address"
-                  checked={selectedId === a.id}
-                  onChange={() => handleSelect(a)}
-                  className="mr-2"
-                />
-                <span className="font-medium">{a.recipientName}</span>
-                <div className="text-xs">{a.addressLine}</div>
-                <div className="text-xs">
-                  {a.city}, {a.province} {a.postalCode}
-                </div>
-              </label>
-            ))}
+            {addrs.map((a) => {
+              const info = resolveMap[a.id];
+              const disabled = Boolean(
+                checkoutStoreId &&
+                  info &&
+                  (!info.inRange || (info.nearestStoreId != null && info.nearestStoreId !== checkoutStoreId))
+              );
+              return (
+                <label
+                  key={a.id}
+                  className={`block ${disabled ? "opacity-50" : "cursor-pointer"} p-3 border rounded-md`}
+                >
+                  <input
+                    type="radio"
+                    name="address"
+                    checked={selectedId === a.id}
+                    onChange={() => !disabled && handleSelect(a)}
+                    disabled={disabled}
+                    className="mr-2"
+                  />
+                  <span className="font-medium">{a.recipientName}</span>
+                  <div className="text-xs">{a.addressLine}</div>
+                  <div className="text-xs">
+                    {a.city}, {a.province} {a.postalCode}
+                  </div>
+                  {info && !info.inRange ? (
+                    <div className="text-xs text-rose-600 mt-1">
+                      Out of delivery range: {info.distanceMeters ? (info.distanceMeters / 1000).toFixed(1) : "N/A"} km (limit {info.maxRadiusKm ?? "N/A"} km)
+                    </div>
+                  ) : info && info.nearestStoreId != null && info.nearestStoreId !== checkoutStoreId ? (
+                    <div className="text-xs text-rose-600 mt-1">Not served by selected store</div>
+                  ) : null}
+                </label>
+              );
+            })}
           </div>
         ) : (
           <div>
