@@ -16,7 +16,7 @@ export default function ProductsList() {
 
   // Fetch products without location to get all products for admin
   const { data, isLoading, error } = useProducts();
-  
+
   // Extract products array from the response
   const products = data?.products || [];
 
@@ -167,7 +167,7 @@ export default function ProductsList() {
                       Rp {Number(product.price || 0).toLocaleString("id-ID")}
                     </td>
                     <td className="px-4 py-3 text-sm font-semibold text-indigo-600">
-                      stock
+                      {product.stock}
                     </td>
                     <td className="px-4 py-3 text-sm flex gap-2">
                       <Link
