@@ -41,7 +41,7 @@ export default function Home() {
   const featuredProducts = visibleProducts.slice(0, 6);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="container mx-auto px-4 py-20">
@@ -156,7 +156,7 @@ export default function Home() {
                         href={`/products/${product.slug}`}
                         className="bg-primary-gradient hover:opacity-95 text-primary-foreground px-6 py-2 rounded-xl transition-all font-semibold"
                       >
-                        Details Product
+                        Product Details
                       </Link>
                     </div>
                   </div>

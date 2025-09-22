@@ -56,11 +56,13 @@
     var(--background-mid) 50%,
     var(--background-end) 100%
   );
-  --foreground: oklch(0.2 0 0);
+  /* Reusable text color (replaces black text) */
+  --text-ink: oklch(0.2663 0.0482 263.28);
+  --foreground: var(--text-ink);
   --card: oklch(98.282% 0.00441 77.982 / 0.628);
-  --card-foreground: oklch(0.2 0 0);
+  --card-foreground: var(--text-ink);
   --popover: oklch(0.98 0.02 75);
-  --popover-foreground: oklch(0.2 0 0);
+  --popover-foreground: var(--text-ink);
   --primary: oklch(79.589% 0.14105 71.832);
   --primary-foreground: oklch(0.98 0.02 75);
     /* Primary gradient stops - use --primary for solid color and --primary-gradient for backgrounds */
@@ -83,7 +85,7 @@
   --chart-4: oklch(0.75 0.18 85);
   --chart-5: oklch(0.8 0.2 105);
   --sidebar: oklch(0.97 0.03 72);
-  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-foreground: var(--text-ink);
   --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);

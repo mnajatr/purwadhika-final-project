@@ -140,10 +140,10 @@ export default function Navbar() {
                 )}
               </div>
               <div className="hidden sm:flex flex-col text-left">
-                <span className="text-xs opacity-90">
+                <span className="text-xs opacity-90 text-muted-foreground">
                   {itemCount} {itemCount === 1 ? "item" : "items"}
                 </span>
-                <span className="text-sm font-semibold">
+                <span className="text-sm font-semibold text-foreground">
                   Rp {totalAmount.toLocaleString("id-ID")}
                 </span>
               </div>
