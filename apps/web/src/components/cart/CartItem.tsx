@@ -125,21 +125,20 @@ export default function CartItem({
       pendingQtyRef.current = null;
       debounceTimerRef.current = null;
       if (qtyToSend == null) return;
-      setIsUpdating(true);
+      // Perform optimistic update without setting local isUpdating flag so
+      // the UI (especially the quantity controls) doesn't show a loading
+      // overlay or become disabled while the network request runs. The
+      // mutation hook already performs optimistic updates and will rollback
+      // on error.
       try {
         await updateCartItemMutation.mutateAsync({
           itemId: item.id,
           qty: qtyToSend,
         });
-        // Do not show a toast for quantity updates (they can be frequent).
-        // Keep hasManuallyUpdated for internal UI decisions only.
         if (hasManuallyUpdated) setHasManuallyUpdated(false);
       } catch {
-        // Reset local qty to server value; detailed error toast will be
-        // handled centrally by the hook's onError handler (handleCartError).
+        // Reset local qty to server value; hook handles error toasts.
         setCurrentQty(item.qty);
-      } finally {
-        setIsUpdating(false);
       }
     }, 250);
   };
@@ -232,8 +231,8 @@ export default function CartItem({
             <button
               onClick={() => setShowConfirm(true)}
               disabled={isUpdating}
-              className={`absolute -top-3 -right-3 w-8 h-8 sm:w-9 sm:h-9 bg-red-100 border-2 border-card rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-red-600 hover:text-red-700 hover:bg-red-200 transition-all duration-200 z-10 ${
-                isUpdating ? "opacity-50 cursor-not-allowed" : ""
+              className={`absolute -top-3 -right-3 w-8 h-8 sm:w-9 sm:h-9 bg-red-100 border-2 border-card rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-red-600 hover:text-red-700 hover:bg-red-200 transition-all duration-200 z-10 cursor-pointer disabled:cursor-not-allowed ${
+                isUpdating ? "opacity-50" : ""
               }`}
               aria-label="Remove item"
             >

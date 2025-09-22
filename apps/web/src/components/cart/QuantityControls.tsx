@@ -27,7 +27,7 @@ export default function QuantityControls({
       >
         {/* Decrease button: subtle circular */}
         <button
-          className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-white flex items-center justify-center transition-all duration-150 border border-[color:var(--muted)]/40 disabled:opacity-50"
+          className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-white flex items-center justify-center transition-all duration-150 border border-[color:var(--muted)]/40 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
           onClick={onDecrease}
           disabled={disabled}
           aria-label="Decrease quantity"
@@ -43,7 +43,7 @@ export default function QuantityControls({
 
         {/* Increase button: primary orange circular using CSS variable */}
         <button
-          className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-all duration-150 disabled:opacity-50`}
+          className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-all duration-150 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed`}
           onClick={onIncrease}
           disabled={disabled || maxReached}
           aria-label="Increase quantity"

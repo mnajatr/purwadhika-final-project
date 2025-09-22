@@ -28,7 +28,7 @@ export function CartPage({ userId }: CartPageProps) {
   // Derive storeId from location store so cart follows nearest store selection
   const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? 1;
   const storeId = nearestStoreId;
-  const { data: cart, isLoading } = useCart(userId, storeId);
+  const { data: cart, isInitialLoading, isFetching } = useCart(userId, storeId);
   const clearCartMutation = useClearCart(userId, storeId);
   const updateCartItemMutation = useUpdateCartItem(userId, storeId);
   const [selectedIds, setSelectedIds] = React.useState<Record<number, boolean>>(
@@ -102,7 +102,11 @@ export function CartPage({ userId }: CartPageProps) {
     }
   }, [cart, hasAutoAdjusted]);
 
-  if (isLoading || !cart) return <CartPageSkeleton />;
+  // Only show the full-page skeleton while the query is loading for the
+  // first time (initial load). During background fetches (e.g. after a
+  // mutation) we keep the UI stable and show a subtle inline spinner.
+  if (isInitialLoading) return <CartPageSkeleton />;
+  if (!cart) return <CartPageSkeleton />;
   if (cart.items.length === 0) return <EmptyCartState />;
 
   const allSelected = cart.items.every((it) => selectedIds[it.id]);
@@ -169,13 +173,21 @@ export function CartPage({ userId }: CartPageProps) {
             aria-label="Back to landing"
             title="Back"
             onClick={() => router.push("/")}
-            className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-all duration-200"
+            className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
           >
             <ChevronLeft className="w-5 h-5 text-foreground" />
           </button>
 
           <div>
-            <h2 className="text-2xl font-bold text-foreground">My Cart</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-foreground">My Cart</h2>
+              {isFetching && (
+                <div
+                  className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"
+                  aria-hidden
+                />
+              )}
+            </div>
             <p className="text-muted-foreground text-sm mt-1">
               {cart.items.length} {cart.items.length === 1 ? "item" : "items"}{" "}
               in your cart
