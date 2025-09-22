@@ -182,25 +182,55 @@ export default function CartItem({
       {/* Checkbox - Outside the card, centered vertically */}
       {!readOnly && (
         <div className="flex items-center justify-center self-center sm:self-auto">
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={onToggle}
-            readOnly={!onToggle}
-            className="h-5 w-5 rounded-md text-indigo-600 focus:ring-indigo-500 border-gray-300"
-          />
+          <label className="inline-flex items-center cursor-pointer">
+            {/* Visually-hidden real checkbox for accessibility */}
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={onToggle}
+              readOnly={!onToggle}
+              className="sr-only"
+            />
+
+            {/* Custom visual box that shows primary gradient when checked */}
+            <span
+              aria-hidden
+              className="inline-flex items-center justify-center h-6 w-6 rounded-sm border-2 transition-all duration-150"
+              style={{
+                background: selected ? "var(--cart-check)" : "transparent",
+              }}
+            >
+              {selected && (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  className="h-4 w-4"
+                  style={{ color: "var(--primary-foreground)" }}
+                >
+                  <path
+                    strokeWidth={3}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              )}
+            </span>
+          </label>
         </div>
       )}
 
       {/* Card Container */}
-      <div className="relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-3 sm:p-4 shadow-sm border-2 sm:border-4 border-white hover:shadow-md transition-all duration-200 flex-1">
+      <div className="relative bg-card rounded-2xl p-3 sm:p-4 shadow-sm border border-border hover:shadow-md transition-all duration-200 flex-1 backdrop-blur-sm">
         {/* Delete Button - Positioned to blend with card border */}
         {!readOnly && (
           <>
             <button
               onClick={() => setShowConfirm(true)}
               disabled={isUpdating}
-              className={`absolute -top-3 -right-3 w-8 h-8 sm:w-9 sm:h-9 bg-orange-100 border-2 border-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-orange-600 hover:text-orange-700 transition-all duration-200 z-10`}
+              className={`absolute -top-3 -right-3 w-8 h-8 sm:w-9 sm:h-9 bg-red-100 border-2 border-card rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-red-600 hover:text-red-700 hover:bg-red-200 transition-all duration-200 z-10`}
               aria-label="Remove item"
             >
               <TrashIcon />
@@ -230,7 +260,7 @@ export default function CartItem({
             <CategoryBadge>{productCategory}</CategoryBadge>
 
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-gray-900 text-base leading-tight">
+              <h3 className="font-semibold text-foreground text-lg leading-tight">
                 {item.product.name}
               </h3>
               {stockHandler.isOutOfStock && (
@@ -239,7 +269,9 @@ export default function CartItem({
                 </span>
               )}
             </div>
-            <p className="text-sm text-gray-500 mb-1">{formatIDR(unitPrice)}</p>
+            <p className="text-sm text-muted-foreground mb-1">
+              {formatIDR(unitPrice)}
+            </p>
 
             {/* Stock warning - show when stock is low or item quantity was high, but hide if user manually updated */}
             {!stockHandler.isOutOfStock &&
@@ -277,7 +309,7 @@ export default function CartItem({
 
           {/* Centered Price */}
           <div className="text-center flex-shrink-0 mt-2 sm:mt-0 sm:ml-2">
-            <div className="text-sm sm:text-base md:text-lg font-bold text-gray-900">
+            <div className="text-sm sm:text-base md:text-lg font-bold text-foreground">
               {formatIDR(totalPrice)}
             </div>
           </div>

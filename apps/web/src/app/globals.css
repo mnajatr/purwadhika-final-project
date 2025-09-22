@@ -65,10 +65,16 @@
   --popover-foreground: var(--text-ink);
   --primary: oklch(79.589% 0.14105 71.832);
   --primary-foreground: oklch(0.98 0.02 75);
-    /* Primary gradient stops - use --primary for solid color and --primary-gradient for backgrounds */
-    --prim-start: oklch(78.811% 0.15837 69.501);
-    --prim-end: oklch(81.9% 0.14852 71.477);
-    --primary-gradient: linear-gradient(135deg, var(--prim-start) 0%, var(--prim-end) 100%);
+  /* Primary gradient stops - use --primary for solid color and --primary-gradient for backgrounds */
+  --prim-start: oklch(78.811% 0.15837 69.501);
+  --prim-end: oklch(81.9% 0.14852 71.477);
+  --primary-gradient: linear-gradient(
+    135deg,
+    var(--prim-start) 0%,
+    var(--prim-end) 100%
+  );
+  /* Custom cart checkbox color (used for cart item checklist) */
+  --cart-check: oklch(75.296% 0.08962 121.211);
   --secondary: oklch(0.9885 0.0098 87.47);
   --secondary-foreground: oklch(0.25 0 0);
   --muted: oklch(91.944% 0.05343 78.986);
@@ -112,10 +118,14 @@
   --popover-foreground: oklch(0.95 0.01 70);
   --primary: oklch(0.8 0.16 50);
   --primary-foreground: oklch(0.15 0.02 55);
-    /* Dark mode primary gradient (subtle, for backgrounds on dark) */
-    --prim-start: oklch(0.28 0.06 48);
-    --prim-end: oklch(0.8 0.16 50);
-    --primary-gradient: linear-gradient(135deg, var(--prim-start) 0%, var(--prim-end) 100%);
+  /* Dark mode primary gradient (subtle, for backgrounds on dark) */
+  --prim-start: oklch(0.28 0.06 48);
+  --prim-end: oklch(0.8 0.16 50);
+  --primary-gradient: linear-gradient(
+    135deg,
+    var(--prim-start) 0%,
+    var(--prim-end) 100%
+  );
   --secondary: oklch(0.3 0.02 60);
   --secondary-foreground: oklch(0.9 0.01 70);
   --muted: oklch(0.28 0.02 58);
