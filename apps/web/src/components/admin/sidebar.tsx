@@ -12,7 +12,7 @@ export default function Sidebar() {
     { name: "Discounts", path: "/admin/discountManagement" },
     { name: "Category", path: "/admin/categoryManagement" },
     { name: "Orders", path: "/admin/orders" },
-    { name: "Reports", path: "/admin/reports" },
+    { name: "Reports", path: "/admin/report" },
   ];
 
   return (
