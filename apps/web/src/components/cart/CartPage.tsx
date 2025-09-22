@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import useCreateOrder from "@/hooks/useOrder";
 import { useRouter } from "next/navigation";
 import formatIDR from "@/utils/formatCurrency";
+import { CartPageSkeleton } from "./CartSkeleton";
+import { EmptyCartState } from "./EmptyCartState";
 import {
   validateCartForCheckout,
   hasOutOfStockItems,
@@ -100,24 +102,8 @@ export function CartPage({ userId }: CartPageProps) {
     }
   }, [cart, hasAutoAdjusted]);
 
-  if (isLoading || !cart) return <div>Loading cart...</div>;
-  if (cart.items.length === 0)
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <p className="text-xl font-semibold text-foreground mb-4">
-            Your cart is empty. Start shopping!
-          </p>
-          <Button
-            size="lg"
-            className="bg-primary-gradient text-primary-foreground hover:opacity-95 px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl"
-            onClick={() => router.push("/products")}
-          >
-            Shop now
-          </Button>
-        </div>
-      </div>
-    );
+  if (isLoading || !cart) return <CartPageSkeleton />;
+  if (cart.items.length === 0) return <EmptyCartState />;
 
   const allSelected = cart.items.every((it) => selectedIds[it.id]);
 
@@ -177,20 +163,30 @@ export function CartPage({ userId }: CartPageProps) {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto p-4 sm:p-6">
+        {/* Header - Consistent with skeleton layout */}
         <div className="flex items-center gap-3 mb-6">
           <button
             aria-label="Back to landing"
             title="Back"
             onClick={() => router.push("/")}
-            className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-card/90 border border-border shadow-sm cursor-pointer hover:shadow-md transition"
+            className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-all duration-200"
           >
             <ChevronLeft className="w-5 h-5 text-foreground" />
           </button>
 
-          <h2 className="text-2xl font-bold text-foreground">My Cart</h2>
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">My Cart</h2>
+            <p className="text-muted-foreground text-sm mt-1">
+              {cart.items.length} {cart.items.length === 1 ? "item" : "items"}{" "}
+              in your cart
+            </p>
+          </div>
         </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
+          {/* Main Cart Content - Matching skeleton padding */}
           <div className="bg-card rounded-xl border border-border p-4 sm:p-6 shadow-sm backdrop-blur-sm">
+            {/* Select All Header - Matching skeleton spacing */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-1 pb-4 border-b border-border mb-4">
               <div className="flex items-center gap-3">
                 <label className="inline-flex items-center cursor-pointer">
@@ -203,8 +199,15 @@ export function CartPage({ userId }: CartPageProps) {
                   />
                   <span
                     aria-hidden
-                    className="inline-flex items-center justify-center h-6 w-6 rounded-sm border-2 transition-all duration-150"
-                    style={{ background: allSelected ? 'var(--cart-check)' : 'transparent' }}
+                    className="inline-flex items-center justify-center h-6 w-6 rounded-sm border-2 transition-all duration-200"
+                    style={{
+                      background: allSelected
+                        ? "var(--cart-check)"
+                        : "transparent",
+                      borderColor: allSelected
+                        ? "var(--cart-check)"
+                        : "var(--border)",
+                    }}
                   >
                     {allSelected && (
                       <svg
@@ -213,7 +216,7 @@ export function CartPage({ userId }: CartPageProps) {
                         fill="none"
                         stroke="currentColor"
                         className="h-4 w-4"
-                        style={{ color: 'var(--primary-foreground)' }}
+                        style={{ color: "var(--primary-foreground)" }}
                       >
                         <path
                           strokeWidth={3}
@@ -229,8 +232,13 @@ export function CartPage({ userId }: CartPageProps) {
                   Select All
                 </span>
               </div>
+              <div className="text-sm text-muted-foreground mt-2 sm:mt-0">
+                {Object.values(selectedIds).filter(Boolean).length} of{" "}
+                {cart.items.length} selected
+              </div>
             </div>
 
+            {/* Cart Items */}
             <div className="space-y-4">
               {cart.items.map((item) => (
                 <CartItem
@@ -244,6 +252,7 @@ export function CartPage({ userId }: CartPageProps) {
               ))}
             </div>
 
+            {/* Clear Cart Button - Matching skeleton spacing */}
             <div className="mt-6 border-t border-border pt-4">
               <div className="flex w-full items-center justify-end">
                 <div className="w-full sm:w-auto">
@@ -282,21 +291,24 @@ export function CartPage({ userId }: CartPageProps) {
             </div>
           </div>
 
+          {/* Checkout Sidebar - Matching skeleton layout */}
           <div className="w-full lg:w-auto">
             <div className="bg-card rounded-2xl border border-border p-6 shadow-lg backdrop-blur-sm lg:sticky lg:top-6">
               <h3 className="text-xl font-bold mb-6 text-foreground">
-                Total Amount
+                Order Summary
               </h3>
 
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between items-center py-2 border-b border-border">
                   <span className="text-muted-foreground font-medium">
-                    Subtotal:
+                    Subtotal (
+                    {Object.values(selectedIds).filter(Boolean).length} items):
                   </span>
                   <span className="font-semibold text-foreground text-lg">
                     {formatIDR(subtotal)}
                   </span>
                 </div>
+
                 <div className="flex justify-between items-center py-3">
                   <span className="text-xl font-bold text-foreground">
                     Total:
@@ -332,26 +344,36 @@ export function CartPage({ userId }: CartPageProps) {
                   </div>
                 )}
 
-                {/* Idempotency is intentionally handled at the checkout/order
-                    level (server + checkout UI). Removing cart-level idempotency
-                    input to avoid confusion — users generate/see keys on Checkout. */}
                 <Button
                   className={`w-full py-4 rounded-2xl font-semibold text-lg transition-all duration-200 ${
-                    hasOutOfStockInSelection
+                    hasOutOfStockInSelection ||
+                    Object.values(selectedIds).filter(Boolean).length === 0
                       ? "bg-gray-400 text-gray-700 cursor-not-allowed"
                       : "bg-primary-gradient text-primary-foreground hover:opacity-95 shadow-lg hover:shadow-xl"
                   }`}
                   size="lg"
                   onClick={handleCheckout}
-                  disabled={creating || hasOutOfStockInSelection}
+                  disabled={
+                    creating ||
+                    hasOutOfStockInSelection ||
+                    Object.values(selectedIds).filter(Boolean).length === 0
+                  }
                 >
-                  {creating ? "Processing..." : (
+                  {creating ? (
+                    "Processing..."
+                  ) : (
                     <span className="inline-flex items-center justify-center gap-2">
-                      Add to Checkout
+                      Proceed to Checkout
                       <ChevronRight className="w-4 h-4" />
                     </span>
                   )}
                 </Button>
+
+                {Object.values(selectedIds).filter(Boolean).length === 0 && (
+                  <p className="text-center text-sm text-muted-foreground">
+                    Select items to proceed with checkout
+                  </p>
+                )}
               </div>
             </div>
           </div>

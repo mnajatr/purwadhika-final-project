@@ -13,6 +13,7 @@ import ConfirmDialog from "@/components/ui/confirm-dialog";
 import formatIDR from "@/utils/formatCurrency";
 import { TrashIcon } from "./CartItemIcons";
 import QuantityControls from "./QuantityControls";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface CartItemProps {
   item: CartItemType;
@@ -198,6 +199,7 @@ export default function CartItem({
               className="inline-flex items-center justify-center h-6 w-6 rounded-sm border-2 transition-all duration-150"
               style={{
                 background: selected ? "var(--cart-check)" : "transparent",
+                borderColor: selected ? "var(--cart-check)" : "var(--border)",
               }}
             >
               {selected && (
@@ -230,10 +232,16 @@ export default function CartItem({
             <button
               onClick={() => setShowConfirm(true)}
               disabled={isUpdating}
-              className={`absolute -top-3 -right-3 w-8 h-8 sm:w-9 sm:h-9 bg-red-100 border-2 border-card rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-red-600 hover:text-red-700 hover:bg-red-200 transition-all duration-200 z-10`}
+              className={`absolute -top-3 -right-3 w-8 h-8 sm:w-9 sm:h-9 bg-red-100 border-2 border-card rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-red-600 hover:text-red-700 hover:bg-red-200 transition-all duration-200 z-10 ${
+                isUpdating ? "opacity-50 cursor-not-allowed" : ""
+              }`}
               aria-label="Remove item"
             >
-              <TrashIcon />
+              {isUpdating ? (
+                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <TrashIcon />
+              )}
             </button>
             <ConfirmDialog
               open={showConfirm}
@@ -252,7 +260,14 @@ export default function CartItem({
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
           {/* Product Image */}
-          <CartItemImage productId={item.productId} alt={item.product.name} />
+          <div className="relative">
+            <CartItemImage productId={item.productId} alt={item.product.name} />
+            {isUpdating && (
+              <div className="absolute inset-0 bg-card/50 rounded-xl flex items-center justify-center">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+          </div>
 
           {/* Product Details */}
           <div className="flex-1 min-w-0">
@@ -269,6 +284,7 @@ export default function CartItem({
                 </span>
               )}
             </div>
+
             <p className="text-sm text-muted-foreground mb-1">
               {formatIDR(unitPrice)}
             </p>
@@ -330,7 +346,7 @@ export default function CartItem({
               />
             )
           ) : (
-            <div className="text-sm text-gray-600 flex-shrink-0">
+            <div className="text-sm text-muted-foreground flex-shrink-0">
               Quantity: {currentQty}
             </div>
           )}
