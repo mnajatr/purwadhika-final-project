@@ -120,6 +120,66 @@ export class ProductService {
     }
   }
 
+  async getByStoreId(storeId: number) {
+    try {
+      // Get store details
+      const store = await prisma.store.findUnique({
+        where: { id: storeId },
+        select: { id: true, name: true, locations: true },
+      });
+
+      if (!store) {
+        return {
+          products: [],
+          nearestStore: null,
+          message: "Store not found",
+        };
+      }
+
+      // Get products available at this store
+      const products = await prisma.product.findMany({
+        where: {
+          inventories: {
+            some: {
+              storeId: storeId,
+              stockQty: { gt: 0 },
+            },
+          },
+        },
+        include: {
+          category: true,
+          inventories: {
+            where: { storeId },
+            select: {
+              stockQty: true,
+              store: { select: { id: true, name: true, locations: true } },
+            },
+          },
+          images: true,
+        },
+      });
+
+      const formattedProducts = products.map((p) => ({
+        ...p,
+        price: Number(p.price),
+      }));
+
+      return {
+        products: formattedProducts,
+        nearestStore: store,
+        message: `Showing products from ${store?.name || "selected store"}`,
+      };
+    } catch (error) {
+      console.error("Error finding products by storeId:", error);
+      const products = await this.getAllWithStock();
+      return {
+        products,
+        nearestStore: null,
+        message: "Showing all available products (store lookup failed)",
+      };
+    }
+  }
+
   async getBySlug(slug: string) {
     return prisma.product.findUnique({
       where: { slug },
@@ -209,7 +269,7 @@ export class ProductService {
         await tx.productImage.deleteMany({
           where: { productId: product.id },
         });
-        
+
         // Create new images
         await tx.productImage.createMany({
           data: data.images.map((img) => ({
@@ -287,7 +347,9 @@ export class ProductService {
     });
 
     if (orderItems) {
-      throw new Error("Cannot delete product that has been ordered. You can deactivate it instead.");
+      throw new Error(
+        "Cannot delete product that has been ordered. You can deactivate it instead."
+      );
     }
 
     // Use transaction to ensure all deletes succeed or fail together
@@ -303,10 +365,10 @@ export class ProductService {
 
       // Delete vouchers first, then discounts
       await tx.voucher.deleteMany({
-        where: { 
+        where: {
           discount: {
-            productId: product.id
-          }
+            productId: product.id,
+          },
         },
       });
 
@@ -317,9 +379,9 @@ export class ProductService {
       await tx.storeInventory.deleteMany({
         where: { productId: product.id },
       });
-      
-      await tx.productImage.deleteMany({ 
-        where: { productId: product.id } 
+
+      await tx.productImage.deleteMany({
+        where: { productId: product.id },
       });
 
       return tx.product.delete({

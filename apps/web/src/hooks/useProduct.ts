@@ -7,10 +7,10 @@ import {
 } from "../services/products.service";
 import { ProductResponse } from "@/types/products.type";
 
-export function useProducts(lat?: number, lon?: number) {
+export function useProducts(storeId?: number, lat?: number, lon?: number) {
   return useQuery({
-    queryKey: ["products", lat, lon],
-    queryFn: () => productsService.getProducts(lat, lon),
+    queryKey: ["products", storeId, lat, lon],
+    queryFn: () => productsService.getProducts(storeId, lat, lon),
   });
 }
 

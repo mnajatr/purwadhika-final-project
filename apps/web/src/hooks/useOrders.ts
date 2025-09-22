@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getAdminOrders } from "@/services/orders.service";
+import { getAdminOrders } from "@/services/adminOrders.service";
 
 type ListResp = {
   items: unknown[];
@@ -21,7 +21,7 @@ export function useOrders(opts?: {
     "admin",
     "orders",
     opts?.page ?? 1,
-    opts?.pageSize ?? 20,
+    opts?.pageSize ?? 10,
     opts?.status ?? null,
     opts?.q ?? null,
     opts?.storeId ?? null,
@@ -33,10 +33,10 @@ export function useOrders(opts?: {
       console.log("useOrders calling getAdminOrders with opts:", opts);
       const data = await getAdminOrders({
         page: opts?.page ?? 1,
-        pageSize: opts?.pageSize ?? 20,
+        pageSize: opts?.pageSize ?? 10,
         status: opts?.status,
-  q: opts?.q,
-  storeId: opts?.storeId,
+        q: opts?.q,
+        storeId: opts?.storeId,
       });
       console.log("useOrders received data:", data);
       return data;
@@ -51,7 +51,7 @@ export function useOrders(opts?: {
     meta: {
       total: result.data?.total ?? 0,
       page: result.data?.page ?? 1,
-      pageSize: result.data?.pageSize ?? 20,
+      pageSize: result.data?.pageSize ?? 10,
     },
   };
 }

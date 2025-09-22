@@ -7,7 +7,7 @@ type ListResp = {
   pageSize: number;
 };
 
-class OrdersService {
+class AdminOrdersService {
   private readonly basePath = "/admin/orders";
 
   async getOrders(opts?: {
@@ -24,10 +24,10 @@ class OrdersService {
     if (opts?.status) params.status = opts.status;
     if (opts?.q) params.q = opts.q;
     if (typeof opts?.storeId === "number") params.storeId = opts.storeId;
-    
+
     console.log(
-    "Orders service calling:",
-    this.basePath,
+      "AdminOrders service calling:",
+      this.basePath,
       "with params:",
       params
     );
@@ -35,7 +35,7 @@ class OrdersService {
       this.basePath,
       params
     );
-    console.log("Orders service received envelope:", envelope);
+    console.log("AdminOrders service received envelope:", envelope);
     return envelope.data;
   }
 
@@ -44,12 +44,12 @@ class OrdersService {
     action: "confirm" | "ship" | "cancel"
   ) {
     const endpoint = `${this.basePath}/${orderId}/${action}`;
-    console.log("Orders service calling:", endpoint);
+    console.log("AdminOrders service calling:", endpoint);
     const response = await apiClient.patch<{
       success: boolean;
       message: string;
     }>(endpoint);
-    console.log("Orders service action response:", response);
+    console.log("AdminOrders service action response:", response);
     return response;
   }
 
@@ -62,11 +62,11 @@ class OrdersService {
   }
 }
 
-export const ordersService = new OrdersService();
+export const adminOrdersService = new AdminOrdersService();
 export const getAdminOrders = (opts?: {
   page?: number;
   pageSize?: number;
   status?: string;
   q?: string;
   storeId?: number;
-}) => ordersService.getOrders(opts);
+}) => adminOrdersService.getOrders(opts);

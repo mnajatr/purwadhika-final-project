@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Sidebar from "@/components/admin/sidebar";
-import { ordersService } from "@/services/orders.service";
+import { adminOrdersService as ordersService } from "@/services/adminOrders.service";
 
 type OrderDetail = {
   id: number;

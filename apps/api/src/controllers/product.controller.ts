@@ -5,7 +5,16 @@ const service = new ProductService();
 
 export class ProductController {
   static async getAll(req: Request, res: Response) {
-    const { lat, lon } = req.query;
+    const { lat, lon, storeId } = req.query;
+
+    // If explicit storeId provided, fetch products for that store
+    if (storeId) {
+      const sid = Number(storeId);
+      if (!Number.isNaN(sid)) {
+        const result = await service.getByStoreId(sid);
+        return res.json(result);
+      }
+    }
 
     if (lat && lon) {
       const userLat = parseFloat(lat as string);
@@ -17,7 +26,7 @@ export class ProductController {
       }
     }
 
-    // When no coordinates provided, show only products with stock
+    // When no coordinates or storeId provided, show only products with stock
     const products = await service.getAllWithStock();
     const response = {
       products,
@@ -56,7 +65,8 @@ export class ProductController {
       res.json(updated);
     } catch (e) {
       console.error("Update product error:", e);
-      const message = e instanceof Error ? e.message : "Failed to update product";
+      const message =
+        e instanceof Error ? e.message : "Failed to update product";
       res.status(400).json({ message });
     }
   }
@@ -72,7 +82,8 @@ export class ProductController {
       res.json({ message: "Product deleted successfully" });
     } catch (e) {
       console.error("Delete product error:", e);
-      const message = e instanceof Error ? e.message : "Failed to delete product";
+      const message =
+        e instanceof Error ? e.message : "Failed to delete product";
       res.status(400).json({ message });
     }
   }
@@ -86,10 +97,14 @@ export class ProductController {
         return res.status(404).json({ message: "Product not found" });
       }
 
-      res.json({ message: "Product deactivated successfully", product: deactivated });
+      res.json({
+        message: "Product deactivated successfully",
+        product: deactivated,
+      });
     } catch (e) {
       console.error("Deactivate product error:", e);
-      const message = e instanceof Error ? e.message : "Failed to deactivate product";
+      const message =
+        e instanceof Error ? e.message : "Failed to deactivate product";
       res.status(400).json({ message });
     }
   }
@@ -103,10 +118,14 @@ export class ProductController {
         return res.status(404).json({ message: "Product not found" });
       }
 
-      res.json({ message: "Product activated successfully", product: activated });
+      res.json({
+        message: "Product activated successfully",
+        product: activated,
+      });
     } catch (e) {
       console.error("Activate product error:", e);
-      const message = e instanceof Error ? e.message : "Failed to activate product";
+      const message =
+        e instanceof Error ? e.message : "Failed to activate product";
       res.status(400).json({ message });
     }
   }

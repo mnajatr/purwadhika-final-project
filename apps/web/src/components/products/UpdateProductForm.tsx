@@ -3,6 +3,7 @@
 import { useUpdateProduct } from "@/hooks/useProduct";
 import { useForm, Controller } from "react-hook-form";
 import { useEffect } from "react";
+import useLocationStore from "@/stores/locationStore";
 
 type InventoryInput = { stockQty: number; storeId: number };
 type ImageInput = { imageUrl: string };
@@ -37,6 +38,7 @@ export default function UpdateProductForm({ product }: { product: ProductForEdit
   // Hooks must be called unconditionally
   const updateProduct = useUpdateProduct();
 
+  const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? 1;
   const { register, handleSubmit, reset, control, watch } = useForm<ProductForEdit>({
     defaultValues: {
       name: "",
@@ -49,7 +51,7 @@ export default function UpdateProductForm({ product }: { product: ProductForEdit
       length: 0,
       categoryId: 1,
       images: [{ imageUrl: "" }],
-      inventories: [{ stockQty: 0, storeId: 1 }],
+      inventories: [{ stockQty: 0, storeId: nearestStoreId }],
     },
   });
 
@@ -69,10 +71,10 @@ export default function UpdateProductForm({ product }: { product: ProductForEdit
         images: product.images?.length ? product.images : [{ imageUrl: "" }],
         inventories: product.inventories?.length
           ? product.inventories
-          : [{ stockQty: 0, storeId: 1 }],
+          : [{ stockQty: 0, storeId: nearestStoreId }],
       });
     }
-  }, [product, reset]);
+  }, [product, reset, nearestStoreId]);
 
   // read full form values and access categoryId to avoid typed overloads
   const formValues = watch();
@@ -95,7 +97,7 @@ export default function UpdateProductForm({ product }: { product: ProductForEdit
             stockQty: Number(i.stockQty),
             storeId: Number(i.storeId),
           }))
-        : [{ stockQty: 0, storeId: 1 }],
+        : [{ stockQty: 0, storeId: nearestStoreId }],
     };
 
     if (!product?.slug) {

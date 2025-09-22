@@ -1,4 +1,5 @@
 import { prisma } from "@repo/database";
+import { paginate, formatPagination } from "../utils/pagination.js";
 
 export interface OrderListOptions {
   storeId?: number;
@@ -11,62 +12,45 @@ export interface OrderListOptions {
   pageSize?: number;
 }
 
-export interface OrderListResult {
-  items: any[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
-
 export class OrderReadService {
+  async listOrders(options: OrderListOptions = {}): Promise<any> {
+    const { storeId, userId, status, q, dateFrom, dateTo } = options;
 
-  async listOrders(options: OrderListOptions): Promise<OrderListResult> {
-    const {
-      storeId,
-      userId,
-      status,
-      q,
-      dateFrom,
-      dateTo,
-      page = 1,
-      pageSize = 20,
-    } = options || {};
+    const { take, skip, page, pageSize } = paginate({
+      page: options.page,
+      pageSize: options.pageSize,
+      max: 100,
+    });
+
+    // Defensive: ensure skip/take are valid integers. If invalid, fall back to safe values
+    let safeTake = Number.isFinite(Number(take)) ? Math.max(1, Math.floor(Number(take))) : Math.max(1, Number(pageSize ?? 20));
+    let safeSkip = Number.isFinite(Number(skip)) ? Math.max(0, Math.floor(Number(skip))) : 0;
+
+    // Log pagination to help diagnose cases where the client/server disagree
+    try {
+      const logger = (await import("../utils/logger.js")).default;
+      logger.info("order.read.service: pagination", { take: safeTake, skip: safeSkip, page, pageSize });
+    } catch {}
 
     const where: any = {};
-
-    // Filter by storeId if provided (admin listing)
     if (typeof storeId === "number") where.storeId = storeId;
-
-    // Filter by userId if provided
     if (typeof userId === "number") where.userId = userId;
-
-    // Filter by status if provided
     if (status && status.trim() !== "") where.status = status.trim();
 
-    // Filter by order ID or search in order items if provided
     if (q) {
       const qTrimmed = String(q).trim();
       const qn = Number(qTrimmed);
-
       if (!Number.isNaN(qn) && qn > 0) {
-        // If it's a valid number, search by order ID
         where.id = qn;
       } else if (qTrimmed !== "") {
-        // If it's text, search in product names within order items
         where.items = {
           some: {
-            product: {
-              name: {
-                contains: qTrimmed,
-                mode: "insensitive",
-              },
-            },
+            product: { name: { contains: qTrimmed, mode: "insensitive" } },
           },
         };
       }
     }
 
-    // Filter by date range if provided
     if (dateFrom || dateTo) {
       where.createdAt = {};
       if (dateFrom) {
@@ -85,41 +69,34 @@ export class OrderReadService {
       }
     }
 
-    const take = Math.min(100, Math.max(1, pageSize));
-    const skip = Math.max(0, (Math.max(1, page) - 1) * take);
-
     const [items, total] = await Promise.all([
       prisma.order.findMany({
         where,
         include: {
-          items: {
-            include: {
-              product: { select: { id: true, name: true, price: true } },
-            },
-          },
+          items: { include: { product: { select: { id: true, name: true, price: true } } } },
           payment: true,
         },
         orderBy: { createdAt: "desc" },
-        skip,
-        take,
+        skip: safeSkip,
+        take: safeTake,
       }),
       prisma.order.count({ where }),
     ]);
 
-    return { items, total, page, pageSize: take };
+    return {
+      items,
+      total,
+      page,
+      pageSize,
+      pagination: formatPagination(total, page, pageSize),
+    };
   }
 
   async getOrderById(orderId: number) {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        items: {
-          include: {
-            product: {
-              select: { id: true, name: true, price: true },
-            },
-          },
-        },
+        items: { include: { product: { select: { id: true, name: true, price: true } } } },
         payment: true,
         shipment: true,
       },
@@ -132,13 +109,8 @@ export class OrderReadService {
     const logger = (await import("../utils/logger.js")).default;
     logger.info(`Getting order counts by status for userId: ${userId}`);
 
-    // Get all orders for the user
-    const orders = await prisma.order.findMany({
-      where: { userId },
-      select: { status: true },
-    });
+    const orders = await prisma.order.findMany({ where: { userId }, select: { status: true } });
 
-    // Count by status
     const counts: Record<string, number> = {
       ALL: orders.length,
       PENDING_PAYMENT: 0,
@@ -149,24 +121,10 @@ export class OrderReadService {
       CANCELLED: 0,
     };
 
-    // Count each status
-    for (const order of orders) {
-      if (counts[order.status] !== undefined) {
-        counts[order.status]++;
-      }
-    }
+    for (const order of orders) if (counts[order.status] !== undefined) counts[order.status]++;
 
     logger.info(`Order counts calculated:`, counts);
     return counts;
-  }
-
-  async checkOrderOwnership(orderId: number, userId: number): Promise<boolean> {
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      select: { userId: true },
-    });
-
-    return order?.userId === userId;
   }
 }
 

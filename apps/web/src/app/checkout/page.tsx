@@ -11,16 +11,44 @@ import OrderSummary from "@/components/checkout/OrderSummary";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import usersService from "@/services/users.service";
+import useLocationStore from "@/stores/locationStore";
+import apiClient from "@/lib/axios-client";
+type ResolveResp = {
+  success?: boolean;
+  data?: {
+    nearestStore?: { id: number } | null;
+    distanceMeters?: number | null;
+    maxRadiusKm?: number | null;
+    inRange?: boolean;
+  };
+  message?: string;
+};
 
 export default function CheckoutPage() {
-  // read user id from sessionStorage (saved by CartPage) — fallback for dev
+  // Prefer admin dev user selector (localStorage.devUserId) when set, otherwise sessionStorage, then seeded 4
+  const devUser =
+    typeof window !== "undefined" ? localStorage.getItem("devUserId") : null;
   const storedUserId =
     typeof window !== "undefined"
       ? sessionStorage.getItem("checkout:userId")
       : null;
-  const userId = storedUserId ? Number(storedUserId) : 1;
-  const storeId = 1;
-  const { data: cart, isLoading } = useCart(userId, storeId);
+  const userId =
+    devUser && devUser !== "none"
+      ? Number(devUser)
+      : storedUserId
+      ? Number(storedUserId)
+      : 4;
+  // Freeze the store used during shopping at first render to avoid cart switching during checkout
+  const initialStoreIdRef = React.useRef<number | null>(
+    typeof window !== "undefined"
+      ? useLocationStore.getState().nearestStoreId ?? null
+      : null
+  );
+  const { data: cart, isLoading: isCartLoading } = useCart(
+    userId,
+    initialStoreIdRef.current ?? undefined
+  );
+  
   // do not pass storeId to createOrder so backend can resolve nearest store
   const createOrder = useCreateOrder(userId);
 
@@ -28,20 +56,46 @@ export default function CheckoutPage() {
     null
   );
 
-  // selected address from AddressCard (id + coords)
+  // selected address from AddressCard (id only)
   const [selectedAddress, setSelectedAddress] = React.useState<{
     id: number;
-    latitude: number;
-    longitude: number;
   } | null>(null);
 
-  // stable callback to pass to AddressCard to avoid re-creating the function
-  // each render which caused AddressCard.useEffect to re-run and refetch.
   const handleSelectAddress = React.useCallback(
-    (a: { id: number; latitude: number; longitude: number }) => {
+    async (a: { id: number }) => {
       setSelectedAddress(a);
+      // Validation-only: ensure selected address is served by the same store used during shopping
+      try {
+        const checkoutStoreId = initialStoreIdRef.current;
+        if (!checkoutStoreId) return; // nothing to validate
+        const resp = await apiClient.get<ResolveResp>(`/stores/resolve?userId=${userId}&addressId=${a.id}`);
+        const resolved = resp.data?.nearestStore?.id ?? null;
+        const distanceMeters = resp.data?.distanceMeters ?? null;
+        const maxRadiusKm = resp.data?.maxRadiusKm ?? null;
+        if (!resolved) {
+          if (distanceMeters != null && maxRadiusKm != null) {
+            const km = (distanceMeters / 1000).toFixed(1);
+            toast.error(`Address is ${km} km away (limit ${maxRadiusKm} km) — outside service area`);
+          } else {
+            toast.error("Selected address is outside service area for any store");
+          }
+          return;
+        }
+        if (resolved !== checkoutStoreId) {
+          if (distanceMeters != null && maxRadiusKm != null) {
+            const km = (distanceMeters / 1000).toFixed(1);
+            toast.error(`Address is ${km} km away (limit ${maxRadiusKm} km) — not served by the store you shopped from.`);
+          } else {
+            toast.error(
+              "Selected address is not served by the store you shopped from. Please pick another address."
+            );
+          }
+        }
+      } catch {
+        /* ignore resolve errors here; will be re-validated on place order */
+      }
     },
-    []
+    [userId]
   );
 
   // read selection saved by CartPage (sessionStorage key: checkout:selectedIds)
@@ -110,7 +164,7 @@ export default function CheckoutPage() {
       : null;
   }, [selectedAddress, userAddresses]);
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isCartLoading) return <div>Loading...</div>;
   if (!cart || cart.items.length === 0)
     return <div>Your cart is empty. Please add items first.</div>;
 
@@ -128,21 +182,46 @@ export default function CheckoutPage() {
         sessionStorage.setItem("checkout:idempotencyKey", key);
       } catch {}
 
-      // use selected address coords (preferred) instead of device geolocation
-      let userLat: number | undefined;
-      let userLon: number | undefined;
+      // use selected address id
       let addressId: number | undefined;
-      if (selectedAddress) {
-        userLat = selectedAddress.latitude;
-        userLon = selectedAddress.longitude;
-        addressId = selectedAddress.id;
+      if (selectedAddress) addressId = selectedAddress.id;
+
+      // Validate against the store used during shopping (frozen at first render)
+      const checkoutStoreId = initialStoreIdRef.current;
+      if (checkoutStoreId) {
+        if (!addressId) {
+          toast.error("Please select an address");
+          return;
+        }
+        const resp = await apiClient.get<ResolveResp>(`/stores/resolve?userId=${userId}&addressId=${addressId}`);
+        const resolved = resp.data?.nearestStore?.id ?? null;
+        const distanceMeters = resp.data?.distanceMeters ?? null;
+        const maxRadiusKm = resp.data?.maxRadiusKm ?? null;
+        if (!resolved) {
+          if (distanceMeters != null && maxRadiusKm != null) {
+            const km = (distanceMeters / 1000).toFixed(1);
+            toast.error(`Address is ${km} km away (limit ${maxRadiusKm} km) — outside service area`);
+          } else {
+            toast.error("Selected address is outside service area for any store");
+          }
+          return;
+        }
+        if (resolved !== checkoutStoreId) {
+          if (distanceMeters != null && maxRadiusKm != null) {
+            const km = (distanceMeters / 1000).toFixed(1);
+            toast.error(`Address is ${km} km away (limit ${maxRadiusKm} km) — not served by the chosen store.`);
+          } else {
+            toast.error(
+              "Selected address is not served by the chosen store. Please pick an address within the store's delivery area."
+            );
+          }
+          return;
+        }
       }
 
       await createOrder.mutateAsync({
         items,
         idempotencyKey: key,
-        userLat,
-        userLon,
         addressId,
       });
       toast.success("Order created — redirecting...");
@@ -157,13 +236,18 @@ export default function CheckoutPage() {
       toast.error(msg);
     }
   };
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Checkout</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
         <div>
-          <AddressCard onSelect={handleSelectAddress} />
+          <AddressCard
+            onSelect={handleSelectAddress}
+            checkoutStoreId={initialStoreIdRef.current}
+            userId={userId}
+          />
           <ItemsList cart={cart} selectedIds={selectedIds} userId={userId} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">

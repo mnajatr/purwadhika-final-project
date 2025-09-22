@@ -17,7 +17,7 @@ import QuantityControls from "./QuantityControls";
 interface CartItemProps {
   item: CartItemType;
   userId: number;
-  /** optional store id to use with cart hooks; defaults to 1 */
+  /** optional store id to use with cart hooks; if omitted, hooks fall back to nearestStoreId */
   storeId?: number;
   selected?: boolean;
   onToggle?: () => void;
@@ -27,7 +27,7 @@ interface CartItemProps {
 export default function CartItem({
   item,
   userId,
-  storeId = 1,
+  storeId,
   selected = true,
   onToggle,
   readOnly = false,

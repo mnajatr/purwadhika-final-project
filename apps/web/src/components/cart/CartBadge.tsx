@@ -3,6 +3,7 @@
 import { Badge } from "../ui/badge";
 import { ShoppingCart } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
+import useLocationStore from "@/stores/locationStore";
 
 interface CartBadgeProps {
   userId: number;
@@ -10,8 +11,10 @@ interface CartBadgeProps {
   className?: string;
 }
 
-export function CartBadge({ userId, storeId = 1, className }: CartBadgeProps) {
-  const { data: cart } = useCart(userId, storeId);
+export function CartBadge({ userId, storeId, className }: CartBadgeProps) {
+  const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? 1;
+  const effectiveStoreId = storeId ?? nearestStoreId;
+  const { data: cart } = useCart(userId, effectiveStoreId);
   const itemCount = cart?.items?.length || 0;
 
   return (

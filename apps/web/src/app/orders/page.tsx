@@ -32,13 +32,15 @@ interface Order {
   }[];
 }
 
-// Simple fetch function
+// Fetch paginated orders from backend and return envelope { items, total, page, pageSize }
 async function fetchOrders(
-  filters: { status?: string; q?: string; date?: string } = {}
+  filters: { status?: string; q?: string; date?: string; page?: number; pageSize?: number } = {}
 ) {
   const params = new URLSearchParams();
   if (filters.status) params.append("status", filters.status);
   if (filters.q) params.append("q", filters.q);
+  if (typeof filters.page === "number") params.append("page", String(filters.page));
+  if (typeof filters.pageSize === "number") params.append("pageSize", String(filters.pageSize));
   if (filters.date) {
     const selectedDate = new Date(filters.date);
     const dateFrom = new Date(selectedDate);
@@ -69,15 +71,15 @@ async function fetchOrders(
   console.log("API Response:", data);
 
   if (data.success && data.data) {
-    return data.data.items || [];
+    return data.data; // envelope with items, total, page, pageSize
   }
 
-  return [];
+  return { items: [], total: 0, page: 1, pageSize: filters.pageSize ?? 10 };
 }
 
 export default function OrdersPage() {
-  const [allOrders, setAllOrders] = React.useState<Order[]>([]);
-  const [filteredOrders, setFilteredOrders] = React.useState<Order[]>([]);
+  const [orders, setOrders] = React.useState<Order[]>([]);
+  const [total, setTotal] = React.useState<number>(0);
   const [counts, setCounts] = React.useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -89,109 +91,51 @@ export default function OrdersPage() {
   const [searchTimeoutId, setSearchTimeoutId] =
     React.useState<NodeJS.Timeout | null>(null);
 
-  // Load orders when filters change
-  // Load all orders once at startup
+  const [page, setPage] = React.useState<number>(1);
+  const pageSize = 10;
+
+  // Load orders from server whenever filters or page change
   React.useEffect(() => {
-    const loadAllOrders = async () => {
-      console.log("🔄 Loading all orders (once)...");
+    let mounted = true;
+    const load = async () => {
       setIsLoading(true);
       setError(null);
-
       try {
-        // Fetch all orders without filters
-        const ordersData = await fetchOrders({});
-        console.log("✅ All orders loaded:", ordersData.length, "orders");
-        setAllOrders(ordersData);
+        const resp = await fetchOrders({ status: status ?? undefined, q: q ?? undefined, date: date ?? undefined, page, pageSize });
+        if (!mounted) return;
+        setOrders(resp.items || []);
+        setTotal(resp.total ?? 0);
+        // counts endpoint exists — but to keep this change small, derive counts from resp.pagination if available
+        // If a dedicated counts endpoint is preferred, we can call it separately.
       } catch (err) {
         console.error("❌ Error loading orders:", err);
         setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
-        setIsLoading(false);
+        if (mounted) setIsLoading(false);
       }
     };
 
-    loadAllOrders();
-  }, []); // Only run once
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [status, q, date, page]);
 
   // Filter orders and calculate counts whenever filters or data change
   React.useEffect(() => {
     console.log("🔍 Filtering orders with:", { status, q, date });
 
-    let filtered = allOrders;
-
-    // Filter by status
-    if (status) {
-      filtered = filtered.filter((order) => order.status === status);
-      console.log(
-        `📊 After status filter (${status}):`,
-        filtered.length,
-        "orders"
-      );
-    }
-
-    // Filter by search query (order ID or product name)
-    if (q) {
-      const searchTerm = q.toLowerCase();
-      filtered = filtered.filter((order) => {
-        // Search in numeric order ID (convert to string for partial matching)
-        const orderIdString = order.id.toString();
-        if (orderIdString.includes(searchTerm)) return true;
-
-        // Search in invoiceId if it exists
-        if (order.invoiceId?.toLowerCase().includes(searchTerm)) return true;
-
-        // Search in product names
-        const hasMatchingProduct = order.items?.some((item) =>
-          item.product?.name?.toLowerCase().includes(searchTerm)
-        );
-
-        return hasMatchingProduct;
-      });
-      console.log(`🔍 After search filter (${q}):`, filtered.length, "orders");
-      console.log(
-        "🔍 Search matched orders:",
-        filtered.map((o) => ({ id: o.id, invoiceId: o.invoiceId }))
-      );
-    }
-
-    // Filter by date
-    if (date) {
-      const selectedDate = new Date(date);
-      const dateFrom = new Date(selectedDate);
-      dateFrom.setHours(0, 0, 0, 0);
-
-      const dateTo = new Date(selectedDate);
-      dateTo.setHours(23, 59, 59, 999);
-
-      filtered = filtered.filter((order) => {
-        const orderDate = new Date(order.createdAt);
-        return orderDate >= dateFrom && orderDate <= dateTo;
-      });
-      console.log(`📅 After date filter (${date}):`, filtered.length, "orders");
-    }
-
-    setFilteredOrders(filtered);
-
-    // Calculate counts from all orders
-    const newCounts: Record<string, number> = {
-      ALL: allOrders.length,
+    // No client-side filtering: server handles paging and filters. Keep counts as empty until a counts endpoint is used.
+    setCounts({
+      ALL: 0,
       PENDING_PAYMENT: 0,
       PAYMENT_REVIEW: 0,
       PROCESSING: 0,
       SHIPPED: 0,
       CONFIRMED: 0,
       CANCELLED: 0,
-    };
-
-    for (const order of allOrders) {
-      if (newCounts[order.status] !== undefined) {
-        newCounts[order.status]++;
-      }
-    }
-
-    setCounts(newCounts);
-    console.log("📊 Counts calculated:", newCounts);
-  }, [allOrders, status, q, date]);
+    });
+  }, [orders, status, q, date]);
 
   const statusColor: Record<string, string> = {
     PENDING_PAYMENT: "bg-yellow-100 text-yellow-800",
@@ -225,10 +169,10 @@ export default function OrdersPage() {
   }, [searchTimeoutId]);
 
   // Show filter status and results info
-  const hasActiveFilters = status || q || date;
+  const hasActiveFilters = Boolean(status || q || date);
   const isFiltered = hasActiveFilters;
-  const showingFilteredResults = isFiltered && filteredOrders.length > 0;
-  const noResultsForFilter = isFiltered && filteredOrders.length === 0;
+  const showingFilteredResults = isFiltered && orders.length > 0;
+  const noResultsForFilter = isFiltered && orders.length === 0;
 
   if (isLoading) {
     return (
@@ -252,7 +196,7 @@ export default function OrdersPage() {
     );
   }
 
-  if (!filteredOrders || filteredOrders.length === 0) {
+  if (!orders || orders.length === 0) {
     if (noResultsForFilter) {
       // When filter is active but no results - show filter UI with clear options
       return (
@@ -407,8 +351,8 @@ export default function OrdersPage() {
               </div>
             </div>
             <p className="text-gray-500 text-sm">
-              <span className="font-medium">{allOrders.length}</span> total
-              orders available
+              <span className="font-medium">{total}</span> total orders
+              available
             </p>
           </div>
         </div>
@@ -417,7 +361,7 @@ export default function OrdersPage() {
       // When no orders at all (initial state or real empty)
       return (
         <div className="max-w-5xl mx-auto p-6 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">Orders</h1>
+              <h1 className="text-2xl font-bold text-gray-900 mb-6">Orders</h1>
           <div className="text-xl">No orders found</div>
           <p className="text-sm text-muted-foreground">
             You do not have any orders yet.
@@ -435,12 +379,12 @@ export default function OrdersPage() {
       {hasActiveFilters && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-blue-700">
-              <span className="font-medium">
-                Showing {filteredOrders.length} of {allOrders.length} orders
-              </span>
-              <span className="mx-2">•</span>
-              <span>Filtered by:</span>
+              <div className="text-sm text-blue-700">
+                <span className="font-medium">
+                  Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, total)} of {total} orders
+                </span>
+                <span className="mx-2">•</span>
+                <span>Filtered by:</span>
               {status && (
                 <span className="mx-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
                   Status: {status}
@@ -551,7 +495,7 @@ export default function OrdersPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {filteredOrders.map((o: Order) => (
+  {orders.map((o: Order) => (
           <Card key={o.id}>
             <CardHeader className="flex items-center justify-between">
               <div>
@@ -590,6 +534,29 @@ export default function OrdersPage() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Pagination controls */}
+      <div className="mt-6 flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <button
+            className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            Previous
+          </button>
+          <button
+            className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={page * pageSize >= total}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </button>
+        </div>
+        <div className="text-sm text-gray-700">
+          Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, total)} of {total} results
+        </div>
       </div>
     </div>
   );
