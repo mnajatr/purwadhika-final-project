@@ -46,23 +46,30 @@
 :root {
   --radius: 0.625rem;
   /* Warm peachy-orange gradient background inspired by grocery app design */
-  --background-start: oklch(0.965 0.045 65);
-  --background-end: oklch(0.955 0.065 85);
+  --background-start: oklch(95.942% 0.06537 120.645);
+  /* light yellow mid stop to add a soft center highlight */
+  --background-mid: oklch(97.5% 0.055 95);
+  --background-end: oklch(95.164% 0.0495 83.958);
   --background: linear-gradient(
     135deg,
-    var(--background-start),
-    var(--background-end)
+    var(--background-start) 0%,
+    var(--background-mid) 50%,
+    var(--background-end) 100%
   );
   --foreground: oklch(0.2 0 0);
-  --card: oklch(0.98 0.02 75);
+  --card: oklch(98.282% 0.00441 77.982 / 0.628);
   --card-foreground: oklch(0.2 0 0);
   --popover: oklch(0.98 0.02 75);
   --popover-foreground: oklch(0.2 0 0);
-  --primary: oklch(0.72 0.18 55);
+  --primary: oklch(79.589% 0.14105 71.832);
   --primary-foreground: oklch(0.98 0.02 75);
-  --secondary: oklch(0.96 0.03 70);
+    /* Primary gradient stops - use --primary for solid color and --primary-gradient for backgrounds */
+    --prim-start: oklch(78.811% 0.15837 69.501);
+    --prim-end: oklch(81.9% 0.14852 71.477);
+    --primary-gradient: linear-gradient(135deg, var(--prim-start) 0%, var(--prim-end) 100%);
+  --secondary: oklch(0.9885 0.0098 87.47);
   --secondary-foreground: oklch(0.25 0 0);
-  --muted: oklch(0.94 0.04 68);
+  --muted: oklch(91.944% 0.05343 78.986);
   --muted-foreground: oklch(0.55 0.02 60);
   --accent: oklch(0.75 0.15 50);
   --accent-foreground: oklch(0.98 0.02 75);
@@ -77,21 +84,24 @@
   --chart-5: oklch(0.8 0.2 105);
   --sidebar: oklch(0.97 0.03 72);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.72 0.18 55);
-  --sidebar-primary-foreground: oklch(0.98 0.02 75);
-  --sidebar-accent: oklch(0.96 0.03 70);
-  --sidebar-accent-foreground: oklch(0.25 0 0);
-  --sidebar-border: oklch(0.88 0.06 70);
-  --sidebar-ring: oklch(0.72 0.18 55);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 }
 
 .dark {
   --background-start: oklch(0.18 0.02 45);
+  /* subtle mid for dark mode to keep a gentle center tone */
+  --background-mid: oklch(0.205 0.02 55);
   --background-end: oklch(0.22 0.03 65);
   --background: linear-gradient(
     135deg,
-    var(--background-start),
-    var(--background-end)
+    var(--background-start) 0%,
+    var(--background-mid) 50%,
+    var(--background-end) 100%
   );
   --foreground: oklch(0.95 0.01 70);
   --card: oklch(0.25 0.02 55);
@@ -100,6 +110,10 @@
   --popover-foreground: oklch(0.95 0.01 70);
   --primary: oklch(0.8 0.16 50);
   --primary-foreground: oklch(0.15 0.02 55);
+    /* Dark mode primary gradient (subtle, for backgrounds on dark) */
+    --prim-start: oklch(0.28 0.06 48);
+    --prim-end: oklch(0.8 0.16 50);
+    --primary-gradient: linear-gradient(135deg, var(--prim-start) 0%, var(--prim-end) 100%);
   --secondary: oklch(0.3 0.02 60);
   --secondary-foreground: oklch(0.9 0.01 70);
   --muted: oklch(0.28 0.02 58);
@@ -132,5 +146,16 @@
   body {
     background: var(--background);
     color: var(--foreground);
+  }
+
+  /* Utility: use primary gradient as a background */
+  .bg-primary-gradient {
+    background: var(--primary-gradient);
+    color: var(--primary-foreground);
+    background-size: cover;
+  }
+
+  .bg-primary-gradient:hover {
+    opacity: 0.95;
   }
 }

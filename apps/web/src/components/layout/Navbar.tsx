@@ -36,7 +36,7 @@ export default function Navbar() {
           {/* Logo/Brand */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-primary-gradient rounded-lg flex items-center justify-center">
                 <svg
                   className="w-5 h-5 text-primary-foreground"
                   fill="currentColor"
@@ -117,7 +117,7 @@ export default function Navbar() {
             {/* Cart Button */}
             <Link
               href="/cart"
-              className="relative flex items-center space-x-3 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-xl transition-all shadow-sm hover:shadow-md"
+              className="relative flex items-center space-x-3 bg-primary-gradient hover:opacity-95 text-primary-foreground px-4 py-2 rounded-xl transition-all shadow-sm hover:shadow-md"
             >
               <div className="relative">
                 <svg

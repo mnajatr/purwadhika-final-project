@@ -54,7 +54,7 @@ export default function Home() {
                     fill="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12L8.1 13h7.45c.75 0 1.41-.41 1.75-1.03L21.7 4H5.21l-.94-2H1zm16 16c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                    <path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12L8.1 13h7.45c.75 0 1.41-.41 1.75-1.03L21.7 4H5.21l-.94-2H1zm16 16c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
                   </svg>
                 </div>
               </div>
@@ -64,18 +64,19 @@ export default function Home() {
               <span className="block text-primary">Fresh & Fast</span>
             </h1>
             <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-              The easiest way to buy your grocery shopping. Fresh produce delivered to your doorstep within hours.
+              The easiest way to buy your grocery shopping. Fresh produce
+              delivered to your doorstep within hours.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link
                 href="/products"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-2xl text-lg font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                className="bg-primary-gradient hover:opacity-95 text-primary-foreground px-8 py-4 rounded-2xl text-lg font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1"
               >
                 Get Started
               </Link>
               <Link
                 href="/cart"
-                className="border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground px-8 py-4 rounded-2xl text-lg font-semibold transition-all"
+                className="bg-primary-gradient hover:opacity-95 text-primary-foreground px-8 py-4 rounded-2xl text-lg font-semibold transition-all"
               >
                 View Cart
               </Link>
@@ -131,7 +132,7 @@ export default function Home() {
                   </div>
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="inline-block px-3 py-1 text-xs bg-primary/10 text-primary rounded-full font-medium">
+                      <span className="inline-block px-3 py-1 text-xs bg-primary/25 text-primary rounded-full font-medium">
                         {product.category}
                       </span>
                       <span className="text-xs text-muted-foreground">
@@ -147,17 +148,15 @@ export default function Home() {
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col">
                         <span className="text-2xl font-bold text-primary">
-                          Rp {Number(product.price || 0).toLocaleString("id-ID")}
-                        </span>
-                        <span className="text-xs text-muted-foreground line-through">
-                          Rp {(Number(product.price || 0) * 1.2).toLocaleString("id-ID")}
+                          Rp{" "}
+                          {Number(product.price || 0).toLocaleString("id-ID")}
                         </span>
                       </div>
                       <Link
                         href={`/products/${product.slug}`}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-xl transition-all font-semibold"
+                        className="bg-primary-gradient hover:opacity-95 text-primary-foreground px-6 py-2 rounded-xl transition-all font-semibold"
                       >
-                        Add to Cart
+                        Details Product
                       </Link>
                     </div>
                   </div>
@@ -178,14 +177,30 @@ export default function Home() {
         {/* Categories Section */}
         <div className="mb-20">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-foreground mb-4">Shop by Category</h2>
-            <p className="text-muted-foreground text-lg">Find what you need quickly</p>
+            <h2 className="text-4xl font-bold text-foreground mb-4">
+              Shop by Category
+            </h2>
+            <p className="text-muted-foreground text-lg">
+              Find what you need quickly
+            </p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
-              { name: "Fruits", icon: "🍎", color: "from-red-400 to-orange-400" },
-              { name: "Vegetables", icon: "🥕", color: "from-green-400 to-emerald-400" },
-              { name: "Fast food", icon: "🍔", color: "from-yellow-400 to-orange-400" },
+              {
+                name: "Fruits",
+                icon: "🍎",
+                color: "from-red-400 to-orange-400",
+              },
+              {
+                name: "Vegetables",
+                icon: "🥕",
+                color: "from-green-400 to-emerald-400",
+              },
+              {
+                name: "Fast food",
+                icon: "🍔",
+                color: "from-yellow-400 to-orange-400",
+              },
               { name: "Dairy", icon: "🥛", color: "from-blue-400 to-cyan-400" },
             ].map((category) => (
               <Link
@@ -194,10 +209,14 @@ export default function Home() {
                 className="group"
               >
                 <div className="bg-card rounded-3xl p-8 text-center hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-border">
-                  <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br ${category.color} flex items-center justify-center text-2xl group-hover:scale-110 transition-transform`}>
+                  <div
+                    className={`w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br ${category.color} flex items-center justify-center text-2xl group-hover:scale-110 transition-transform`}
+                  >
                     {category.icon}
                   </div>
-                  <h3 className="font-semibold text-foreground">{category.name}</h3>
+                  <h3 className="font-semibold text-foreground">
+                    {category.name}
+                  </h3>
                 </div>
               </Link>
             ))}
@@ -210,25 +229,34 @@ export default function Home() {
             {
               icon: "⏰",
               title: "Fast Delivery",
-              description: "Quick and reliable delivery to your doorstep within hours."
+              description:
+                "Quick and reliable delivery to your doorstep within hours.",
             },
             {
               icon: "✅",
               title: "Fresh Quality",
-              description: "Hand-picked fresh products from trusted suppliers."
+              description: "Hand-picked fresh products from trusted suppliers.",
             },
             {
               icon: "💰",
               title: "Best Prices",
-              description: "Competitive prices with regular discounts and offers."
-            }
+              description:
+                "Competitive prices with regular discounts and offers.",
+            },
           ].map((feature) => (
-            <div key={feature.title} className="bg-card p-8 rounded-3xl text-center shadow-lg border border-border">
+            <div
+              key={feature.title}
+              className="bg-card p-8 rounded-3xl text-center shadow-lg border border-border"
+            >
               <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl">
                 {feature.icon}
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-3">{feature.title}</h3>
-              <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
+              <h3 className="text-xl font-bold text-foreground mb-3">
+                {feature.title}
+              </h3>
+              <p className="text-muted-foreground leading-relaxed">
+                {feature.description}
+              </p>
             </div>
           ))}
         </div>
@@ -239,12 +267,12 @@ export default function Home() {
             Ready to Start Shopping?
           </h2>
           <p className="text-muted-foreground mb-8 text-lg max-w-2xl mx-auto">
-            Browse through our collection of fresh groceries and household essentials. 
-            Get everything delivered fresh to your doorstep.
+            Browse through our collection of fresh groceries and household
+            essentials. Get everything delivered fresh to your doorstep.
           </p>
           <Link
             href="/products"
-            className="inline-block bg-primary hover:bg-primary/90 text-primary-foreground px-10 py-4 rounded-2xl text-lg font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+            className="inline-block bg-primary-gradient hover:opacity-95 text-primary-foreground px-10 py-4 rounded-2xl text-lg font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1"
           >
             Explore Products
           </Link>
