@@ -10,6 +10,7 @@ export type ProductResponse = {
   height?: number;
   length?: number;
   inventories?: {
+    stockQty: number;
     store?: { name: string };
   }[];
   images?: { imageUrl: string }[];
