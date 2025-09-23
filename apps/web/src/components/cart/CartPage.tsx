@@ -5,11 +5,14 @@ import useLocationStore from "@/stores/locationStore";
 import CartItem from "./CartItem";
 import { useCart, useClearCart, useUpdateCartItem } from "@/hooks/useCart";
 import { Button } from "../ui/button";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 import useCreateOrder from "@/hooks/useOrder";
 import { useRouter } from "next/navigation";
 import formatIDR from "@/utils/formatCurrency";
+import { CartPageSkeleton } from "./CartSkeleton";
+import { EmptyCartState } from "./EmptyCartState";
 import {
   validateCartForCheckout,
   hasOutOfStockItems,
@@ -25,7 +28,7 @@ export function CartPage({ userId }: CartPageProps) {
   // Derive storeId from location store so cart follows nearest store selection
   const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? 1;
   const storeId = nearestStoreId;
-  const { data: cart, isLoading } = useCart(userId, storeId);
+  const { data: cart, isInitialLoading, isFetching } = useCart(userId, storeId);
   const clearCartMutation = useClearCart(userId, storeId);
   const updateCartItemMutation = useUpdateCartItem(userId, storeId);
   const [selectedIds, setSelectedIds] = React.useState<Record<number, boolean>>(
@@ -99,24 +102,12 @@ export function CartPage({ userId }: CartPageProps) {
     }
   }, [cart, hasAutoAdjusted]);
 
-  if (isLoading || !cart) return <div>Loading cart...</div>;
-  if (cart.items.length === 0)
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
-        <div className="text-center">
-          <p className="text-xl font-semibold text-gray-900 mb-4">
-            Your cart is empty. Start shopping!
-          </p>
-          <Button
-            size="lg"
-            className="bg-indigo-600 text-white hover:bg-indigo-700 px-6 py-3 rounded-lg font-semibold"
-            onClick={() => router.push("/products")}
-          >
-            Shop now
-          </Button>
-        </div>
-      </div>
-    );
+  // Only show the full-page skeleton while the query is loading for the
+  // first time (initial load). During background fetches (e.g. after a
+  // mutation) we keep the UI stable and show a subtle inline spinner.
+  if (isInitialLoading) return <CartPageSkeleton />;
+  if (!cart) return <CartPageSkeleton />;
+  if (cart.items.length === 0) return <EmptyCartState />;
 
   const allSelected = cart.items.every((it) => selectedIds[it.id]);
 
@@ -174,26 +165,92 @@ export function CartPage({ userId }: CartPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto p-4 sm:p-6">
-        <h2 className="text-2xl font-bold mb-6 text-gray-900">My Cart</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-1 pb-4 border-b mb-4">
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  aria-label="select all"
-                  checked={allSelected}
-                  onChange={toggleSelectAll}
-                  className="h-5 w-5 rounded-md text-indigo-600 focus:ring-indigo-500 border-gray-300"
+        {/* Header - Consistent with skeleton layout */}
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            aria-label="Back to landing"
+            title="Back"
+            onClick={() => router.push("/")}
+            className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+          >
+            <ChevronLeft className="w-5 h-5 text-foreground" />
+          </button>
+
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-foreground">My Cart</h2>
+              {isFetching && (
+                <div
+                  className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"
+                  aria-hidden
                 />
-                <span className="text-lg font-semibold text-gray-900">
+              )}
+            </div>
+            <p className="text-muted-foreground text-sm mt-1">
+              {cart.items.length} {cart.items.length === 1 ? "item" : "items"}{" "}
+              in your cart
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
+          {/* Main Cart Content - Matching skeleton padding */}
+          <div className="bg-card rounded-xl border border-border p-4 sm:p-6 shadow-sm backdrop-blur-sm">
+            {/* Select All Header - Matching skeleton spacing */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-1 pb-4 border-b border-border mb-4">
+              <div className="flex items-center gap-3">
+                <label className="inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    aria-label="select all"
+                    checked={allSelected}
+                    onChange={toggleSelectAll}
+                    className="sr-only"
+                  />
+                  <span
+                    aria-hidden
+                    className="inline-flex items-center justify-center h-6 w-6 rounded-sm border-2 transition-all duration-200"
+                    style={{
+                      background: allSelected
+                        ? "var(--cart-check)"
+                        : "transparent",
+                      borderColor: allSelected
+                        ? "var(--cart-check)"
+                        : "var(--border)",
+                    }}
+                  >
+                    {allSelected && (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        className="h-4 w-4"
+                        style={{ color: "var(--primary-foreground)" }}
+                      >
+                        <path
+                          strokeWidth={3}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    )}
+                  </span>
+                </label>
+                <span className="text-xl font-bold text-foreground">
                   Select All
                 </span>
               </div>
+              <div className="text-sm text-muted-foreground mt-2 sm:mt-0">
+                {Object.values(selectedIds).filter(Boolean).length} of{" "}
+                {cart.items.length} selected
+              </div>
             </div>
 
+            {/* Cart Items */}
             <div className="space-y-4">
               {cart.items.map((item) => (
                 <CartItem
@@ -207,16 +264,17 @@ export function CartPage({ userId }: CartPageProps) {
               ))}
             </div>
 
-            <div className="mt-6 border-t pt-4">
+            {/* Clear Cart Button - Matching skeleton spacing */}
+            <div className="mt-6 border-t border-border pt-4">
               <div className="flex w-full items-center justify-end">
                 <div className="w-full sm:w-auto">
                   <>
                     <Button
                       variant="destructive"
-                      size="sm"
+                      size="lg"
                       onClick={() => setShowConfirmAll(true)}
                       disabled={clearCartMutation.isPending}
-                      className="w-full sm:w-auto"
+                      className="text-md w-full sm:w-auto"
                     >
                       {clearCartMutation.isPending
                         ? "Clearing..."
@@ -245,24 +303,31 @@ export function CartPage({ userId }: CartPageProps) {
             </div>
           </div>
 
+          {/* Checkout Sidebar - Matching skeleton layout */}
           <div className="w-full lg:w-auto">
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm lg:sticky lg:top-6">
-              <h3 className="text-xl font-semibold mb-4 text-gray-900">
-                Shopping Summary
+            <div className="bg-card rounded-2xl border border-border p-6 shadow-lg backdrop-blur-sm lg:sticky lg:top-6">
+              <h3 className="text-xl font-bold mb-6 text-foreground">
+                Order Summary
               </h3>
 
-              <div className="space-y-3 mb-6">
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>Subtotal:</span>
-                  <span className="font-medium text-gray-900">
+              <div className="space-y-4 mb-6">
+                <div className="flex justify-between items-center py-2 border-b border-border">
+                  <span className="text-muted-foreground font-medium">
+                    Subtotal (
+                    {Object.values(selectedIds).filter(Boolean).length} items):
+                  </span>
+                  <span className="font-semibold text-foreground text-lg">
                     {formatIDR(subtotal)}
                   </span>
                 </div>
-                <div className="border-t pt-3">
-                  <div className="flex justify-between text-lg font-semibold text-gray-900">
-                    <span>Total:</span>
-                    <span>{formatIDR(subtotal)}</span>
-                  </div>
+
+                <div className="flex justify-between items-center py-3">
+                  <span className="text-xl font-bold text-foreground">
+                    Total:
+                  </span>
+                  <span className="text-2xl font-bold text-primary">
+                    {formatIDR(subtotal)}
+                  </span>
                 </div>
               </div>
 
@@ -291,21 +356,36 @@ export function CartPage({ userId }: CartPageProps) {
                   </div>
                 )}
 
-                {/* Idempotency is intentionally handled at the checkout/order
-                    level (server + checkout UI). Removing cart-level idempotency
-                    input to avoid confusion — users generate/see keys on Checkout. */}
                 <Button
-                  className={`w-full py-3 rounded-lg font-semibold ${
-                    hasOutOfStockInSelection
+                  className={`w-full py-4 rounded-2xl font-semibold text-lg transition-all duration-200 ${
+                    hasOutOfStockInSelection ||
+                    Object.values(selectedIds).filter(Boolean).length === 0
                       ? "bg-gray-400 text-gray-700 cursor-not-allowed"
-                      : "bg-indigo-600 text-white hover:bg-indigo-700"
+                      : "bg-primary-gradient text-primary-foreground hover:opacity-95 shadow-lg hover:shadow-xl"
                   }`}
                   size="lg"
                   onClick={handleCheckout}
-                  disabled={creating || hasOutOfStockInSelection}
+                  disabled={
+                    creating ||
+                    hasOutOfStockInSelection ||
+                    Object.values(selectedIds).filter(Boolean).length === 0
+                  }
                 >
-                  {creating ? "Processing..." : "Checkout"}
+                  {creating ? (
+                    "Processing..."
+                  ) : (
+                    <span className="inline-flex items-center justify-center gap-2">
+                      Proceed to Checkout
+                      <ChevronRight className="w-4 h-4" />
+                    </span>
+                  )}
                 </Button>
+
+                {Object.values(selectedIds).filter(Boolean).length === 0 && (
+                  <p className="text-center text-sm text-muted-foreground">
+                    Select items to proceed with checkout
+                  </p>
+                )}
               </div>
             </div>
           </div>

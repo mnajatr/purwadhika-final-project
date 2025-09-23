@@ -12,10 +12,10 @@ type IdempotencyEntry =
 
 const IDEMPOTENCY_TTL_MS = 60 * 1000;
 const idempotencyStore = new Map<string, IdempotencyEntry>();
-const ORDER_CANCEL_DELAY_MS = Number(process.env.ORDER_CANCEL_DELAY_MS) || 60 * 60 * 1000;
+const ORDER_CANCEL_DELAY_MS =
+  Number(process.env.ORDER_CANCEL_DELAY_MS) || 60 * 60 * 1000;
 
 export class CheckoutService {
-
   async createCheckout(
     userId: number,
     storeId: number | undefined,
@@ -92,10 +92,16 @@ export class CheckoutService {
     // Create order in transaction
     const result = await prisma.$transaction(async (tx) => {
       // Validate inventory availability
-      await inventoryService.validateInventoryAvailability(resolvedStoreId, items);
+      await inventoryService.validateInventoryAvailability(
+        resolvedStoreId,
+        items
+      );
 
       // Resolve address for the order
-      const chosenAddressId = await addressService.resolveAddressId(userId, addressId);
+      const chosenAddressId = await addressService.resolveAddressId(
+        userId,
+        addressId
+      );
 
       // Compute totals and create order
       let subtotal = 0;
@@ -123,7 +129,7 @@ export class CheckoutService {
         const product = await tx.product.findUnique({
           where: { id: item.productId },
         });
-        
+
         const unitPrice = Math.round(Number(product?.price ?? 0));
         const totalAmount = unitPrice * item.qty;
 
@@ -173,13 +179,51 @@ export class CheckoutService {
       await this._scheduleAutoCancellation(result.id, ORDER_CANCEL_DELAY_MS);
     }
 
+    // After successful order creation, remove the ordered products from the user's cart
+    try {
+      const productIds = items.map((it: any) => it.productId).filter(Boolean);
+      if (productIds.length > 0 && resolvedStoreId) {
+        await prisma.cartItem.deleteMany({
+          where: {
+            productId: { in: productIds },
+            cart: { userId, storeId: resolvedStoreId },
+          },
+        });
+      }
+    } catch (err) {
+      // Don't fail the order if cart cleanup fails; log and continue
+      try {
+        const logger = (await import("../utils/logger.js")).default;
+        logger.error(
+          "Failed to clean up cart for user=%d order=%d: %o",
+          userId,
+          result?.id,
+          err
+        );
+      } catch (e) {
+        // fallback
+        // eslint-disable-next-line no-console
+        console.error(
+          "Cart cleanup failed for user=%d order=%d",
+          userId,
+          result?.id,
+          err
+        );
+      }
+    }
+
     return result;
   }
 
-  private async _scheduleAutoCancellation(orderId: number, delayMs: number): Promise<void> {
+  private async _scheduleAutoCancellation(
+    orderId: number,
+    delayMs: number
+  ): Promise<void> {
     try {
-      const { orderCancelQueue } = await import("../queues/orderCancelQueue.js");
-      
+      const { orderCancelQueue } = await import(
+        "../queues/orderCancelQueue.js"
+      );
+
       await orderCancelQueue.add(
         "cancel-order",
         { orderId },
@@ -189,7 +233,10 @@ export class CheckoutService {
       // Don't fail order creation due to queue issues; log error
       try {
         const logger = (await import("../utils/logger.js")).default;
-        logger.error(`Failed to enqueue cancel job for order=${orderId}: %o`, err);
+        logger.error(
+          `Failed to enqueue cancel job for order=${orderId}: %o`,
+          err
+        );
       } catch (e) {
         // swallow logging errors
       }

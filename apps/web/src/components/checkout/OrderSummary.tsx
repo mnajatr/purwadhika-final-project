@@ -2,14 +2,13 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
+import { RippleButton } from "@/components/ui/ripple-button";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardHeader,
   CardContent,
   CardFooter,
-  CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import type { CartResponse as Cart } from "@repo/schemas";
 import { validateCartForCheckout } from "@/utils/cartStockUtils";
@@ -52,117 +51,14 @@ export default function OrderSummary({
   const hasOutOfStockItems = outOfStockItems.length > 0;
 
   return (
-    <Card className="relative lg:sticky lg:top-6 shadow-lg border border-gray-100 overflow-hidden rounded-lg">
-      <CardHeader className="p-0">
-        <div className="absolute top-0 left-0 right-0 rounded-t-lg bg-gradient-to-r from-indigo-600 to-rose-500 text-white p-4 flex items-center justify-between">
+    <div className="lg:sticky lg:top-6">
+      <Card className="bg-card rounded-2xl border border-border shadow-sm backdrop-blur-sm overflow-hidden">
+        <CardHeader className="p-4">
           <div className="flex items-center gap-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-6 h-6 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M3 3h18v4H3zM6 11h12l-1.5 9H7.5L6 11z"
-              />
-            </svg>
-            <div>
-              <CardTitle className="text-white">Order Summary</CardTitle>
-              <CardDescription className="text-indigo-100 text-sm">
-                Secure and fast — finalizes stock at checkout
-              </CardDescription>
-            </div>
-          </div>
-          <Badge className="bg-white text-indigo-700">Secure</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-16">
-        <div className="text-sm text-muted-foreground mb-3">
-          {items.length} item(s)
-        </div>
-
-        <div className="flex justify-between mb-2">
-          <span>Subtotal</span>
-          <span className="font-medium">Rp {subtotal.toLocaleString()}</span>
-        </div>
-
-        <div className="flex justify-between mb-2">
-          <span>Shipping</span>
-          <span className="font-medium">Rp 0</span>
-        </div>
-
-        <div className="flex justify-between border-t pt-3 mt-3 items-end">
-          <span className="font-semibold text-slate-700">Total</span>
-          <span className="text-2xl md:text-3xl bg-clip-text text-transparent font-extrabold bg-gradient-to-r from-indigo-600 to-rose-500">
-            Rp {subtotal.toLocaleString()}
-          </span>
-        </div>
-
-        <div className="mt-4">
-          <div className="mb-2 text-sm">Idempotency Key</div>
-          <div className="flex items-center gap-2 mb-3">
-            <input
-              className="flex-1 input input-bordered text-sm"
-              readOnly
-              value={idempotencyKey ?? "(generated on submit)"}
-              aria-label="idempotency-key"
-            />
-            <Button
-              size="sm"
-              onClick={() => {
-                const k = String(Math.random()).slice(2, 14);
-                setIdempotencyKey(k);
-                try {
-                  sessionStorage.setItem("checkout:idempotencyKey", k);
-                } catch {}
-              }}
-            >
-              Generate
-            </Button>
-          </div>
-        </div>
-
-        <div className="mt-6 border-t pt-4 text-sm">
-          <h4 className="font-semibold text-lg mb-3 flex items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-5 h-5 text-blue-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v9a2 2 0 002 2z"
-              />
-            </svg>
-            Shipping Information
-          </h4>
-          <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-            <div>Name</div>
-            <div className="font-medium">{customer?.fullName ?? "-"}</div>
-
-            <div>Address</div>
-            <div className="font-medium">{address?.addressLine ?? "-"}</div>
-
-            <div>City</div>
-            <div className="font-medium">{address?.city ?? "-"}</div>
-
-            <div>Postal Code</div>
-            <div className="font-medium">{address?.postalCode ?? "-"}</div>
-          </div>
-
-          <div className="border-t pt-4 mt-3">
-            <h4 className="font-semibold text-lg mb-3 flex items-center gap-2">
+            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center relative">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="w-5 h-5 text-blue-600"
+                className="w-7 h-7 text-primary"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -171,54 +67,265 @@ export default function OrderSummary({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.637 6.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"
                 />
               </svg>
-              Customer Information
-            </h4>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>Phone</div>
-              <div className="font-medium">{customer?.phone ?? "-"}</div>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                Order Summary
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Review your order details
+              </p>
+            </div>
+          </div>
+        </CardHeader>
 
-              <div>Email</div>
-              <div className="font-medium">{customer?.email ?? "-"}</div>
-            </div>
-          </div>
+        {/* full-width gradient separator between header and content */}
+        <div className="px-4">
+          <div
+            aria-hidden
+            className="w-full rounded-full h-1"
+            style={{
+              background:
+                "linear-gradient(90deg, rgb(223, 239, 181), rgb(247, 237, 184), rgb(253, 231, 188))",
+            }}
+          />
         </div>
-      </CardContent>
-      <CardFooter className="flex-col gap-2">
-        {hasOutOfStockItems && (
-          <div className="w-full p-3 bg-red-50 border border-red-200 rounded-md mb-2">
-            <div className="text-sm text-red-700 font-medium mb-1">
-              Cannot place order
+
+        <CardContent className="p-6 space-y-6">
+          {/* Order Items Count */}
+          <div className="flex items-center justify-between py-2">
+            <span className="text-muted-foreground">
+              {items.length} {items.length === 1 ? "item" : "items"}
+            </span>
+            <Badge
+              variant="secondary"
+              className="bg-muted text-muted-foreground"
+            >
+              {items.length}
+            </Badge>
+          </div>
+
+          {/* Price Breakdown */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-foreground">Subtotal</span>
+              <span className="font-medium text-foreground">
+                Rp {subtotal.toLocaleString("id-ID")}
+              </span>
             </div>
-            <div className="text-xs text-red-600">
-              Remove out of stock items from your cart to continue
+            <div className="flex justify-between items-center">
+              <span className="text-foreground">Discount</span>
+              <span className="font-medium text-muted-foreground">-</span>
+            </div>
+
+            <hr className="border-border" />
+
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-semibold text-foreground">
+                Total
+              </span>
+              <span className="text-2xl font-bold text-primary">
+                Rp {subtotal.toLocaleString("id-ID")}
+              </span>
             </div>
           </div>
-        )}
-        <div className="w-full">
-          <div className="mb-1 text-sm text-muted-foreground">
-            Payment:{" "}
-            <span className="font-medium text-slate-800">Bank Transfer</span>
+
+          {/* Shipping Information */}
+          {(customer || address) && (
+            <div className="bg-muted/30 rounded-xl p-4 space-y-3">
+              <h4 className="font-semibold text-foreground flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-4 h-4 text-primary"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                Delivery Address
+              </h4>
+
+              <div className="space-y-2 text-sm">
+                {customer?.fullName && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Name:</span>
+                    <span className="font-medium text-foreground">
+                      {customer.fullName}
+                    </span>
+                  </div>
+                )}
+                {address?.addressLine && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Address:</span>
+                    <span className="font-medium text-foreground text-right max-w-[200px]">
+                      {address.addressLine}
+                    </span>
+                  </div>
+                )}
+                {address?.city && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">City:</span>
+                    <span className="font-medium text-foreground">
+                      {address.city}
+                    </span>
+                  </div>
+                )}
+                {customer?.phone && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Phone:</span>
+                    <span className="font-medium text-foreground">
+                      {customer.phone}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Idempotency Key - Hidden in production but useful for dev */}
+          {process.env.NODE_ENV === "development" && (
+            <div className="bg-muted/20 rounded-xl p-4 space-y-2">
+              <div className="text-sm font-medium text-foreground">
+                Idempotency Key (Dev)
+              </div>
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 px-3 py-2 bg-muted border border-border rounded-lg text-xs text-foreground font-mono"
+                  readOnly
+                  value={idempotencyKey ?? "(generated on submit)"}
+                  aria-label="idempotency-key"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const k = String(Math.random()).slice(2, 14);
+                    setIdempotencyKey(k);
+                    try {
+                      sessionStorage.setItem("checkout:idempotencyKey", k);
+                    } catch {}
+                  }}
+                  className="px-3 text-xs"
+                >
+                  New
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+
+        <CardFooter className="p-6 pt-0">
+          <div className="w-full space-y-4">
+            {/* Out of stock warning */}
+            {hasOutOfStockItems && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="h-5 w-5 text-red-500 flex-shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div>
+                    <div className="text-sm text-red-700 font-medium">
+                      Cannot place order
+                    </div>
+                    <div className="text-xs text-red-600">
+                      Remove out of stock items to continue
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Place Order Button (RippleButton) */}
+            <RippleButton
+              onClick={onPlaceOrder}
+              size="lg"
+              disabled={isProcessing || hasOutOfStockItems}
+              className={`w-full py-4 rounded-2xl font-semibold text-lg transition-all duration-200 ${
+                hasOutOfStockItems || isProcessing
+                  ? "bg-gray-400 text-gray-700 cursor-not-allowed"
+                  : "bg-primary-gradient text-primary-foreground hover:opacity-95 shadow-lg hover:shadow-xl"
+              }`}
+              rippleClassName={
+                isProcessing || hasOutOfStockItems
+                  ? "bg-input"
+                  : "bg-primary-foreground/30"
+              }
+            >
+              {isProcessing ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                  Processing...
+                </div>
+              ) : hasOutOfStockItems ? (
+                "Remove Out of Stock Items"
+              ) : (
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  Place Order
+                </div>
+              )}
+            </RippleButton>
+
+            {/* Security note */}
+            <div className="text-center text-xs text-muted-foreground space-y-1">
+              <p className="flex items-center justify-center gap-1">
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+                Secure checkout
+              </p>
+              <p>Your payment information is protected</p>
+            </div>
           </div>
-          <Button
-            onClick={onPlaceOrder}
-            size="lg"
-            className="w-full"
-            disabled={isProcessing || hasOutOfStockItems}
-          >
-            {isProcessing
-              ? "Processing..."
-              : hasOutOfStockItems
-              ? "Remove Out of Stock Items"
-              : "Place Order"}
-          </Button>
-          <div className="mt-2 text-xs text-muted-foreground">
-            Secure checkout • No extra charges • Idempotency prevents duplicates
-          </div>
-        </div>
-      </CardFooter>
-    </Card>
+        </CardFooter>
+      </Card>
+    </div>
   );
 }

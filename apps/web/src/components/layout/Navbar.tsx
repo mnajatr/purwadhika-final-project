@@ -42,10 +42,12 @@ export default function Navbar() {
                   fill="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12L8.1 13h7.45c.75 0 1.41-.41 1.75-1.03L21.7 4H5.21l-.94-2H1zm16 16c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                  <path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12L8.1 13h7.45c.75 0 1.41-.41 1.75-1.03L21.7 4H5.21l-.94-2H1zm16 16c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
                 </svg>
               </div>
-              <span className="text-xl font-bold text-foreground">Daily Grocery</span>
+              <span className="text-xl font-bold text-foreground">
+                Daily Grocery
+              </span>
             </Link>
           </div>
 
@@ -105,12 +107,14 @@ export default function Navbar() {
             <div className="hidden sm:flex items-center space-x-2 bg-muted px-3 py-2 rounded-xl">
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                 <span className="text-xs font-bold text-primary-foreground">
-                  {userId.toString().padStart(2, '0')}
+                  {userId.toString().padStart(2, "0")}
                 </span>
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-muted-foreground">Hello,</span>
-                <span className="text-sm font-medium text-foreground">User {userId}</span>
+                <span className="text-sm font-medium text-foreground">
+                  User {userId}
+                </span>
               </div>
             </div>
 
@@ -134,16 +138,16 @@ export default function Navbar() {
                   />
                 </svg>
                 {itemCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {itemCount > 9 ? "9+" : itemCount}
+                  <span className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground text-xs rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center">
+                    {itemCount}
                   </span>
                 )}
               </div>
               <div className="hidden sm:flex flex-col text-left">
-                <span className="text-xs opacity-90">
+                <span className="text-xs opacity-90 text-muted-foreground">
                   {itemCount} {itemCount === 1 ? "item" : "items"}
                 </span>
-                <span className="text-sm font-semibold">
+                <span className="text-sm font-semibold text-foreground">
                   Rp {totalAmount.toLocaleString("id-ID")}
                 </span>
               </div>
