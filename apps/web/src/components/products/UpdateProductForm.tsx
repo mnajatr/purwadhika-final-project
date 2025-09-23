@@ -4,8 +4,8 @@ import { useUpdateProduct } from "@/hooks/useProduct";
 import { useForm, Controller } from "react-hook-form";
 import { useEffect } from "react";
 import useLocationStore from "@/stores/locationStore";
+import { useCategories } from "@/hooks/useCategory";
 
-type InventoryInput = { stockQty: number; storeId: number };
 type ImageInput = { imageUrl: string };
 
 type ProductForEdit = {
@@ -20,26 +20,20 @@ type ProductForEdit = {
   length?: number;
   categoryId?: number;
   images?: ImageInput[];
-  inventories?: InventoryInput[];
+  stockQty?: number; // terpisah dari array
+  storeId?: number; // terpisah dari array
 };
 
-export default function UpdateProductForm({ product }: { product: ProductForEdit | null }) {
-  const categories = [
-    { id: 1, name: "Fruits & Vegetables" },
-    { id: 2, name: "Dairy & Eggs" },
-    { id: 3, name: "Meat & Poultry" },
-    { id: 4, name: "Seafood" },
-    { id: 5, name: "Bakery" },
-    { id: 6, name: "Pantry Essentials" },
-    { id: 7, name: "Beverages" },
-    { id: 8, name: "Snacks" },
-  ];
-
-  // Hooks must be called unconditionally
+export default function UpdateProductForm({
+  product,
+}: {
+  product: ProductForEdit | null;
+}) {
   const updateProduct = useUpdateProduct();
-
   const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? 1;
-  const { register, handleSubmit, reset, control, watch } = useForm<ProductForEdit>({
+  const { data: categories = [] } = useCategories();
+
+  const { register, handleSubmit, reset, control } = useForm<ProductForEdit>({
     defaultValues: {
       name: "",
       slug: "",
@@ -49,38 +43,38 @@ export default function UpdateProductForm({ product }: { product: ProductForEdit
       width: 0,
       height: 0,
       length: 0,
-      categoryId: 1,
+      categoryId: undefined,
       images: [{ imageUrl: "" }],
-      inventories: [{ stockQty: 0, storeId: nearestStoreId }],
+      stockQty: 0,
+      storeId: nearestStoreId,
     },
   });
 
-  // Set default values dari product
   useEffect(() => {
     if (product) {
       reset({
-        name: product.name,
-        slug: product.slug,
-        description: product.description,
-        price: product.price,
-        weight: product.weight,
-        width: product.width,
-        height: product.height,
-        length: product.length,
-        categoryId: product.categoryId,
+        name: product.name || "",
+        slug: product.slug || "",
+        description: product.description || "",
+        price: Number(product.price) || 0,
+        weight: Number(product.weight) || 0,
+        width: Number(product.width) || 0,
+        height: Number(product.height) || 0,
+        length: Number(product.length) || 0,
+        categoryId: product.categoryId ?? undefined,
         images: product.images?.length ? product.images : [{ imageUrl: "" }],
-        inventories: product.inventories?.length
-          ? product.inventories
-          : [{ stockQty: 0, storeId: nearestStoreId }],
+        stockQty: product.stockQty ?? product.inventories?.[0]?.stockQty ?? 0,
+        storeId:
+          product.storeId ??
+          product.inventories?.[0]?.storeId ??
+          nearestStoreId,
       });
     }
   }, [product, reset, nearestStoreId]);
 
-  // read full form values and access categoryId to avoid typed overloads
-  const formValues = watch();
-  const selectedCategoryId = formValues?.categoryId as number | undefined;
-
   const onSubmit = (data: ProductForEdit) => {
+    if (!product?.slug) return alert("Produk tidak valid: slug tidak tersedia");
+
     const payload = {
       name: data.name,
       slug: data.slug,
@@ -92,28 +86,20 @@ export default function UpdateProductForm({ product }: { product: ProductForEdit
       length: Number(data.length),
       categoryId: Number(data.categoryId),
       images: data.images?.length ? data.images : [{ imageUrl: "" }],
-      inventories: data.inventories?.length
-        ? data.inventories.map((i: InventoryInput) => ({
-            stockQty: Number(i.stockQty),
-            storeId: Number(i.storeId),
-          }))
-        : [{ stockQty: 0, storeId: nearestStoreId }],
+      inventories: [
+        {
+          stockQty: Number(data.stockQty ?? 0),
+          storeId: Number(data.storeId ?? nearestStoreId),
+        },
+      ],
     };
-
-    if (!product?.slug) {
-      alert("Produk tidak valid: slug tidak tersedia");
-      return;
-    }
 
     updateProduct.mutate(
       { slug: product.slug, data: payload },
       {
-        onSuccess: () => {
-          alert("Produk berhasil diperbarui!");
-        },
-        onError: (err: Error) => {
-          alert("Gagal memperbarui produk: " + err.message);
-        },
+        onSuccess: () => alert("Produk berhasil diperbarui!"),
+        onError: (err: Error) =>
+          alert("Gagal memperbarui produk: " + err.message),
       }
     );
   };
@@ -125,30 +111,23 @@ export default function UpdateProductForm({ product }: { product: ProductForEdit
     >
       <h2 className="text-2xl font-bold mb-4">Edit Produk</h2>
 
-      {/* Nama Produk */}
       <input
         type="text"
         placeholder="Nama Produk"
         {...register("name", { required: true })}
         className="w-full p-2 border rounded"
       />
-
-      {/* Slug */}
       <input
         type="text"
         placeholder="Slug"
         {...register("slug", { required: true })}
         className="w-full p-2 border rounded"
       />
-
-      {/* Deskripsi */}
       <textarea
         placeholder="Deskripsi"
         {...register("description", { required: true })}
         className="w-full p-2 border rounded"
       />
-
-      {/* Harga */}
       <input
         type="number"
         {...register("price", { required: true, valueAsNumber: true })}
@@ -156,7 +135,6 @@ export default function UpdateProductForm({ product }: { product: ProductForEdit
         className="w-full p-2 border rounded"
       />
 
-      {/* Dimensi & Berat */}
       <div className="grid grid-cols-2 gap-4">
         <input
           type="number"
@@ -187,22 +165,24 @@ export default function UpdateProductForm({ product }: { product: ProductForEdit
       {/* Kategori */}
       <div>
         <p className="text-sm font-semibold mb-2">Pilih Kategori</p>
-        <div className="flex flex-wrap gap-2">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => reset({ ...watch(), categoryId: cat.id })}
-              className={`px-4 py-2 rounded-full border transition ${
-                selectedCategoryId === cat.id
-                  ? "bg-indigo-600 text-white border-indigo-600"
-                  : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
-              }`}
+        <Controller
+          name="categoryId"
+          control={control}
+          render={({ field }) => (
+            <select
+              {...field}
+              value={field.value ?? ""}
+              className="w-full px-4 py-2 border rounded-lg bg-white shadow-sm"
             >
-              {cat.name}
-            </button>
-          ))}
-        </div>
+              <option value="">-- Pilih kategori --</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          )}
+        />
       </div>
 
       {/* URL Gambar */}
@@ -219,15 +199,16 @@ export default function UpdateProductForm({ product }: { product: ProductForEdit
         )}
       />
 
-      {/* Inventories */}
+      {/* Stock & Store */}
       <div className="grid grid-cols-2 gap-4">
         <Controller
+          name="stockQty"
           control={control}
-          name="inventories.0.stockQty"
           render={({ field }) => (
             <input
               type="number"
               {...field}
+              value={field.value ?? 0}
               onChange={(e) => field.onChange(Number(e.target.value))}
               placeholder="Stok"
               className="w-full p-2 border rounded"
@@ -235,12 +216,13 @@ export default function UpdateProductForm({ product }: { product: ProductForEdit
           )}
         />
         <Controller
+          name="storeId"
           control={control}
-          name="inventories.0.storeId"
           render={({ field }) => (
             <input
               type="number"
               {...field}
+              value={field.value ?? nearestStoreId}
               onChange={(e) => field.onChange(Number(e.target.value))}
               placeholder="Store ID"
               className="w-full p-2 border rounded"

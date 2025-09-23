@@ -64,6 +64,7 @@ class ProductsService {
           category: product.category.name,
           store: storeName,
           imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
+          stock: inventory?.stockQty ?? 0,
         };
       }),
       nearestStore: nearest,
@@ -89,11 +90,13 @@ class ProductsService {
       height: product.height,
       length: product.length,
       imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
+      stock: inventory?.stockQty ?? 0,
     };
   }
 
   async createProduct(data: ProductResponse) {
     const product = await apiClient.post<ProductResponse>(this.basePath, data);
+    const inventory = product.inventories?.[0];
 
     return {
       id: product.id,
@@ -108,6 +111,7 @@ class ProductsService {
       height: product.height,
       length: product.length,
       imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
+      stock: inventory?.stockQty ?? 0,
     };
   }
 
@@ -116,6 +120,7 @@ class ProductsService {
       `${this.basePath}/${slug}`,
       data
     );
+    const inventory = product.inventories?.[0];
 
     return {
       id: product.id,
@@ -130,6 +135,7 @@ class ProductsService {
       height: product.height,
       length: product.length,
       imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
+      stock: inventory?.stockQty ?? 0,
     };
   }
   async deleteProduct(slug: string) {

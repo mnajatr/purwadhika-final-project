@@ -1,7 +1,6 @@
 import { prisma } from "@repo/database";
-import { Prisma } from "@prisma/client";
-import { CreateProduct } from "../types/product.js";
 import { locationService } from "./location.service.js";
+import { CreateProduct } from "../types/product.js";
 
 export class ProductService {
   async getAll() {
@@ -18,27 +17,16 @@ export class ProductService {
       },
     });
 
-    return products.map((p) => ({
-      ...p,
-      price: Number(p.price), // <- langsung ubah string ke number
-    }));
+    return products.map((p) => ({ ...p, price: Number(p.price) }));
   }
 
   async getAllWithStock() {
     const products = await prisma.product.findMany({
-      where: {
-        inventories: {
-          some: {
-            stockQty: { gt: 0 }, // Only products with stock > 0
-          },
-        },
-      },
+      where: { inventories: { some: { stockQty: { gt: 0 } } } },
       include: {
         category: true,
         inventories: {
-          where: {
-            stockQty: { gt: 0 }, // Only show inventories with stock
-          },
+          where: { stockQty: { gt: 0 } },
           select: {
             stockQty: true,
             store: { select: { id: true, name: true, locations: true } },
@@ -48,40 +36,28 @@ export class ProductService {
       },
     });
 
-    return products.map((p) => ({
-      ...p,
-      price: Number(p.price),
-    }));
+    return products.map((p) => ({ ...p, price: Number(p.price) }));
   }
 
   async getByNearestStore(lat: number, lon: number) {
     try {
-      // Find the nearest store using existing location service
       const nearestStoreId = await locationService.findNearestStoreId(lat, lon);
-
-      if (!nearestStoreId) {
-        // Return empty result with message if no nearby store found
+      if (!nearestStoreId)
         return {
           products: [],
           nearestStore: null,
           message: "No store found within service area",
         };
-      }
 
-      // Get store details
       const store = await prisma.store.findUnique({
         where: { id: nearestStoreId },
         select: { id: true, name: true, locations: true },
       });
 
-      // Get products available at this store
       const products = await prisma.product.findMany({
         where: {
           inventories: {
-            some: {
-              storeId: nearestStoreId,
-              stockQty: { gt: 0 }, // Only products with stock
-            },
+            some: { storeId: nearestStoreId, stockQty: { gt: 0 } },
           },
         },
         include: {
@@ -97,19 +73,13 @@ export class ProductService {
         },
       });
 
-      const formattedProducts = products.map((p) => ({
-        ...p,
-        price: Number(p.price),
-      }));
-
       return {
-        products: formattedProducts,
+        products: products.map((p) => ({ ...p, price: Number(p.price) })),
         nearestStore: store,
         message: `Showing products from ${store?.name || "nearest store"}`,
       };
     } catch (error) {
       console.error("Error finding products by nearest store:", error);
-      // Fallback to all products with stock when location service fails
       const products = await this.getAllWithStock();
       return {
         products,
@@ -122,30 +92,15 @@ export class ProductService {
 
   async getByStoreId(storeId: number) {
     try {
-      // Get store details
       const store = await prisma.store.findUnique({
         where: { id: storeId },
         select: { id: true, name: true, locations: true },
       });
+      if (!store)
+        return { products: [], nearestStore: null, message: "Store not found" };
 
-      if (!store) {
-        return {
-          products: [],
-          nearestStore: null,
-          message: "Store not found",
-        };
-      }
-
-      // Get products available at this store
       const products = await prisma.product.findMany({
-        where: {
-          inventories: {
-            some: {
-              storeId: storeId,
-              stockQty: { gt: 0 },
-            },
-          },
-        },
+        where: { inventories: { some: { storeId, stockQty: { gt: 0 } } } },
         include: {
           category: true,
           inventories: {
@@ -159,13 +114,8 @@ export class ProductService {
         },
       });
 
-      const formattedProducts = products.map((p) => ({
-        ...p,
-        price: Number(p.price),
-      }));
-
       return {
-        products: formattedProducts,
+        products: products.map((p) => ({ ...p, price: Number(p.price) })),
         nearestStore: store,
         message: `Showing products from ${store?.name || "selected store"}`,
       };
@@ -191,28 +141,43 @@ export class ProductService {
     });
   }
 
-  async createProduct(data: CreateProduct) {
+  // ================= CREATE PRODUCT =================
+  async createProduct(data: any) {
+    // ===== Parse multipart/form-data =====
+    if (typeof data.inventories === "string")
+      data.inventories = JSON.parse(data.inventories);
+    if (typeof data.categoryId === "string")
+      data.categoryId = Number(data.categoryId);
+    if (typeof data.price === "string") data.price = Number(data.price);
+
+    if (data.inventories) {
+      data.inventories = data.inventories.map((inv: any) => ({
+        stockQty: Number(inv.stockQty),
+        storeId: Number(inv.storeId),
+      }));
+    }
+
     const product = await prisma.product.create({
       data: {
         name: data.name,
         slug: data.slug,
         description: data.description,
         price: data.price,
-        weight: data.weight,
-        width: data.width,
-        height: data.height,
-        length: data.length,
+        weight: Number(data.weight),
+        width: Number(data.width),
+        height: Number(data.height),
+        length: Number(data.length),
         category: { connect: { id: data.categoryId } },
         images: data.images
           ? {
-              create: data.images.map((img) => ({
+              create: data.images.map((img: any) => ({
                 imageUrl: img.imageUrl,
               })),
             }
           : undefined,
         inventories: data.inventories
           ? {
-              create: data.inventories.map((inv) => ({
+              create: data.inventories.map((inv: any) => ({
                 stockQty: inv.stockQty,
                 store: { connect: { id: inv.storeId } },
               })),
@@ -226,26 +191,32 @@ export class ProductService {
       },
     });
 
-    return {
-      ...product,
-      price: Number(product.price),
-    };
+    return { ...product, price: Number(product.price) };
   }
 
-  async updateProduct(slug: string, data: Partial<CreateProduct>) {
-    // First, get the existing product
+  // ================= UPDATE PRODUCT =================
+  async updateProduct(slug: string, data: any) {
+    // Parse multipart/form-data
+    if (typeof data.inventories === "string")
+      data.inventories = JSON.parse(data.inventories);
+    if (typeof data.categoryId === "string")
+      data.categoryId = Number(data.categoryId);
+    if (typeof data.price === "string") data.price = Number(data.price);
+
+    if (data.inventories) {
+      data.inventories = data.inventories.map((inv: any) => ({
+        stockQty: Number(inv.stockQty),
+        storeId: Number(inv.storeId),
+      }));
+    }
+
     const existingProduct = await prisma.product.findUnique({
       where: { slug },
       include: { inventories: true, images: true },
     });
+    if (!existingProduct) throw new Error("Product not found");
 
-    if (!existingProduct) {
-      throw new Error("Product not found");
-    }
-
-    // Use a transaction to ensure data consistency
-    return await prisma.$transaction(async (tx) => {
-      // Update basic product information
+    return prisma.$transaction(async (tx) => {
       const product = await tx.product.update({
         where: { slug },
         data: {
@@ -253,38 +224,30 @@ export class ProductService {
           slug: data.slug,
           description: data.description,
           price: data.price,
-          weight: data.weight,
-          width: data.width,
-          height: data.height,
-          length: data.length,
+          weight: Number(data.weight),
+          width: Number(data.width),
+          height: Number(data.height),
+          length: Number(data.length),
           category: data.categoryId
             ? { connect: { id: data.categoryId } }
             : undefined,
         },
       });
 
-      // Handle images separately
+      // ===== Images =====
       if (data.images) {
-        // Delete existing images
-        await tx.productImage.deleteMany({
-          where: { productId: product.id },
-        });
-
-        // Create new images
+        await tx.productImage.deleteMany({ where: { productId: product.id } });
         await tx.productImage.createMany({
-          data: data.images.map((img) => ({
+          data: data.images.map((img: any) => ({
             productId: product.id,
             imageUrl: img.imageUrl,
           })),
         });
       }
 
-      // Handle inventories more carefully
+      // ===== Inventories =====
       if (data.inventories) {
-        // For inventories, we'll update existing ones or create new ones
-        // but we won't delete existing ones that have stock journals
         for (const invData of data.inventories) {
-          // Check if inventory already exists for this store
           const existingInventory = await tx.storeInventory.findUnique({
             where: {
               storeId_productId: {
@@ -295,7 +258,6 @@ export class ProductService {
           });
 
           if (existingInventory) {
-            // Update existing inventory
             await tx.storeInventory.update({
               where: {
                 storeId_productId: {
@@ -303,12 +265,9 @@ export class ProductService {
                   productId: product.id,
                 },
               },
-              data: {
-                stockQty: invData.stockQty,
-              },
+              data: { stockQty: invData.stockQty },
             });
           } else {
-            // Create new inventory
             await tx.storeInventory.create({
               data: {
                 storeId: invData.storeId,
@@ -320,7 +279,6 @@ export class ProductService {
         }
       }
 
-      // Return the updated product with relationships
       const updatedProduct = await tx.product.findUnique({
         where: { id: product.id },
         include: {
@@ -330,63 +288,33 @@ export class ProductService {
         },
       });
 
-      return {
-        ...updatedProduct!,
-        price: Number(updatedProduct!.price),
-      };
+      return { ...updatedProduct!, price: Number(updatedProduct!.price) };
     });
   }
 
+  // ================= DELETE PRODUCT =================
   async deleteProduct(slug: string) {
     const product = await prisma.product.findUnique({ where: { slug } });
     if (!product) return null;
 
-    // Check if product has any order items (cannot delete if ordered)
     const orderItems = await prisma.orderItem.findFirst({
       where: { productId: product.id },
     });
-
-    if (orderItems) {
+    if (orderItems)
       throw new Error(
-        "Cannot delete product that has been ordered. You can deactivate it instead."
+        "Cannot delete product that has been ordered. Deactivate instead."
       );
-    }
 
-    // Use transaction to ensure all deletes succeed or fail together
-    return await prisma.$transaction(async (tx) => {
-      // Delete related records in the correct order
-      await tx.cartItem.deleteMany({
-        where: { productId: product.id },
-      });
-
-      await tx.stockJournal.deleteMany({
-        where: { productId: product.id },
-      });
-
-      // Delete vouchers first, then discounts
+    return prisma.$transaction(async (tx) => {
+      await tx.cartItem.deleteMany({ where: { productId: product.id } });
+      await tx.stockJournal.deleteMany({ where: { productId: product.id } });
       await tx.voucher.deleteMany({
-        where: {
-          discount: {
-            productId: product.id,
-          },
-        },
+        where: { discount: { productId: product.id } },
       });
-
-      await tx.discount.deleteMany({
-        where: { productId: product.id },
-      });
-
-      await tx.storeInventory.deleteMany({
-        where: { productId: product.id },
-      });
-
-      await tx.productImage.deleteMany({
-        where: { productId: product.id },
-      });
-
-      return tx.product.delete({
-        where: { slug },
-      });
+      await tx.discount.deleteMany({ where: { productId: product.id } });
+      await tx.storeInventory.deleteMany({ where: { productId: product.id } });
+      await tx.productImage.deleteMany({ where: { productId: product.id } });
+      return tx.product.delete({ where: { slug } });
     });
   }
 
@@ -400,11 +328,7 @@ export class ProductService {
         images: true,
       },
     });
-
-    return {
-      ...product,
-      price: Number(product.price),
-    };
+    return { ...product, price: Number(product.price) };
   }
 
   async activateProduct(slug: string) {
@@ -417,10 +341,6 @@ export class ProductService {
         images: true,
       },
     });
-
-    return {
-      ...product,
-      price: Number(product.price),
-    };
+    return { ...product, price: Number(product.price) };
   }
 }
