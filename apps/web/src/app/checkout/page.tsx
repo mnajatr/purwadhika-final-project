@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import AddressCard from "@/components/checkout/AddressCard";
 import ItemsList from "@/components/checkout/ItemsList";
 import OrderSummary from "@/components/checkout/OrderSummary";
@@ -25,11 +26,29 @@ import apiClient from "@/lib/axios-client";
 import {
   ArrowLeft,
   Clock,
-  CreditCard,
   Tag,
   MessageSquare,
   Check,
+  Package,
+  ShieldCheck,
 } from "lucide-react";
+import {
+  FaShippingFast,
+  FaTruck,
+  FaWallet,
+  FaMapMarkerAlt,
+  FaTag,
+  FaComments,
+  FaLock,
+  FaCheckCircle,
+} from "react-icons/fa";
+import {
+  MdLocalShipping,
+  MdPayment,
+  MdDiscount,
+  MdMessage,
+} from "react-icons/md";
+import { TbTruckDelivery, TbCreditCard, TbDiscount } from "react-icons/tb";
 type ResolveResp = {
   success?: boolean;
   data?: {
@@ -123,8 +142,8 @@ export default function CheckoutPage() {
     id: number;
   } | null>(null);
 
-  // payment method selection
-  const [paymentMethod, setPaymentMethod] = React.useState<string>("Manual");
+  // payment method selection (start with no selection)
+  const [paymentMethod, setPaymentMethod] = React.useState<string | null>(null);
 
   const handleSelectAddress = React.useCallback(
     async (a: { id: number }) => {
@@ -237,9 +256,51 @@ export default function CheckoutPage() {
       : null;
   }, [selectedAddress, userAddresses]);
 
-  if (isCartLoading) return <div>Loading...</div>;
-  if (!cart || cart.items.length === 0)
-    return <div>Your cart is empty. Please add items first.</div>;
+  if (isCartLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Spinner
+            variant="circle-filled"
+            size={48}
+            className="mx-auto text-primary"
+          />
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold text-foreground">
+              Loading Checkout
+            </h2>
+            <p className="text-muted-foreground">
+              Preparing your order details...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!cart || cart.items.length === 0) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
+            <Package className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold text-foreground">
+              Your cart is empty
+            </h2>
+            <p className="text-muted-foreground">
+              Please add items to your cart before proceeding to checkout.
+            </p>
+          </div>
+          <Button onClick={() => window.history.back()} className="mt-4">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Continue Shopping
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const items = (
     selectedIds && selectedIds.length > 0
@@ -306,7 +367,7 @@ export default function CheckoutPage() {
         addressId,
         shippingMethod,
         shippingOption,
-        paymentMethod,
+        paymentMethod: paymentMethod ?? undefined,
       } as CreateOrderPayload);
       toast.success("Order created — redirecting...");
       // cleanup and redirect
@@ -326,400 +387,796 @@ export default function CheckoutPage() {
       <div className="container mx-auto py-6 px-4 max-w-7xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <Button
               variant="outline"
               size="sm"
               onClick={() => window.history.back()}
-              className="h-9 w-9 p-0"
+              className="h-10 w-10 p-0 rounded-full shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Checkout</h1>
-              <p className="text-muted-foreground">
-                Complete your purchase securely
+              <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                Checkout
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Complete your purchase securely and safely
               </p>
             </div>
           </div>
-          <Badge variant="secondary" className="px-3 py-1">
-            {items.length} {items.length === 1 ? "item" : "items"}
-          </Badge>
+          <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-muted/50 rounded-2xl">
+            <ShieldCheck className="w-5 h-5 text-green-500" />
+            <span className="text-sm font-medium text-foreground">
+              Secure Checkout
+            </span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Delivery Address (component includes its own Card) */}
-            <AddressCard
-              onSelect={handleSelectAddress}
-              checkoutStoreId={initialStoreIdRef.current}
-              userId={userId}
-            />
-
-            {/* Order Items (component includes its own Card) */}
-            <ItemsList cart={cart} selectedIds={selectedIds} userId={userId} />
-
-            {/* Shipping Method */}
-            <Card className="relative bg-card rounded-2xl border border-border shadow-sm backdrop-blur-sm overflow-hidden">
-              {/* wrapper used to measure card width for the dropdown */}
-              <div ref={cardRef} className="w-full">
-                <CardHeader className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center relative">
-                        <Clock className="w-7 h-7 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-foreground">
-                          Shipping Method
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Choose a carrier
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-end">
-                      <div className="mt-3">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShippingMenuOpen(true)}
-                        >
-                          Change
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-
-                {/* separator */}
-                <div className="px-4">
+        {/* Mobile Progress Steps */}
+        <div className="lg:hidden mb-8">
+          <Card className="bg-gradient-to-r from-primary/5 to-secondary/5 border border-primary/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between relative">
+                {/* Progress line */}
+                <div className="absolute top-1/2 left-6 right-6 h-0.5 bg-border -translate-y-1/2">
                   <div
-                    aria-hidden
-                    className="w-full rounded-full h-1"
+                    className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-500"
                     style={{
-                      background:
-                        "linear-gradient(90deg, #dfefb5, #fff7ce, #fde7bc)",
+                      width:
+                        selectedAddress && shippingMethod && paymentMethod
+                          ? "100%"
+                          : shippingMethod
+                          ? "66%"
+                          : selectedAddress
+                          ? "33%"
+                          : "0%",
                     }}
                   />
                 </div>
 
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-foreground">
-                      {shippingMethod ?? "Select shipping carrier"}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Rates and ETA applied at confirmation
-                    </div>
-                  </div>
-
-                  <div>
-                    {/* Dropdown is anchored to an invisible full-width trigger inside the Card so the menu aligns to the card's left edge */}
-                    <DropdownMenu
-                      open={shippingMenuOpen}
-                      onOpenChange={(open) => {
-                        if (open) updateShippingMenuWidth();
-                        setShippingMenuOpen(open);
-                      }}
-                    >
-                      <DropdownMenuTrigger asChild>
-                        {/* invisible full-card anchor; pointer-events none so it doesn't block clicks */}
-                        <span className="absolute left-0 top-0 w-full h-full pointer-events-none" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="start"
-                        sideOffset={4}
-                        className="p-6"
-                        style={{
-                          width: shippingMenuWidth
-                            ? `${shippingMenuWidth}px`
-                            : undefined,
-                        }}
-                      >
-                        <DropdownMenuItem
-                          onSelect={() => {
-                            setShippingMethod("JNE");
-                            setShippingOption(null);
-                            setShippingMenuOpen(false);
-                            setShippingOptionOpen(true);
-                          }}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-xs font-semibold text-primary">
-                                JNE
-                              </div>
-                              <div className="text-sm">
-                                <div className="font-medium">JNE</div>
-                                <div className="text-xs text-muted-foreground">
-                                  ETA: 2-3 days
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <div>Rp 12.000</div>
-                              {shippingMethod === "JNE" && (
-                                <Check className="w-4 h-4 text-primary" />
-                              )}
-                            </div>
-                          </div>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                          onSelect={() => {
-                            setShippingMethod("J&T");
-                            setShippingOption(null);
-                            setShippingMenuOpen(false);
-                            setShippingOptionOpen(true);
-                          }}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-xs font-semibold text-primary">
-                                J&T
-                              </div>
-                              <div className="text-sm">
-                                <div className="font-medium">J&T Express</div>
-                                <div className="text-xs text-muted-foreground">
-                                  ETA: 1-2 days
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <div>Rp 15.000</div>
-                              {shippingMethod === "J&T" && (
-                                <Check className="w-4 h-4 text-primary" />
-                              )}
-                            </div>
-                          </div>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                          onSelect={() => {
-                            setShippingMethod("Ninja Xpress");
-                            setShippingOption(null);
-                            setShippingMenuOpen(false);
-                            setShippingOptionOpen(true);
-                          }}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-xs font-semibold text-primary">
-                                NX
-                              </div>
-                              <div className="text-sm">
-                                <div className="font-medium">Ninja Xpress</div>
-                                <div className="text-xs text-muted-foreground">
-                                  ETA: 1-3 days
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <div>Rp 18.000</div>
-                              {shippingMethod === "Ninja Xpress" && (
-                                <Check className="w-4 h-4 text-primary" />
-                              )}
-                            </div>
-                          </div>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  {/* visible trigger button moved into the CardHeader above */}
-                </CardContent>
-              </div>
-
-              {/* Shipping Option - appears only after a carrier (shippingMethod) is chosen */}
-              {shippingMethod && (
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold text-foreground">
-                        {shippingOption ?? "Select shipping option"}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Choose a delivery option
-                      </div>
-                    </div>
-
-                    <div>
-                      <DropdownMenu
-                        open={shippingOptionOpen}
-                        onOpenChange={setShippingOptionOpen}
-                      >
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShippingOptionOpen(true)}
-                          >
-                            Change
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="start"
-                          sideOffset={4}
-                          className="p-3"
-                          style={{
-                            width: shippingMenuWidth
-                              ? `${shippingMenuWidth}px`
-                              : undefined,
-                          }}
-                        >
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              setShippingOption("Reguler");
-                              setShippingOptionOpen(false);
-                            }}
-                          >
-                            Reguler
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              setShippingOption("Hemat Kargo");
-                              setShippingOptionOpen(false);
-                            }}
-                          >
-                            Hemat Kargo
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </CardContent>
-              )}
-            </Card>
-
-            {/* Payment Method */}
-            <Card className="bg-card rounded-2xl border border-border shadow-sm backdrop-blur-sm overflow-hidden">
-              <CardHeader className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center relative">
-                    <CreditCard className="w-7 h-7 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground">
-                      Payment Method
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Select how you&apos;d like to pay
-                    </p>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <div className="px-4">
-                <div
-                  aria-hidden
-                  className="w-full rounded-full h-1"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, #dfefb5, #fff7ce, #fde7bc)",
-                  }}
-                />
-              </div>
-
-              <CardContent className="p-4 space-y-3">
-                {[
-                  {
-                    id: "Manual",
-                    title: "Manual Transfer",
-                    subtitle: "Bank transfer (manual)",
-                  },
-                  {
-                    id: "Gateway",
-                    title: "Payment Gateway",
-                    subtitle: "Fast secure payments",
-                  },
-                ].map((m) => {
-                  const active = paymentMethod === m.id;
-                  return (
-                    <button
-                      key={m.id}
-                      onClick={() => setPaymentMethod(m.id)}
-                      className={`w-full flex items-center gap-4 p-3 rounded-xl border transition-all text-left ${
-                        active
-                          ? "border-primary bg-primary/5"
-                          : "border-border bg-card hover:border-primary/50"
+                {/* Step indicators */}
+                <div className="flex items-center justify-between w-full relative z-10">
+                  <div className="flex flex-col items-center gap-2">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                        selectedAddress
+                          ? "bg-primary text-white"
+                          : "bg-background border-2 border-border"
                       }`}
                     >
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-sm font-semibold text-primary">
-                        {m.id[0]}
-                      </div>
+                      {selectedAddress ? (
+                        <FaCheckCircle className="w-5 h-5" />
+                      ) : (
+                        "1"
+                      )}
+                    </div>
+                    <span className="text-xs font-medium text-center">
+                      Addr
+                    </span>
+                  </div>
 
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <div className="font-semibold text-foreground">
-                            {m.title}
-                          </div>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {m.subtitle}
-                        </div>
-                      </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                        shippingMethod
+                          ? "bg-primary text-white"
+                          : "bg-background border-2 border-border"
+                      }`}
+                    >
+                      {shippingMethod ? (
+                        <FaCheckCircle className="w-5 h-5" />
+                      ) : (
+                        "2"
+                      )}
+                    </div>
+                    <span className="text-xs font-medium text-center">
+                      Ship
+                    </span>
+                  </div>
 
-                      <div className="flex items-center">
-                        {active ? (
-                          <Check className="w-5 h-5 text-primary" />
-                        ) : (
-                          <div className="w-4 h-4 rounded-full border-2 border-border" />
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </CardContent>
-            </Card>
+                  <div className="flex flex-col items-center gap-2">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                        paymentMethod
+                          ? "bg-primary text-white"
+                          : "bg-background border-2 border-border"
+                      }`}
+                    >
+                      {paymentMethod ? (
+                        <FaCheckCircle className="w-5 h-5" />
+                      ) : (
+                        "3"
+                      )}
+                    </div>
+                    <span className="text-xs font-medium text-center">Pay</span>
+                  </div>
 
-            {/* Additional Options */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Promo Code */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-base">
-                    <Tag className="h-4 w-4 text-primary" />
-                    Promo Code
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <Label htmlFor="promo">Enter discount code</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="promo"
-                        placeholder="SAVE10"
-                        className="flex-1"
-                      />
-                      <Button variant="outline">Apply</Button>
+                  <div className="flex flex-col items-center gap-2">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                        selectedAddress && shippingMethod && paymentMethod
+                          ? "bg-gradient-to-r from-primary to-secondary text-white animate-pulse"
+                          : "bg-background border-2 border-border"
+                      }`}
+                    >
+                      <FaLock className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-medium text-center">Rev</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content with left-side steps */}
+          <div className="lg:col-span-2">
+            <div className="flex gap-4">
+              {/* Left bullets moved next to each card on large screens (no sticky sidebar) */}
+
+              {/* Right: original main content moved here */}
+              <div className="flex-1 space-y-8 relative">
+                {/* Vertical progress track (visible on large screens) */}
+                <div
+                  aria-hidden
+                  className="hidden lg:block absolute left-7 top-0 bottom-0 w-[2px] bg-border/60"
+                />
+                {/* Delivery Address (component includes its own Card) with left bullet on large screens */}
+                <div className="flex items-center gap-6">
+                  <div className="hidden lg:flex flex-col items-center w-14">
+                    <div
+                      className={`z-10 flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all duration-300 ${
+                        selectedAddress
+                          ? "bg-primary text-white shadow-lg scale-110"
+                          : "bg-card border-2 border-border hover:border-primary/50"
+                      }`}
+                    >
+                      {selectedAddress ? (
+                        <FaCheckCircle className="w-5 h-5" />
+                      ) : (
+                        <FaMapMarkerAlt className="w-5 h-5 text-muted-foreground" />
+                      )}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Special Instructions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-base">
-                    <MessageSquare className="h-4 w-4 text-primary" />
-                    Special Instructions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <Label htmlFor="instructions">
-                      Delivery notes (optional)
-                    </Label>
-                    <textarea
-                      id="instructions"
-                      placeholder="Leave at front door, call when arriving..."
-                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  <div className="flex-1">
+                    <AddressCard
+                      onSelect={handleSelectAddress}
+                      checkoutStoreId={initialStoreIdRef.current}
+                      userId={userId}
                     />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+
+                {/* Order Items (component includes its own Card) - aligned with other cards */}
+                <div className="flex items-center gap-6">
+                  <div className="hidden lg:flex flex-col items-center w-14">
+                    {/* placeholder to align with bullets */}
+                    <div className="z-10 w-10 h-10" />
+                  </div>
+                  <div className="flex-1">
+                    <ItemsList
+                      cart={cart}
+                      selectedIds={selectedIds}
+                      userId={userId}
+                    />
+                  </div>
+                </div>
+
+                {/* Shipping Method */}
+                <div className="flex items-center gap-6">
+                  <div className="hidden lg:flex flex-col items-center w-14">
+                    <div
+                      className={`z-10 flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all duration-300 ${
+                        shippingMethod
+                          ? "bg-primary text-white shadow-lg scale-110"
+                          : selectedAddress
+                          ? "bg-orange-100 border-2 border-orange-300 text-orange-600"
+                          : "bg-muted border-2 border-border"
+                      }`}
+                    >
+                      {shippingMethod ? (
+                        <FaCheckCircle className="w-5 h-5" />
+                      ) : (
+                        <FaShippingFast className="w-5 h-5" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <Card className="bg-card rounded-2xl border border-border shadow-sm backdrop-blur-sm overflow-hidden">
+                      {/* wrapper used to measure card width for the dropdown */}
+                      <div ref={cardRef} className="w-full relative z-10">
+                        <CardHeader className="p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-4">
+                              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center relative">
+                                <MdLocalShipping className="w-7 h-7 text-primary" />
+                                {shippingMethod && (
+                                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                                    <Check className="w-3 h-3 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                                  Shipping Method
+                                  {shippingMethod && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      Selected
+                                    </Badge>
+                                  )}
+                                </h3>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  Choose your preferred delivery option
+                                </p>
+                              </div>
+                            </div>
+
+                            <Button
+                              variant={shippingMethod ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setShippingMenuOpen(true)}
+                              className="min-w-[80px] transition-all duration-200"
+                            >
+                              {shippingMethod ? "Change" : "Select"}
+                            </Button>
+                          </div>
+                        </CardHeader>
+
+                        {/* separator (match AddressCard) */}
+                        <div className="px-4">
+                          <div
+                            aria-hidden
+                            className="w-full rounded-full h-1"
+                            style={{
+                              background:
+                                "linear-gradient(90deg, rgb(223, 239, 181), rgb(247, 237, 184), rgb(253, 231, 188))",
+                            }}
+                          />
+                        </div>
+
+                        <CardContent className="p-6 flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center">
+                              <TbTruckDelivery className="w-6 h-6 text-muted-foreground" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-foreground text-lg">
+                                {shippingMethod ?? "Select shipping carrier"}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {shippingMethod
+                                  ? "Fast and reliable delivery service"
+                                  : "Choose from available carriers"}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Dropdown is anchored to an invisible full-width trigger inside the Card */}
+                          <DropdownMenu
+                            open={shippingMenuOpen}
+                            onOpenChange={(open) => {
+                              if (open) updateShippingMenuWidth();
+                              setShippingMenuOpen(open);
+                            }}
+                          >
+                            <DropdownMenuTrigger asChild>
+                              <span className="absolute left-0 top-0 w-full h-full pointer-events-none" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="start"
+                              sideOffset={8}
+                              className="p-4 min-w-[400px] shadow-2xl border-2"
+                              style={{
+                                width: shippingMenuWidth
+                                  ? `${shippingMenuWidth}px`
+                                  : undefined,
+                              }}
+                            >
+                              <div className="mb-3">
+                                <h4 className="font-semibold text-foreground mb-1">
+                                  Available Carriers
+                                </h4>
+                                <p className="text-xs text-muted-foreground">
+                                  Choose your preferred shipping option
+                                </p>
+                              </div>
+
+                              <DropdownMenuItem
+                                onSelect={() => {
+                                  setShippingMethod("JNE");
+                                  setShippingOption(null);
+                                  setShippingMenuOpen(false);
+                                  setShippingOptionOpen(true);
+                                }}
+                                className="p-4 hover:bg-primary/5 rounded-xl"
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-100 to-orange-100 dark:from-red-900 dark:to-orange-900 flex items-center justify-center text-sm font-bold text-red-600 dark:text-red-400 shadow-md">
+                                      JNE
+                                    </div>
+                                    <div>
+                                      <div className="font-semibold text-foreground">
+                                        JNE Express
+                                      </div>
+                                      <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                        <Clock className="w-3 h-3" />
+                                        ETA: 2-3 days
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-sm">
+                                    <span className="font-semibold text-foreground">
+                                      Rp 12.000
+                                    </span>
+                                    {shippingMethod === "JNE" && (
+                                      <Check className="w-5 h-5 text-primary" />
+                                    )}
+                                  </div>
+                                </div>
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                onSelect={() => {
+                                  setShippingMethod("J&T");
+                                  setShippingOption(null);
+                                  setShippingMenuOpen(false);
+                                  setShippingOptionOpen(true);
+                                }}
+                                className="p-4 hover:bg-primary/5 rounded-xl"
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900 dark:to-emerald-900 flex items-center justify-center text-sm font-bold text-green-600 dark:text-green-400 shadow-md">
+                                      J&T
+                                    </div>
+                                    <div>
+                                      <div className="font-semibold text-foreground">
+                                        J&T Express
+                                      </div>
+                                      <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                        <Clock className="w-3 h-3" />
+                                        ETA: 1-2 days
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-sm">
+                                    <span className="font-semibold text-foreground">
+                                      Rp 15.000
+                                    </span>
+                                    {shippingMethod === "J&T" && (
+                                      <Check className="w-5 h-5 text-primary" />
+                                    )}
+                                  </div>
+                                </div>
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                onSelect={() => {
+                                  setShippingMethod("Ninja Xpress");
+                                  setShippingOption(null);
+                                  setShippingMenuOpen(false);
+                                  setShippingOptionOpen(true);
+                                }}
+                                className="p-4 hover:bg-primary/5 rounded-xl"
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900 dark:to-indigo-900 flex items-center justify-center text-sm font-bold text-purple-600 dark:text-purple-400 shadow-md">
+                                      NX
+                                    </div>
+                                    <div>
+                                      <div className="font-semibold text-foreground">
+                                        Ninja Xpress
+                                      </div>
+                                      <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                        <Clock className="w-3 h-3" />
+                                        ETA: 1-3 days
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-sm">
+                                    <span className="font-semibold text-foreground">
+                                      Rp 18.000
+                                    </span>
+                                    {shippingMethod === "Ninja Xpress" && (
+                                      <Check className="w-5 h-5 text-primary" />
+                                    )}
+                                  </div>
+                                </div>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </CardContent>
+                      </div>
+
+                      {/* Shipping Option - appears only after a carrier is chosen */}
+                      {shippingMethod && (
+                        <CardContent className="p-6 pt-0 border-t border-border/50">
+                          <div className="flex items-center justify-between bg-gradient-to-r from-muted/50 to-transparent p-4 rounded-xl">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                                <Package className="w-5 h-5 text-primary" />
+                              </div>
+                              <div>
+                                <div className="font-semibold text-foreground">
+                                  {shippingOption ?? "Select shipping option"}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  Choose delivery speed and pricing
+                                </div>
+                              </div>
+                            </div>
+
+                            <DropdownMenu
+                              open={shippingOptionOpen}
+                              onOpenChange={setShippingOptionOpen}
+                            >
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="min-w-[80px]"
+                                >
+                                  {shippingOption ? "Change" : "Select"}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="start"
+                                sideOffset={4}
+                                className="p-3 min-w-[200px]"
+                              >
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    setShippingOption("Reguler");
+                                    setShippingOptionOpen(false);
+                                  }}
+                                  className="p-3 rounded-lg hover:bg-primary/5"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <TbTruckDelivery className="w-4 h-4 text-blue-500" />
+                                    <span className="font-medium">Reguler</span>
+                                  </div>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    setShippingOption("Hemat Kargo");
+                                    setShippingOptionOpen(false);
+                                  }}
+                                  className="p-3 rounded-lg hover:bg-primary/5"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <TbDiscount className="w-4 h-4 text-green-500" />
+                                    <span className="font-medium">
+                                      Hemat Kargo
+                                    </span>
+                                  </div>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </CardContent>
+                      )}
+                    </Card>
+                  </div>
+                </div>
+
+                {/* Payment Method */}
+                <div className="flex items-center gap-6">
+                  <div className="hidden lg:flex flex-col items-center w-14">
+                    <div
+                      className={`z-10 flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all duration-300 ${
+                        paymentMethod
+                          ? "bg-primary text-white shadow-lg scale-110"
+                          : shippingMethod
+                          ? "bg-green-100 border-2 border-green-300 text-green-600"
+                          : "bg-muted border-2 border-border"
+                      }`}
+                    >
+                      {paymentMethod ? (
+                        <FaCheckCircle className="w-5 h-5" />
+                      ) : (
+                        <FaWallet className="w-5 h-5" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <Card className="bg-card rounded-2xl border border-border shadow-sm backdrop-blur-sm overflow-hidden">
+                      <CardHeader className="p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center relative">
+                              <MdPayment className="w-7 h-7 text-primary" />
+                              {paymentMethod && (
+                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                                  <Check className="w-3 h-3 text-white" />
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                                Payment Method
+                                {paymentMethod && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    Selected
+                                  </Badge>
+                                )}
+                              </h3>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Select your preferred payment option
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <ShieldCheck className="w-5 h-5 text-green-500" />
+                            <span className="text-xs text-green-600 font-medium">
+                              Secure
+                            </span>
+                          </div>
+                        </div>
+                      </CardHeader>
+
+                      {/* separator (match AddressCard) */}
+                      <div className="px-4">
+                        <div
+                          aria-hidden
+                          className="w-full rounded-full h-1"
+                          style={{
+                            background:
+                              "linear-gradient(90deg, rgb(223, 239, 181), rgb(247, 237, 184), rgb(253, 231, 188))",
+                          }}
+                        />
+                      </div>
+
+                      <CardContent className="p-6 space-y-4">
+                        {[
+                          {
+                            id: "Manual",
+                            title: "Manual Transfer",
+                            subtitle: "Bank transfer verification",
+                            icon: <FaTruck className="w-5 h-5" />,
+                            // neutral/primary styling to match AddressCard
+                            color: "from-primary/20 to-primary/40",
+                            iconColor: "text-primary",
+                            bgColorActive: "bg-primary/10 border-primary",
+                            bgColorInactive: "",
+                          },
+                          {
+                            id: "Gateway",
+                            title: "Payment Gateway",
+                            subtitle: "Instant online payments",
+                            icon: <TbCreditCard className="w-5 h-5" />,
+                            color: "from-primary/20 to-primary/40",
+                            iconColor: "text-primary",
+                            bgColorActive: "bg-primary/10 border-primary",
+                            bgColorInactive: "",
+                          },
+                        ].map((method) => {
+                          const active = paymentMethod === method.id;
+                          return (
+                            <button
+                              key={method.id}
+                              onClick={() => setPaymentMethod(method.id)}
+                              className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-300 text-left group hover:scale-[1.02] ${
+                                active
+                                  ? `border-primary bg-primary/10 shadow-lg ring-2 ring-primary/20 ${
+                                      method.bgColorActive ?? ""
+                                    }`
+                                  : `border-border bg-card hover:border-primary/30 hover:shadow-md ${
+                                      method.bgColorInactive ?? ""
+                                    }`
+                              }`}
+                            >
+                              <div
+                                className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${
+                                  method.color
+                                } flex items-center justify-center shadow-lg transition-all duration-300 ${
+                                  active
+                                    ? "scale-110 shadow-xl"
+                                    : "group-hover:scale-105"
+                                }`}
+                              >
+                                <div className={method.iconColor}>
+                                  {method.icon}
+                                </div>
+                              </div>
+
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <div className="font-semibold text-foreground text-lg">
+                                    {method.title}
+                                  </div>
+                                  {active && (
+                                    <Badge className="bg-primary text-primary-foreground">
+                                      Active
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="text-sm text-muted-foreground mt-1">
+                                  {method.subtitle}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center">
+                                {active ? (
+                                  <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-lg">
+                                    <Check className="w-4 h-4 text-white" />
+                                  </div>
+                                ) : (
+                                  <div className="w-5 h-5 rounded-full border-2 border-border group-hover:border-primary/50 transition-colors duration-300" />
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+
+                        {/* Security notice */}
+                        <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl mt-4">
+                          <FaLock className="w-4 h-4 text-muted-foreground" />
+                          <div className="text-sm text-muted-foreground">
+                            <span className="font-medium">SSL encrypted.</span>{" "}
+                            Your payment information is secure and protected.
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+
+                {/* Additional Options (aligned with other cards) */}
+                <div className="flex items-center gap-6">
+                  <div className="hidden lg:flex flex-col items-center w-14">
+                    {/* placeholder to align with bullets */}
+                    <div className="z-10 w-10 h-10" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Promo Code */}
+                      <Card className="bg-card rounded-2xl border border-border shadow-sm backdrop-blur-sm overflow-hidden">
+                        <CardHeader className="p-4">
+                          <CardTitle className="flex items-center gap-3 text-lg">
+                            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shadow-md">
+                              <MdDiscount className="w-5 h-5 text-primary" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-foreground">
+                                Promo Code
+                              </div>
+                              <div className="text-sm font-normal text-muted-foreground">
+                                Get instant discounts
+                              </div>
+                            </div>
+                          </CardTitle>
+                        </CardHeader>
+
+                        {/* separator (match AddressCard) */}
+                        <div className="px-4">
+                          <div
+                            aria-hidden
+                            className="w-full rounded-full h-1"
+                            style={{
+                              background:
+                                "linear-gradient(90deg, rgb(223, 239, 181), rgb(247, 237, 184), rgb(253, 231, 188))",
+                            }}
+                          />
+                        </div>
+
+                        <CardContent className="p-6">
+                          <div className="space-y-3">
+                            <Label
+                              htmlFor="promo"
+                              className="text-sm font-medium text-foreground"
+                            >
+                              Enter discount code
+                            </Label>
+                            <div className="flex gap-3">
+                              <div className="flex-1 relative">
+                                <Input
+                                  id="promo"
+                                  placeholder="SAVE10, WELCOME20..."
+                                  className="pl-10 pr-4 py-2 border-2 border-border hover:border-primary/50 focus:border-primary transition-colors"
+                                />
+                                <FaTag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                              </div>
+                              <Button
+                                variant="outline"
+                                className="px-6 border-2 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+                              >
+                                Apply
+                              </Button>
+                            </div>
+                            <div className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Tag className="w-3 h-3" />
+                              Valid codes will be applied automatically
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Special Instructions */}
+                      <Card className="bg-card rounded-2xl border border-border shadow-sm backdrop-blur-sm overflow-hidden">
+                        <CardHeader className="p-4">
+                          <CardTitle className="flex items-center gap-3 text-lg">
+                            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shadow-md">
+                              <MdMessage className="w-5 h-5 text-primary" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-foreground">
+                                Special Instructions
+                              </div>
+                              <div className="text-sm font-normal text-muted-foreground">
+                                Additional delivery notes
+                              </div>
+                            </div>
+                          </CardTitle>
+                        </CardHeader>
+
+                        {/* separator (match AddressCard) */}
+                        <div className="px-4">
+                          <div
+                            aria-hidden
+                            className="w-full rounded-full h-1"
+                            style={{
+                              background:
+                                "linear-gradient(90deg, rgb(223, 239, 181), rgb(247, 237, 184), rgb(253, 231, 188))",
+                            }}
+                          />
+                        </div>
+
+                        <CardContent className="p-6">
+                          <div className="space-y-3">
+                            <Label
+                              htmlFor="instructions"
+                              className="text-sm font-medium text-foreground"
+                            >
+                              Delivery notes (optional)
+                            </Label>
+                            <div className="relative">
+                              <textarea
+                                id="instructions"
+                                placeholder="Leave at front door, call when arriving, fragile items..."
+                                className="w-full px-4 py-3 pl-10 border-2 border-border rounded-xl bg-background text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary hover:border-primary/50 transition-colors"
+                              />
+                              <FaComments className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                            </div>
+                            <div className="text-xs text-muted-foreground flex items-center gap-1">
+                              <MessageSquare className="w-3 h-3" />
+                              Help us deliver your order perfectly
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Review bullet (bottom) - visible on large screens */}
+                <div className="flex items-center gap-6 mt-6">
+                  <div className="hidden lg:flex flex-col items-center w-14">
+                    <div
+                      className={`z-10 flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all duration-300 ${
+                        selectedAddress && shippingMethod && paymentMethod
+                          ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg animate-pulse"
+                          : "bg-muted border-2 border-border"
+                      }`}
+                    >
+                      <FaLock className="w-5 h-5" />
+                    </div>
+                    <div className="text-xs font-medium mt-2 text-muted-foreground">
+                      Review
+                    </div>
+                  </div>
+                  <div className="flex-1" />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -741,31 +1198,7 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Mobile Order Summary */}
-        <div className="lg:hidden mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <CreditCard className="h-4 w-4 text-primary" />
-                </div>
-                Order Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <OrderSummary
-                cart={cart}
-                items={items}
-                idempotencyKey={idempotencyKey}
-                setIdempotencyKey={setIdempotencyKey}
-                onPlaceOrder={handlePlaceOrder}
-                isProcessing={createOrder.status === "pending"}
-                customer={customer ?? undefined}
-                address={selectedAddressFull ?? undefined}
-              />
-            </CardContent>
-          </Card>
-        </div>
+       
       </div>
     </div>
   );

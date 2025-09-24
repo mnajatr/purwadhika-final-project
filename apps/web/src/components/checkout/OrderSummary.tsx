@@ -3,7 +3,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { RippleButton } from "@/components/ui/ripple-button";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardHeader,
@@ -52,8 +51,14 @@ export default function OrderSummary({
 
   return (
     <div className="lg:sticky lg:top-6">
-      <Card className="bg-card rounded-2xl border border-border shadow-sm backdrop-blur-sm overflow-hidden">
-        <CardHeader className="p-4">
+      {/* Elevated card with stronger visual treatment to make it stand out */}
+      <Card className="relative bg-card rounded-2xl border border-border shadow-2xl ring-2 ring-primary/15 backdrop-blur-sm overflow-hidden transform-gpu transition-transform duration-200 hover:scale-[1.01]">
+        {/* left accent bar */}
+        <div
+          className="absolute left-0 top-0 h-full w-1 rounded-tr-2xl rounded-br-2xl bg-gradient-to-b from-primary to-transparent"
+          aria-hidden
+        />
+        <CardHeader className="p-4 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center relative">
               <svg
@@ -72,7 +77,7 @@ export default function OrderSummary({
               </svg>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-foreground">
+              <h3 className="text-2xl font-bold text-foreground">
                 Order Summary
               </h3>
               <p className="text-sm text-muted-foreground">
@@ -96,17 +101,7 @@ export default function OrderSummary({
 
         <CardContent className="p-6 space-y-6">
           {/* Order Items Count */}
-          <div className="flex items-center justify-between py-2">
-            <span className="text-muted-foreground">
-              {items.length} {items.length === 1 ? "item" : "items"}
-            </span>
-            <Badge
-              variant="secondary"
-              className="bg-muted text-muted-foreground"
-            >
-              {items.length}
-            </Badge>
-          </div>
+          <div className="flex items-center justify-between py-2"></div>
 
           {/* Price Breakdown */}
           <div className="space-y-3">
