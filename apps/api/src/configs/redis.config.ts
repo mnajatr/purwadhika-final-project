@@ -13,19 +13,19 @@ export const redis = new Redis({
 
 // Add connection event logging
 redis.on("connect", () => {
-  logger.info("🔗 Redis connecting...");
+  // logger.info("🔗 Redis connecting...");
 });
 
 redis.on("ready", () => {
-  logger.info("✅ Redis connected and ready!");
+  // logger.info("✅ Redis connected and ready!");
 });
 
 redis.on("error", (err) => {
-  logger.error("❌ Redis connection error:", err.message);
+  // logger.error("❌ Redis connection error:", err.message);
 });
 
 redis.on("close", () => {
-  logger.info("🔌 Redis connection closed");
+  // logger.info("🔌 Redis connection closed");
 });
 
 export type RedisClient = typeof redis;
