@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useProducts } from "@/hooks/useProduct";
@@ -13,6 +13,13 @@ export default function ProductsList() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedStore, setSelectedStore] = useState("All");
+  const [role, setRole] = useState("");
+
+  useEffect(() => {
+    const rolez = localStorage.getItem("role") ?? "";
+    setRole(rolez);
+  }, []);
+  const allowed_role = new Set(["SUPER_ADMIN", "STORE_ADMIN"]);
 
   // Fetch products without location to get all products for admin
   const { data, isLoading, error } = useProducts();
@@ -57,12 +64,15 @@ export default function ProductsList() {
           <h2 className="text-3xl md:text-4xl font-bold text-center md:text-left">
             List Products
           </h2>
-          <Link
-            href="/products/create"
-            className="bg-indigo-500 text-white px-5 py-2 rounded-lg shadow hover:bg-indigo-700 transition text-center"
-          >
-            + Tambah Produk
-          </Link>
+
+          {allowed_role.has(role) && (
+            <Link
+              href="/products/create"
+              className="bg-indigo-500 text-white px-5 py-2 rounded-lg shadow hover:bg-indigo-700 transition text-center"
+            >
+              + Tambah Produk
+            </Link>
+          )}
         </div>
 
         {/* Search */}

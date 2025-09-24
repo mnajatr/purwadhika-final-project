@@ -115,6 +115,20 @@ class ApiClient {
     const resp = await this.client.delete<T>(url, { data });
     return resp.data;
   }
+
+  async postForm<T>(url: string, formData: FormData): Promise<T> {
+    const resp = await this.client.post<T>(url, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return resp.data;
+  }
+
+  async putForm<T>(url: string, formData: FormData): Promise<T> {
+    const resp = await this.client.put<T>(url, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return resp.data;
+  }
 }
 
 export const apiClient = new ApiClient();

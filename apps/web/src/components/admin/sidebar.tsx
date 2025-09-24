@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import { useEffect, useState } from "react";
 
 export default function Sidebar() {
   const menus = [
@@ -15,38 +15,46 @@ export default function Sidebar() {
     { name: "Reports", path: "/admin/report" },
   ];
 
+  const [store, setStore] = useState("");
+  const [devUserId, setDevUserId] = useState("");
+  const [role, setRole] = useState("");
+
+  useEffect(() => {
+    const devUserIdz = localStorage.getItem("devUserId");
+    setDevUserId(devUserIdz ?? "");
+    const rolez = localStorage.getItem("role");
+    setRole(rolez ?? "");
+    const storeId = localStorage.getItem("storeId");
+    setStore(storeId ? `-${storeId}` : "");
+  }, []);
+
   return (
     <div className="flex h-screen">
-      {/* Sidebar */}
       <aside className="w-48 bg-gray-800 text-white p-4 space-y-4">
         <h2 className="font-bold text-lg">Dashboard</h2>
-        {/* TODO: DEV user switch - only visible in development */}
         {process.env.NODE_ENV !== "production" && (
           <div className="mt-2 p-2 bg-gray-700 rounded">
             <label className="block text-xs text-gray-300 mb-1">Dev user</label>
             <select
-              defaultValue={
-                typeof window !== "undefined"
-                  ? localStorage.getItem("devUserId") || "4"
-                  : "4"
-              }
+              value={devUserId ? `${devUserId}-${role}${store}` : "4-USER"}
               onChange={(e) => {
                 try {
-                  localStorage.setItem("devUserId", e.target.value);
-                  // small visual feedback by reloading page so callers pick up header
+                  const target = e.target.value;
+                  const [devUserId, role, storeId] = target.split("-");
+                  localStorage.setItem("devUserId", devUserId);
+                  localStorage.setItem("role", role);
+                  localStorage.setItem("storeId", storeId ?? "");
                   window.location.reload();
-                } catch {
-                  // ignore
-                }
+                } catch {}
               }}
               className="w-full bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 text-sm"
             >
               <option value="none">(none)</option>
-              <option value="1">1 - SUPER_ADMIN</option>
-              <option value="2">2 - STORE_ADMIN (Bandung)</option>
-              <option value="3">3 - STORE_ADMIN (Jakarta)</option>
-              <option value="4">4 - Normal User</option>
-              <option value="5">5 - Normal User 5</option>
+              <option value="1-SUPER_ADMIN">1 - SUPER_ADMIN</option>
+              <option value="2-STORE_ADMIN-1">2 - STORE_ADMIN (Bandung)</option>
+              <option value="3-STORE_ADMIN-2">3 - STORE_ADMIN (Jakarta)</option>
+              <option value="4-USER">4 - Normal User</option>
+              <option value="5-USER">5 - Normal User 5</option>
             </select>
           </div>
         )}
