@@ -1,5 +1,5 @@
 import apiClient from "@/lib/axios-client";
-import { ProductResponse } from "@/types/products.type";
+import { ProductResponse, ProductCreateRequest } from "@/types/products.type";
 
 interface NearestStoreResponse {
   products: ProductResponse[];
@@ -94,50 +94,22 @@ class ProductsService {
     };
   }
 
-  async createProduct(data: ProductResponse) {
-    const product = await apiClient.post<ProductResponse>(this.basePath, data);
-    const inventory = product.inventories?.[0];
+  async createProduct(data: FormData): Promise<ProductResponse> {
+    const product = await apiClient.postForm<ProductResponse>(
+      this.basePath,
+      data
+    );
 
-    return {
-      id: product.id,
-      slug: product.slug,
-      name: product.name,
-      description: product.description,
-      price: Number(product.price),
-      category: product.category?.name,
-      store: product.inventories?.[0]?.store?.name || "Unknown",
-      weight: product.weight,
-      width: product.width,
-      height: product.height,
-      length: product.length,
-      imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
-      stock: inventory?.stockQty ?? 0,
-    };
+    return product;
   }
 
-  async updateProduct(slug: string, data: Partial<ProductResponse>) {
-    const product = await apiClient.put<ProductResponse>(
+  async updateProduct(slug: string, data: FormData): Promise<ProductResponse> {
+    return await apiClient.putForm<ProductResponse>(
       `${this.basePath}/${slug}`,
       data
     );
-    const inventory = product.inventories?.[0];
-
-    return {
-      id: product.id,
-      slug: product.slug,
-      name: product.name,
-      description: product.description,
-      price: Number(product.price),
-      category: product.category?.name,
-      store: product.inventories?.[0]?.store?.name || "Unknown",
-      weight: product.weight,
-      width: product.width,
-      height: product.height,
-      length: product.length,
-      imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
-      stock: inventory?.stockQty ?? 0,
-    };
   }
+
   async deleteProduct(slug: string) {
     await apiClient.delete(`${this.basePath}/${slug}`);
     return { message: "Product deleted successfully" };
@@ -165,9 +137,9 @@ export const getProducts = (storeId?: number, lat?: number, lon?: number) =>
   productsService.getProducts(storeId, lat, lon);
 export const getProductBySlug = (slug: string) =>
   productsService.getProductBySlug(slug);
-export const createProduct = (data: ProductResponse) =>
+export const createProduct = (data: FormData) =>
   productsService.createProduct(data);
-export const updateProduct = (slug: string, data: Partial<ProductResponse>) =>
+export const updateProduct = (slug: string, data: FormData) =>
   productsService.updateProduct(slug, data);
 export const deleteProduct = (slug: string) =>
   productsService.deleteProduct(slug);
