@@ -368,22 +368,58 @@ async function seedDiscounts(stores: any[], products: any[]) {
     const store = faker.helpers.arrayElement(stores);
     const product = faker.helpers.arrayElement(products);
 
-    const discount = await prisma.discount.create({
-      data: {
-        storeId: store.id,
-        productId: product.id,
-        name: faker.word.adjective(),
-        value: faker.helpers.arrayElement(["PRODUCT_DISCOUNT", "BUY1GET1"]),
-        type: faker.helpers.arrayElement(["PERCENTAGE", "NOMINAL"]),
-        minPurchase: faker.datatype.boolean()
-          ? faker.number.int({ min: 1, max: 5 })
-          : null,
-        maxDiscount: faker.datatype.boolean()
-          ? faker.number.int({ min: 5000, max: 50000 })
-          : null,
-        expiredAt: faker.date.soon({ days: 30 }),
-      },
-    });
+    const value = faker.helpers.arrayElement(["PRODUCT_DISCOUNT", "BUY1GET1"]);
+
+    let discount;
+    if (value === "BUY1GET1") {
+      // Buy 1 Get 1
+      discount = await prisma.discount.create({
+        data: {
+          storeId: store.id,
+          productId: product.id,
+          name: faker.word.adjective(),
+          type: "BUYXGETX",
+          value: "BUY1GET1",
+          buyQty: 1,
+          getQty: 1,
+          minPurchase: faker.datatype.boolean()
+            ? faker.number.int({ min: 1, max: 5 })
+            : null,
+          expiredAt: faker.date.soon({ days: 30 }),
+        },
+      });
+    } else {
+      // Product discount (Nominal / Percentage)
+      const type = faker.helpers.arrayElement([
+        "PERCENTAGE",
+        "NOMINAL",
+        "BUYXGETX",
+      ]);
+      discount = await prisma.discount.create({
+        data: {
+          storeId: store.id,
+          productId: product.id,
+          name: faker.word.adjective(),
+          value: "PRODUCT_DISCOUNT",
+          type,
+          amount:
+            type === "NOMINAL"
+              ? faker.number.int({ min: 1000, max: 50000 })
+              : null,
+          percentage:
+            type === "PERCENTAGE"
+              ? faker.number.int({ min: 5, max: 50 })
+              : null,
+          minPurchase: faker.datatype.boolean()
+            ? faker.number.int({ min: 1, max: 5 })
+            : null,
+          maxDiscount: faker.datatype.boolean()
+            ? faker.number.int({ min: 5000, max: 50000 })
+            : null,
+          expiredAt: faker.date.soon({ days: 30 }),
+        },
+      });
+    }
 
     createdDiscounts.push(discount);
   }
@@ -701,8 +737,8 @@ async function seedUserAddresses(users: any[]) {
       city: "Bandung",
       district: "Coblong",
       postalCode: "40115",
-      latitude: -6.8740,
-      longitude: 107.6170,
+      latitude: -6.874,
+      longitude: 107.617,
       isPrimary: false,
     },
   });

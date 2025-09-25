@@ -20,30 +20,39 @@ export default function CreateDiscountForm() {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<CreateDiscountForm>({
     defaultValues: {
       name: "",
       value: ValueType.PRODUCT_DISCOUNT,
       type: DiscountType.PERCENTAGE,
+      amount: undefined,
       minPurchase: undefined,
       maxDiscount: undefined,
       expiredAt: "",
       storeId: undefined,
       productId: undefined,
+      buyQty: 1,
+      getQty: 1,
     },
   });
+
+  const selectedValue = watch("value");
 
   const onSubmit = (data: CreateDiscountForm) => {
     const payload: CreateDiscount = {
       name: data.name,
       value: data.value,
       type: data.type,
+      amount: data.amount ? Number(data.amount) : undefined,
       minPurchase: data.minPurchase ? Number(data.minPurchase) : undefined,
       maxDiscount: data.maxDiscount ? Number(data.maxDiscount) : undefined,
       expiredAt: new Date(data.expiredAt + "T23:59:59Z").toISOString(),
       store: { id: Number(data.storeId) },
       product: { id: Number(data.productId) },
+      buyQty: data.buyQty ?? 1,
+      getQty: data.getQty ?? 1,
     };
 
     createDiscount.mutate(payload, {
@@ -111,14 +120,50 @@ export default function CreateDiscountForm() {
       </select>
 
       {/* Type */}
-      <p className="text-sm font-semibold">Type</p>
-      <select
-        {...register("type", { required: true })}
-        className="w-full p-2 border rounded"
-      >
-        <option value={DiscountType.PERCENTAGE}>Percentage</option>
-        <option value={DiscountType.NOMINAL}>Nominal</option>
-      </select>
+      {selectedValue === ValueType.PRODUCT_DISCOUNT && (
+        <>
+          <p className="text-sm font-semibold">Type</p>
+          <select
+            {...register("type", { required: true })}
+            className="w-full p-2 border rounded"
+          >
+            <option value={DiscountType.PERCENTAGE}>Percentage</option>
+            <option value={DiscountType.NOMINAL}>Nominal</option>
+          </select>
+
+          {/* Amount */}
+          <input
+            type="number"
+            placeholder="Discount Amount"
+            {...register("amount", {
+              required: "Amount wajib diisi untuk Product Discount",
+              valueAsNumber: true,
+            })}
+            className="w-full p-2 border rounded"
+          />
+          {errors.amount && (
+            <p className="text-sm text-red-500">{errors.amount.message}</p>
+          )}
+        </>
+      )}
+
+      {/* Buy 1 Get 1 (atau Buy X Get Y) */}
+      {selectedValue === ValueType.BUY1GET1 && (
+        <div className="grid grid-cols-2 gap-4">
+          <input
+            type="number"
+            placeholder="Buy Quantity"
+            {...register("buyQty", { valueAsNumber: true })}
+            className="w-full p-2 border rounded"
+          />
+          <input
+            type="number"
+            placeholder="Get Quantity"
+            {...register("getQty", { valueAsNumber: true })}
+            className="w-full p-2 border rounded"
+          />
+        </div>
+      )}
 
       {/* Min & Max */}
       <div className="grid grid-cols-2 gap-4">

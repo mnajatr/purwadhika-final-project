@@ -14,11 +14,14 @@ type FormValues = {
   name?: string;
   value?: ValueType;
   type?: DiscountType;
+  amount?: number;
   minPurchase?: number;
   maxDiscount?: number;
-  expiredAt?: string; // YYYY-MM-DD for input[type=date]
+  expiredAt?: string;
   storeId?: number;
   productId?: number;
+  buyQty?: number;
+  getQty?: number;
 };
 
 export default function EditDiscountForm({
@@ -32,24 +35,30 @@ export default function EditDiscountForm({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     defaultValues: {
       name: "",
       value: ValueType.PRODUCT_DISCOUNT,
       type: DiscountType.PERCENTAGE,
+      amount: undefined,
       minPurchase: undefined,
       maxDiscount: undefined,
       expiredAt: "",
       storeId: undefined,
       productId: undefined,
+      buyQty: 1,
+      getQty: 1,
     },
   });
+
+  const selectedValue = watch("value");
 
   useEffect(() => {
     if (!discount) return;
 
-    const expiredRaw = (discount as any).expiredAt;
+    const expiredRaw = discount.expiredAt;
     const expired = expiredRaw
       ? typeof expiredRaw === "string"
         ? expiredRaw.split("T")[0]
@@ -60,11 +69,14 @@ export default function EditDiscountForm({
       name: discount.name ?? "",
       value: discount.value ?? ValueType.PRODUCT_DISCOUNT,
       type: discount.type ?? DiscountType.PERCENTAGE,
+      amount: discount.amount ?? undefined,
       minPurchase: discount.minPurchase ?? undefined,
       maxDiscount: discount.maxDiscount ?? undefined,
       expiredAt: expired,
       storeId: discount.store?.id ?? undefined,
       productId: discount.product?.id ?? undefined,
+      buyQty: discount.buyQty ?? 1,
+      getQty: discount.getQty ?? 1,
     });
   }, [discount, reset]);
 
@@ -73,6 +85,7 @@ export default function EditDiscountForm({
       name: data.name,
       value: data.value,
       type: data.type,
+      amount: data.amount !== undefined ? Number(data.amount) : undefined,
       minPurchase:
         data.minPurchase !== undefined ? Number(data.minPurchase) : undefined,
       maxDiscount:
@@ -82,6 +95,8 @@ export default function EditDiscountForm({
         : undefined,
       store: data.storeId ? { id: Number(data.storeId) } : undefined,
       product: data.productId ? { id: Number(data.productId) } : undefined,
+      buyQty: data.buyQty ?? 1,
+      getQty: data.getQty ?? 1,
     };
 
     updateDiscount.mutate(
@@ -149,15 +164,44 @@ export default function EditDiscountForm({
         <option value={ValueType.BUY1GET1}>Buy 1 Get 1</option>
       </select>
 
-      {/* Type */}
-      <p className="text-sm font-semibold">Type</p>
-      <select
-        {...register("type", { required: true })}
-        className="w-full p-2 border rounded"
-      >
-        <option value={DiscountType.PERCENTAGE}>Percentage</option>
-        <option value={DiscountType.NOMINAL}>Nominal</option>
-      </select>
+      {/* Product Discount */}
+      {selectedValue === ValueType.PRODUCT_DISCOUNT && (
+        <>
+          <p className="text-sm font-semibold">Type</p>
+          <select
+            {...register("type", { required: true })}
+            className="w-full p-2 border rounded"
+          >
+            <option value={DiscountType.PERCENTAGE}>Percentage</option>
+            <option value={DiscountType.NOMINAL}>Nominal</option>
+          </select>
+
+          <input
+            type="number"
+            placeholder="Discount Amount"
+            {...register("amount", { valueAsNumber: true })}
+            className="w-full p-2 border rounded"
+          />
+        </>
+      )}
+
+      {/* Buy 1 Get 1 */}
+      {selectedValue === ValueType.BUY1GET1 && (
+        <div className="grid grid-cols-2 gap-4">
+          <input
+            type="number"
+            placeholder="Buy Quantity"
+            {...register("buyQty", { valueAsNumber: true })}
+            className="w-full p-2 border rounded"
+          />
+          <input
+            type="number"
+            placeholder="Get Quantity"
+            {...register("getQty", { valueAsNumber: true })}
+            className="w-full p-2 border rounded"
+          />
+        </div>
+      )}
 
       {/* Min & Max */}
       <div className="grid grid-cols-2 gap-4">
