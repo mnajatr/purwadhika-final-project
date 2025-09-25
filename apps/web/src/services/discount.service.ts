@@ -16,6 +16,12 @@ class DiscountsService {
       name: discount.name,
       type: discount.type,
       value: discount.value,
+      amount: discount.amount ?? null,
+      percentage: discount.percentage ?? null,
+      minPurchase: discount.minPurchase ?? null,
+      maxDiscount: discount.maxDiscount ?? null,
+      buyQty: discount.buyQty ?? null,
+      getQty: discount.getQty ?? null,
       expiredAt: discount.expiredAt ? new Date(discount.expiredAt) : null,
       store: discount.store
         ? { id: discount.store.id, name: discount.store.name }
@@ -36,6 +42,12 @@ class DiscountsService {
       name: discount.name,
       type: discount.type,
       value: discount.value,
+      amount: discount.amount ?? null,
+      percentage: discount.percentage ?? null,
+      minPurchase: discount.minPurchase ?? null,
+      maxDiscount: discount.maxDiscount ?? null,
+      buyQty: discount.buyQty ?? null,
+      getQty: discount.getQty ?? null,
       expiredAt: discount.expiredAt ? new Date(discount.expiredAt) : null,
       store: discount.store
         ? { id: discount.store.id, name: discount.store.name }
@@ -52,14 +64,24 @@ class DiscountsService {
       { productIds }
     );
 
-    return discounts.map((d) => ({
-      id: d.id,
-      name: d.name,
-      type: d.type,
-      value: d.value,
-      expiredAt: d.expiredAt ? new Date(d.expiredAt) : null,
-      store: d.store ? { id: d.store.id, name: d.store.name } : null,
-      product: d.product ? { id: d.product.id, name: d.product.name } : null,
+    return discounts.map((discount) => ({
+      id: discount.id,
+      name: discount.name,
+      type: discount.type,
+      value: discount.value,
+      amount: discount.amount ?? null,
+      percentage: discount.percentage ?? null,
+      minPurchase: discount.minPurchase ?? null,
+      maxDiscount: discount.maxDiscount ?? null,
+      buyQty: discount.buyQty ?? null,
+      getQty: discount.getQty ?? null,
+      expiredAt: discount.expiredAt ? new Date(discount.expiredAt) : null,
+      store: discount.store
+        ? { id: discount.store.id, name: discount.store.name }
+        : null,
+      product: discount.product
+        ? { id: discount.product.id, name: discount.product.name }
+        : null,
     }));
   }
 
@@ -74,6 +96,12 @@ class DiscountsService {
       name: discount.name,
       type: discount.type,
       value: discount.value,
+      amount: discount.amount ?? null,
+      percentage: discount.percentage ?? null,
+      minPurchase: discount.minPurchase ?? null,
+      maxDiscount: discount.maxDiscount ?? null,
+      buyQty: discount.buyQty ?? null,
+      getQty: discount.getQty ?? null,
       expiredAt: discount.expiredAt ? new Date(discount.expiredAt) : null,
       store: discount.store
         ? { id: discount.store.id, name: discount.store.name }
@@ -95,6 +123,12 @@ class DiscountsService {
       name: discount.name,
       type: discount.type,
       value: discount.value,
+      amount: discount.amount ?? null,
+      percentage: discount.percentage ?? null,
+      minPurchase: discount.minPurchase ?? null,
+      maxDiscount: discount.maxDiscount ?? null,
+      buyQty: discount.buyQty ?? null,
+      getQty: discount.getQty ?? null,
       expiredAt: discount.expiredAt ? new Date(discount.expiredAt) : null,
       store: discount.store
         ? { id: discount.store.id, name: discount.store.name }

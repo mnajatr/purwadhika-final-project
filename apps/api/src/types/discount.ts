@@ -6,14 +6,19 @@ export enum ValueType {
 export enum DiscountType {
   PERCENTAGE = "PERCENTAGE",
   NOMINAL = "NOMINAL",
+  BUYXGETX = "BUYXGETX",
 }
 
 export interface CreateDiscount {
   name: string;
   value: ValueType;
   type: DiscountType;
+  amount?: number;
+  percentage?: number;
   minPurchase?: number;
   maxDiscount?: number;
+  buyQty?: number;
+  getQty?: number;
   expiredAt: string;
   store: { id: number };
   product: { id: number };
@@ -26,8 +31,12 @@ export interface DiscountResponse {
   name: string;
   value: ValueType;
   type: DiscountType;
+  amount?: number;
+  percentage?: number;
   minPurchase?: number;
   maxDiscount?: number;
+  buyQty?: number;
+  getQty?: number;
   expiredAt: string;
   store: {
     id: number;

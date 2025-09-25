@@ -43,6 +43,19 @@ export const discountController = {
 
   async create(req: Request, res: Response) {
     try {
+      const { type, amount, percentage } = req.body;
+
+      if (type === "NOMINAL" && amount === undefined) {
+        return res
+          .status(400)
+          .json({ message: "Amount wajib untuk diskon nominal" });
+      }
+      if (type === "PERCENTAGE" && percentage === undefined) {
+        return res
+          .status(400)
+          .json({ message: "Percentage wajib untuk diskon persentase" });
+      }
+
       const discount = await discountService.createDiscount(req.body);
       res.status(201).json(discount);
     } catch (err) {
@@ -53,6 +66,20 @@ export const discountController = {
   async update(req: Request, res: Response) {
     try {
       const id = Number(req.params.id);
+      const { type, amount, percentage } = req.body;
+
+      // Validasi field sesuai tipe
+      if (type === "NOMINAL" && amount === undefined) {
+        return res
+          .status(400)
+          .json({ message: "Amount wajib untuk diskon nominal" });
+      }
+      if (type === "PERCENTAGE" && percentage === undefined) {
+        return res
+          .status(400)
+          .json({ message: "Percentage wajib untuk diskon persentase" });
+      }
+
       const discount = await discountService.updateDiscount(id, req.body);
       res.json(discount);
     } catch (err) {
