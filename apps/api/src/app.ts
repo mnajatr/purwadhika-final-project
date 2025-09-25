@@ -9,6 +9,8 @@ import storesRouter from "./routes/stores.routes.js";
 import discountRouter from "./routes/admin/discount.routes.js";
 import categoryRouter from "./routes/admin/category.routes.js";
 import reportRouter from "./routes/admin/report.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
+import debugRoutes from "./routes/debug.routes.js";
 import { setupCloudinary } from "./configs/cloudinary.config.js";
 import logger from "./utils/logger.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
@@ -51,6 +53,10 @@ export class App {
     this.app.use("/api/discounts", discountRouter);
     this.app.use("/api/category", categoryRouter);
     this.app.use("/api/reports", reportRouter);
+    this.app.use("/api/payments", paymentRoutes);
+    if (process.env.NODE_ENV !== "production") {
+      this.app.use("/api/debug", debugRoutes);
+    }
     // Debug routes removed for production; keep local/dev-only debug routes out of main app.
 
     this.app.get("/api/health", (request: Request, response: Response) =>
