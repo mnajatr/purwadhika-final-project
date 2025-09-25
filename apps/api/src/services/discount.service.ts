@@ -47,6 +47,27 @@ export const discountService = {
     };
   },
 
+  async getByProductIds(productIds: number[]): Promise<DiscountResponse[]> {
+    const discounts = await prisma.discount.findMany({
+      where: {
+        productId: { in: productIds },
+      },
+      include: { store: true, product: true },
+    });
+
+    return discounts.map((d) => ({
+      id: d.id,
+      name: d.name,
+      value: d.value as ValueType,
+      type: d.type as DiscountType,
+      minPurchase: d.minPurchase ?? undefined,
+      maxDiscount: d.maxDiscount ?? undefined,
+      expiredAt: d.expiredAt.toISOString(),
+      store: { id: d.store.id, name: d.store.name },
+      product: { id: d.product.id, name: d.product.name },
+    }));
+  },
+
   async createDiscount(data: CreateDiscount): Promise<DiscountResponse> {
     const d = await prisma.discount.create({
       data: {
