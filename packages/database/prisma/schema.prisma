@@ -45,6 +45,7 @@ enum PaymentStatus {
 enum DiscountType {
   PERCENTAGE
   NOMINAL
+  BUYXGETX
 }
 
 enum ValueType {
@@ -258,7 +259,11 @@ model Discount {
   product     Product      @relation(fields: [productId], references: [id])
   productId   Int
   value       ValueType
+  amount      Int?
+  percentage  Float?
   type        DiscountType
+  buyQty      Int?
+  getQty      Int?
   minPurchase Int?
   maxDiscount Int?
   expiredAt   DateTime
