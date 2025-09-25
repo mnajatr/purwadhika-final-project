@@ -12,12 +12,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import AddressCard from "@/components/checkout/AddressCard";
 import ItemsList from "@/components/checkout/ItemsList";
 import OrderSummary from "@/components/checkout/OrderSummary";
+import ApplyDiscount from "@/components/discount/ApplyDiscount";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import usersService from "@/services/users.service";
@@ -26,7 +26,6 @@ import apiClient from "@/lib/axios-client";
 import {
   ArrowLeft,
   Clock,
-  Tag,
   MessageSquare,
   Check,
   Package,
@@ -37,7 +36,6 @@ import {
   FaTruck,
   FaWallet,
   FaMapMarkerAlt,
-  FaTag,
   FaComments,
   FaLock,
   FaCheckCircle,
@@ -45,7 +43,6 @@ import {
 import {
   MdLocalShipping,
   MdPayment,
-  MdDiscount,
   MdMessage,
 } from "react-icons/md";
 import { TbTruckDelivery, TbCreditCard, TbDiscount } from "react-icons/tb";
@@ -144,6 +141,13 @@ export default function CheckoutPage() {
 
   // payment method selection (start with no selection)
   const [paymentMethod, setPaymentMethod] = React.useState<string | null>(null);
+
+  // discount handling
+  const handleApplyDiscount = React.useCallback((code: string) => {
+    // TODO: Implement discount logic here
+    // For now, just show a success message
+    toast.success(`Discount code "${code}" applied successfully!`);
+  }, []);
 
   const handleSelectAddress = React.useCallback(
     async (a: { id: number }) => {
@@ -1065,66 +1069,7 @@ export default function CheckoutPage() {
                   <div className="flex-1">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Promo Code */}
-                      <Card className="bg-card rounded-2xl border border-border shadow-sm backdrop-blur-sm overflow-hidden">
-                        <CardHeader className="p-4">
-                          <CardTitle className="flex items-center gap-3 text-lg">
-                            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shadow-md">
-                              <MdDiscount className="w-5 h-5 text-primary" />
-                            </div>
-                            <div>
-                              <div className="font-semibold text-foreground">
-                                Promo Code
-                              </div>
-                              <div className="text-sm font-normal text-muted-foreground">
-                                Get instant discounts
-                              </div>
-                            </div>
-                          </CardTitle>
-                        </CardHeader>
-
-                        {/* separator (match AddressCard) */}
-                        <div className="px-4">
-                          <div
-                            aria-hidden
-                            className="w-full rounded-full h-1"
-                            style={{
-                              background:
-                                "linear-gradient(90deg, rgb(223, 239, 181), rgb(247, 237, 184), rgb(253, 231, 188))",
-                            }}
-                          />
-                        </div>
-
-                        <CardContent className="p-6">
-                          <div className="space-y-3">
-                            <Label
-                              htmlFor="promo"
-                              className="text-sm font-medium text-foreground"
-                            >
-                              Enter discount code
-                            </Label>
-                            <div className="flex gap-3">
-                              <div className="flex-1 relative">
-                                <Input
-                                  id="promo"
-                                  placeholder="SAVE10, WELCOME20..."
-                                  className="pl-10 pr-4 py-2 border-2 border-border hover:border-primary/50 focus:border-primary transition-colors"
-                                />
-                                <FaTag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                              </div>
-                              <Button
-                                variant="outline"
-                                className="px-6 border-2 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
-                              >
-                                Apply
-                              </Button>
-                            </div>
-                            <div className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Tag className="w-3 h-3" />
-                              Valid codes will be applied automatically
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      <ApplyDiscount onApplyDiscount={handleApplyDiscount} />
 
                       {/* Special Instructions */}
                       <Card className="bg-card rounded-2xl border border-border shadow-sm backdrop-blur-sm overflow-hidden">
