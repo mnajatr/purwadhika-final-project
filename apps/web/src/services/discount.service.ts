@@ -46,6 +46,23 @@ class DiscountsService {
     };
   }
 
+  async getDiscountsByProductIds(productIds: number[]) {
+    const discounts = await apiClient.post<DiscountResponse[]>(
+      `${this.basePath}/by-products`,
+      { productIds }
+    );
+
+    return discounts.map((d) => ({
+      id: d.id,
+      name: d.name,
+      type: d.type,
+      value: d.value,
+      expiredAt: d.expiredAt ? new Date(d.expiredAt) : null,
+      store: d.store ? { id: d.store.id, name: d.store.name } : null,
+      product: d.product ? { id: d.product.id, name: d.product.name } : null,
+    }));
+  }
+
   async createDiscount(data: CreateDiscount) {
     const discount = await apiClient.post<DiscountResponse>(
       this.basePath,
@@ -99,6 +116,8 @@ export const discountsService = new DiscountsService();
 export const getDiscounts = () => discountsService.getDiscounts();
 export const getDiscountById = (id: number) =>
   discountsService.getDiscountById(id);
+export const getDiscountsByProductIds = (productIds: number[]) =>
+  discountsService.getDiscountsByProductIds(productIds);
 export const createDiscount = (data: CreateDiscount) =>
   discountsService.createDiscount(data);
 export const updateDiscount = (id: number, data: UpdateDiscount) =>

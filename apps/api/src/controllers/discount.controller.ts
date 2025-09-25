@@ -11,6 +11,24 @@ export const discountController = {
     }
   },
 
+  async getDiscountsByProductIds(req: Request, res: Response) {
+    try {
+      const { productIds } = req.body;
+
+      if (!Array.isArray(productIds) || productIds.length === 0) {
+        return res.status(400).json({
+          message: "productIds harus berupa array dan tidak boleh kosong",
+        });
+      }
+
+      const discounts = await discountService.getByProductIds(productIds);
+      return res.json(discounts);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+
   async getById(req: Request, res: Response) {
     try {
       const id = Number(req.params.id);

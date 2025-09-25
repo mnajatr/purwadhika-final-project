@@ -5,6 +5,7 @@ import {
   createDiscount,
   updateDiscount,
   deleteDiscount,
+  getDiscountsByProductIds,
 } from "../services/discount.service";
 import {
   DiscountResponse,
@@ -24,6 +25,14 @@ export function useDiscount(id: number) {
     queryKey: ["discount", id],
     queryFn: () => getDiscountById(id),
     enabled: !!id,
+  });
+}
+
+export function useDiscountsByProductIds(productIds: number[]) {
+  return useQuery({
+    queryKey: ["discounts-by-productIds", productIds],
+    queryFn: () => getDiscountsByProductIds(productIds),
+    enabled: productIds.length > 0, // biar gak jalan kalau array kosong
   });
 }
 
