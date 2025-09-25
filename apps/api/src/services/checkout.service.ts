@@ -23,7 +23,8 @@ export class CheckoutService {
     idempotencyKey?: string,
     userLat?: number,
     userLon?: number,
-    addressId?: number
+    addressId?: number,
+    paymentMethod?: string
   ): Promise<any> {
     if (idempotencyKey) {
       const entry = idempotencyStore.get(idempotencyKey);
@@ -44,7 +45,8 @@ export class CheckoutService {
       items,
       userLat,
       userLon,
-      addressId
+      addressId,
+      paymentMethod
     );
 
     // Store work in idempotency cache if key provided
@@ -74,7 +76,8 @@ export class CheckoutService {
     items: OrderItemInput[],
     userLat?: number,
     userLon?: number,
-    addressId?: number
+    addressId?: number,
+    paymentMethod?: string
   ) {
     if (!items || items.length === 0) {
       throw new Error("No items provided");
@@ -113,7 +116,8 @@ export class CheckoutService {
           storeId: resolvedStoreId,
           addressId: chosenAddressId,
           status: "PENDING_PAYMENT",
-          paymentMethod: "MANUAL_TRANSFER",
+          paymentMethod:
+            paymentMethod === "Gateway" ? "GATEWAY" : "MANUAL_TRANSFER",
           subtotalAmount: 0,
           shippingCost: 0,
           discountTotal: 0,

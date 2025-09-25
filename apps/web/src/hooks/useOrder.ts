@@ -49,12 +49,20 @@ export function useCreateOrder(userId: number, storeId?: number) {
     userLat?: number;
     userLon?: number;
     addressId?: number;
+    paymentMethod?: string;
   };
 
   return useMutation({
     // accept either: { items } or { items, idempotencyKey }
     mutationFn: async (payload: Payload) => {
-      const { items, idempotencyKey, userLat, userLon, addressId } = payload;
+      const {
+        items,
+        idempotencyKey,
+        userLat,
+        userLon,
+        addressId,
+        paymentMethod,
+      } = payload;
       const key = idempotencyKey ?? uuidv4();
       const res = await orderService.createOrder(
         userId,
@@ -63,7 +71,8 @@ export function useCreateOrder(userId: number, storeId?: number) {
         key,
         userLat,
         userLon,
-        addressId
+        addressId,
+        paymentMethod
       );
       return res.data;
     },
@@ -133,10 +142,28 @@ export function useCreateOrder(userId: number, storeId?: number) {
         console.warn("Failed to sync cart after order creation", err);
       }
 
-      // navigate to the created order detail page if we have an id
+      // Update payment session with actual orderId before redirect
       try {
         const id = created?.id ?? created?.order?.id;
         if (id) {
+          // Update payment session with actual order ID
+          const pendingPaymentStr = sessionStorage.getItem("pendingPayment");
+          if (pendingPaymentStr) {
+            try {
+              const pendingPayment = JSON.parse(pendingPaymentStr);
+              pendingPayment.orderId = id;
+              sessionStorage.setItem(
+                "pendingPayment",
+                JSON.stringify(pendingPayment)
+              );
+            } catch (error) {
+              console.warn(
+                "Failed to update payment session with orderId:",
+                error
+              );
+            }
+          }
+
           window.location.href = `/orders/${id}`;
         }
       } catch (err) {
