@@ -10,11 +10,15 @@ const controller = {
   createOrder: checkoutController.createOrder.bind(checkoutController),
   listOrders: checkoutController.listOrders.bind(checkoutController),
   getOrderById: checkoutController.getOrderById.bind(checkoutController),
-  uploadPaymentProof: paymentController.uploadPaymentProof.bind(paymentController),
+  uploadPaymentProof:
+    paymentController.uploadPaymentProof.bind(paymentController),
+  createSnap: paymentController.createSnap.bind(paymentController),
   cancelOrder: fulfillmentController.cancelOrder.bind(fulfillmentController),
   confirmOrder: fulfillmentController.confirmOrder.bind(fulfillmentController),
   shipOrder: fulfillmentController.shipOrder.bind(fulfillmentController),
-  getOrderCounts: fulfillmentController.getOrderCounts.bind(fulfillmentController),
+  getOrderCounts: fulfillmentController.getOrderCounts.bind(
+    fulfillmentController
+  ),
 };
 
 // TODO: Use auth middleware only in production. Define routes once and inject
@@ -38,6 +42,9 @@ router.post(
   upload.single("proof"),
   controller.uploadPaymentProof
 );
+
+// POST /orders/:id/snap - create Midtrans Snap token for order
+router.post("/:id/snap", ...maybeAuth, controller.createSnap);
 
 // PATCH /orders/:id/cancel - cancel order
 router.patch("/:id/cancel", ...maybeAuth, controller.cancelOrder);

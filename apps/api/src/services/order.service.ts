@@ -14,7 +14,6 @@ type PaymentMinimal = {
 };
 
 export class OrderService {
-
   async createOrder(
     userId: number,
     storeId: number | undefined,
@@ -22,7 +21,8 @@ export class OrderService {
     idempotencyKey?: string,
     userLat?: number,
     userLon?: number,
-    addressId?: number
+    addressId?: number,
+    paymentMethod?: string
   ): Promise<any> {
     return checkoutService.createCheckout(
       userId,
@@ -31,7 +31,8 @@ export class OrderService {
       idempotencyKey,
       userLat,
       userLon,
-      addressId
+      addressId,
+      paymentMethod
     );
   }
 
@@ -39,17 +40,25 @@ export class OrderService {
     return fulfillmentService.shipOrder(orderId, actorUserId);
   }
 
-  async confirmOrder(orderId: number, requesterUserId?: number, actorId?: number) {
+  async confirmOrder(
+    orderId: number,
+    requesterUserId?: number,
+    actorId?: number
+  ) {
     return fulfillmentService.confirmOrder(orderId, requesterUserId, actorId);
   }
 
-  async cancelOrder(orderId: number, requesterUserId: number, actorId?: number) {
+  async cancelOrder(
+    orderId: number,
+    requesterUserId: number,
+    actorId?: number
+  ) {
     return fulfillmentService.cancelOrder(orderId, requesterUserId, actorId);
   }
 
   async listOrders(opts: {
-  storeId?: number;
-  userId?: number;
+    storeId?: number;
+    userId?: number;
     status?: string;
     q?: string | number;
     dateFrom?: string;
@@ -57,7 +66,7 @@ export class OrderService {
     page?: number;
     pageSize?: number;
   }) {
-  return orderReadService.listOrders(opts as any);
+    return orderReadService.listOrders(opts as any);
   }
 
   async uploadPaymentProof(

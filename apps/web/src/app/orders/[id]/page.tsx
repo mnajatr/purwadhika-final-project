@@ -12,6 +12,7 @@ import { ArrowLeft } from "lucide-react";
 import PaymentUpload from "@/components/orders/PaymentUpload";
 import ConfirmButton from "@/components/orders/ConfirmButton";
 import { useGetOrder, OrderDetail, useCancelOrder } from "@/hooks/useOrder";
+import { AutoPaymentPopup, PayNowButton } from "@/components/payment";
 
 function CancelButton({
   orderId,
@@ -151,6 +152,24 @@ export default function OrderPage({ params }: OrderPageProps) {
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
+      {/* Auto Payment Popup - checks sessionStorage and auto-opens */}
+      {order.status === "PENDING_PAYMENT" &&
+        order.paymentMethod === "GATEWAY" && (
+          <AutoPaymentPopup
+            orderId={order.id}
+            orderTotal={Number(order.grandTotal ?? 0)}
+            onPaymentSuccess={() => {
+              refetch();
+            }}
+            onPaymentPending={() => {
+              refetch();
+            }}
+            onPaymentError={(error) => {
+              console.error("Payment error:", error);
+            }}
+          />
+        )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Order #{order.id}</h1>
@@ -167,15 +186,15 @@ export default function OrderPage({ params }: OrderPageProps) {
         </div>
       </div>
 
-        {/* Confirm button for shipped orders (buyer) */}
-        {order.status === "SHIPPED" && (
-          <div>
-            <ConfirmButton
-              orderId={order.id}
-              userId={(order as { userId?: number }).userId}
-            />
-          </div>
-        )}
+      {/* Confirm button for shipped orders (buyer) */}
+      {order.status === "SHIPPED" && (
+        <div>
+          <ConfirmButton
+            orderId={order.id}
+            userId={(order as { userId?: number }).userId}
+          />
+        </div>
+      )}
 
       {/* Order summary */}
       <Card>
@@ -304,19 +323,44 @@ export default function OrderPage({ params }: OrderPageProps) {
               </p>
             )}
 
-            {/* If pending payment with manual transfer, show upload UI */}
-            {order.status === "PENDING_PAYMENT" &&
-              (order.payment?.status === undefined ||
-                order.payment?.status === "PENDING") &&
-              order.paymentMethod === "MANUAL_TRANSFER" && (
-                <div className="mt-4 space-y-3">
-                  <PaymentUpload orderId={order.id} apiBase={apiBase} />
-                  <CancelButton
-                    orderId={order.id}
-                    userId={(order as { userId?: number }).userId}
-                  />
-                </div>
-              )}
+            {/* Payment Actions */}
+            {order.status === "PENDING_PAYMENT" && (
+              <div className="mt-4 space-y-3">
+                {/* Manual Transfer: Show upload UI */}
+                {order.paymentMethod === "MANUAL_TRANSFER" && (
+                  <>
+                    <PaymentUpload orderId={order.id} apiBase={apiBase} />
+                    <CancelButton
+                      orderId={order.id}
+                      userId={(order as { userId?: number }).userId}
+                    />
+                  </>
+                )}
+
+                {/* Gateway Payment: Show Pay Now button as fallback */}
+                {order.paymentMethod === "GATEWAY" && (
+                  <div className="space-y-3">
+                    <PayNowButton
+                      orderId={order.id}
+                      orderTotal={Number(order.grandTotal ?? 0)}
+                      onPaymentSuccess={() => {
+                        refetch();
+                      }}
+                      onPaymentPending={() => {
+                        refetch();
+                      }}
+                      onPaymentError={(error) => {
+                        console.error("Payment error:", error);
+                      }}
+                    />
+                    <CancelButton
+                      orderId={order.id}
+                      userId={(order as { userId?: number }).userId}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

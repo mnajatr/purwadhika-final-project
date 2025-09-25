@@ -9,6 +9,7 @@ import {
   CardContent,
 } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
+import DevUserSwitcher from "../../components/DevUserSwitcher";
 
 interface Order {
   id: number;
@@ -32,6 +33,24 @@ interface Order {
   }[];
 }
 
+// Get current user ID using the same logic as axios client
+function getCurrentUserId(): string {
+  if (typeof window === "undefined") return "4"; // server-side fallback
+  
+  try {
+    const stored = localStorage.getItem("devUserId");
+    console.log("fetchOrders: devUserId from localStorage:", stored);
+    if (stored && stored !== "none") {
+      return stored;
+    }
+  } catch {
+    // ignore localStorage errors
+  }
+  
+  // Default fallback when none is set
+  return "4";
+}
+
 // Fetch paginated orders from backend and return envelope { items, total, page, pageSize }
 async function fetchOrders(
   filters: { status?: string; q?: string; date?: string; page?: number; pageSize?: number } = {}
@@ -53,12 +72,13 @@ async function fetchOrders(
     params.append("dateTo", dateTo.toISOString());
   }
 
+  const currentUserId = getCurrentUserId();
   const url = `http://localhost:8000/api/orders?${params.toString()}`;
-  console.log("Fetching orders from:", url);
+  console.log("Fetching orders from:", url, "for user:", currentUserId);
 
   const response = await fetch(url, {
     headers: {
-      "x-dev-user-id": "4",
+      "x-dev-user-id": currentUserId,
       "Content-Type": "application/json",
     },
   });
@@ -171,7 +191,6 @@ export default function OrdersPage() {
   // Show filter status and results info
   const hasActiveFilters = Boolean(status || q || date);
   const isFiltered = hasActiveFilters;
-  const showingFilteredResults = isFiltered && orders.length > 0;
   const noResultsForFilter = isFiltered && orders.length === 0;
 
   if (isLoading) {
@@ -202,6 +221,8 @@ export default function OrdersPage() {
       return (
         <div className="max-w-5xl mx-auto p-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">Orders</h1>
+
+          <DevUserSwitcher />
 
           {/* Search and Filter UI */}
           <div className="mb-6 flex flex-col md:flex-row gap-4">
@@ -362,6 +383,7 @@ export default function OrdersPage() {
       return (
         <div className="max-w-5xl mx-auto p-6 text-center">
               <h1 className="text-2xl font-bold text-gray-900 mb-6">Orders</h1>
+          <DevUserSwitcher />
           <div className="text-xl">No orders found</div>
           <p className="text-sm text-muted-foreground">
             You do not have any orders yet.
@@ -374,6 +396,8 @@ export default function OrdersPage() {
   return (
     <div className="max-w-5xl mx-auto p-6">
       <h1 className="text-3xl font-bold tracking-tight mb-2">Your Orders</h1>
+      
+      <DevUserSwitcher />
 
       {/* Filter Status Indicator */}
       {hasActiveFilters && (

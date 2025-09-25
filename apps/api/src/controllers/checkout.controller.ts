@@ -92,6 +92,7 @@ export class CheckoutController {
       const userLat = req.body?.userLat ? Number(req.body.userLat) : undefined;
       const userLon = req.body?.userLon ? Number(req.body.userLon) : undefined;
       const addressId = req.body?.addressId ? Number(req.body.addressId) : undefined;
+      const paymentMethod = req.body?.paymentMethod as string | undefined;
 
       const idempotencyKey =
         (req.headers["idempotency-key"] as string) ||
@@ -117,7 +118,8 @@ export class CheckoutController {
         idempotencyKey,
         userLat,
         userLon,
-        addressId
+        addressId,
+        paymentMethod
       );
 
       return res.status(201).json(successResponse(result, "Order created"));

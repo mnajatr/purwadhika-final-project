@@ -13,7 +13,8 @@ export class OrderService {
     idempotencyKey?: string,
     userLat?: number,
     userLon?: number,
-    addressId?: number
+    addressId?: number,
+    paymentMethod?: string
   ): Promise<ApiResponse<unknown>> {
     const body: Record<string, unknown> = { items, userId };
     if (typeof storeId === "number") body.storeId = storeId;
@@ -21,6 +22,7 @@ export class OrderService {
     if (typeof userLat === "number") body.userLat = userLat;
     if (typeof userLon === "number") body.userLon = userLon;
     if (typeof addressId === "number") body.addressId = addressId;
+    if (paymentMethod) body.paymentMethod = paymentMethod;
     return apiClient.post<ApiResponse<unknown>>(this.base, body);
   }
 

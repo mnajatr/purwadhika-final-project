@@ -361,6 +361,31 @@ export default function CheckoutPage() {
         }
       }
 
+      // Set payment session for Gateway payments before creating order
+      if (paymentMethod === "Gateway") {
+        try {
+          // Calculate total from cart items
+          const cartTotal =
+            cart?.items?.reduce((sum, item) => {
+              const price = item.product?.price ?? 0;
+              return sum + price * item.qty;
+            }, 0) ?? 0;
+
+          const paymentSession = {
+            orderId: 0, // Will be updated after order creation
+            orderTotal: cartTotal,
+            timestamp: Date.now(),
+            paymentMethod: paymentMethod,
+          };
+          sessionStorage.setItem(
+            "pendingPayment",
+            JSON.stringify(paymentSession)
+          );
+        } catch (error) {
+          console.warn("Failed to set payment session:", error);
+        }
+      }
+
       await createOrder.mutateAsync({
         items,
         idempotencyKey: key,
