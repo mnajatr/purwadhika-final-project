@@ -28,11 +28,11 @@ export function useDiscount(id: number) {
   });
 }
 
-export function useDiscountsByProductIds(productIds: number[]) {
+export function useDiscountsByProductIds(productIds?: number[]) {
   return useQuery({
-    queryKey: ["discounts-by-productIds", productIds],
-    queryFn: () => getDiscountsByProductIds(productIds),
-    enabled: productIds.length > 0, // biar gak jalan kalau array kosong
+    queryKey: ["discounts-by-productIds", productIds ?? []],
+    queryFn: () => getDiscountsByProductIds(productIds ?? []),
+    enabled: Array.isArray(productIds) && productIds.length > 0,
   });
 }
 

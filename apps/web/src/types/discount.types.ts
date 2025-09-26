@@ -31,19 +31,35 @@ export interface DiscountResponse {
   name: string;
   value: ValueType;
   type: DiscountType;
+  amount?: number | null;
+  percentage?: number | null;
+  minPurchase?: number | null;
+  maxDiscount?: number | null;
+  buyQty?: number | null;
+  getQty?: number | null;
+  expiredAt: string | Date | null;
+  store: {
+    id: number;
+    name: string;
+  } | null;
+  product: {
+    id: number;
+    name: string;
+  } | null;
+}
+
+export interface AppliedDiscount {
+  id: number;
+  name: string;
+  value: ValueType;
+  type: DiscountType;
   amount?: number;
   percentage?: number;
   minPurchase?: number;
   maxDiscount?: number;
   buyQty?: number;
   getQty?: number;
-  expiredAt: string;
-  store: {
-    id: number;
-    name: string;
-  };
-  product: {
-    id: number;
-    name: string;
-  };
+  expiredAt: string | Date | null;
+  productId?: number;
+  storeId?: number;
 }
