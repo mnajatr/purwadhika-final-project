@@ -12,7 +12,7 @@ import {
 import type { CartResponse as Cart } from "@repo/schemas";
 import { validateCartForCheckout } from "@/utils/cartStockUtils";
 
-interface Props {
+export interface Props {
   cart: Cart;
   items: Array<{ productId: number; qty: number }>;
   idempotencyKey: string | null;
@@ -25,6 +25,60 @@ interface Props {
     city?: string;
     postalCode?: string | number;
   };
+  appliedDiscounts?: Array<{
+    type: "PERCENTAGE" | "NOMINAL" | "BUYXGETX";
+    value: string;
+    amount?: number | null;
+    percentage?: number | null;
+    buyQty?: number | null;
+    getQty?: number | null;
+    minPurchase?: number | null;
+    maxDiscount?: number | null;
+    productId?: number;
+  }>;
+}
+function calculateDiscount(
+  items: Array<{ productId: number; qty: number }>,
+  cart: Cart,
+  discounts: Props["appliedDiscounts"] = []
+) {
+  let totalDiscount = 0;
+
+  for (const discount of discounts) {
+    const item = items.find((it) => it.productId === discount.productId);
+    const productPrice =
+      cart.items.find((ci) => ci.productId === discount.productId)?.product
+        ?.price ?? 0;
+
+    if (!item) continue;
+
+    switch (discount.type) {
+      case "PERCENTAGE": {
+        const raw =
+          (productPrice * item.qty * (discount.percentage ?? 0)) / 100;
+        const capped = discount.maxDiscount
+          ? Math.min(raw, discount.maxDiscount)
+          : raw;
+        totalDiscount += capped;
+        break;
+      }
+
+      case "NOMINAL": {
+        totalDiscount += discount.amount ?? 0;
+        break;
+      }
+
+      case "BUYXGETX": {
+        const buyQty = discount.buyQty ?? 1;
+        const getQty = discount.getQty ?? 1;
+        const freeItems = Math.floor(item.qty / (buyQty + getQty)) * getQty;
+        totalDiscount += freeItems * productPrice;
+        break;
+      }
+    }
+  }
+
+  return totalDiscount;
 }
 
 export default function OrderSummary({
@@ -33,6 +87,7 @@ export default function OrderSummary({
   idempotencyKey,
   setIdempotencyKey,
   onPlaceOrder,
+  appliedDiscounts = [],
   isProcessing,
   customer,
   address,
@@ -44,6 +99,8 @@ export default function OrderSummary({
     return s + Number(p) * it.qty;
   }, 0);
 
+  const discountAmount = calculateDiscount(items, cart, appliedDiscounts);
+  const total = Math.max(0, subtotal - discountAmount);
   // Check if cart has any out of stock items
   const { outOfStockItems } = validateCartForCheckout(cart.items || []);
 
@@ -113,7 +170,9 @@ export default function OrderSummary({
             </div>
             <div className="flex justify-between items-center">
               <span className="text-foreground">Discount</span>
-              <span className="font-medium text-muted-foreground">-</span>
+              <span className="font-medium text-muted-foreground">
+                -Rp {discountAmount.toLocaleString("id-ID")}
+              </span>
             </div>
 
             <hr className="border-border" />
@@ -123,7 +182,7 @@ export default function OrderSummary({
                 Total
               </span>
               <span className="text-2xl font-bold text-primary">
-                Rp {subtotal.toLocaleString("id-ID")}
+                Rp {total.toLocaleString("id-ID")}
               </span>
             </div>
           </div>
