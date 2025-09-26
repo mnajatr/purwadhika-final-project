@@ -40,12 +40,9 @@ import {
   FaLock,
   FaCheckCircle,
 } from "react-icons/fa";
-import {
-  MdLocalShipping,
-  MdPayment,
-  MdMessage,
-} from "react-icons/md";
+import { MdLocalShipping, MdPayment, MdMessage } from "react-icons/md";
 import { TbTruckDelivery, TbCreditCard, TbDiscount } from "react-icons/tb";
+import { DiscountResponse } from "@/types/discount.types";
 type ResolveResp = {
   success?: boolean;
   data?: {
@@ -81,7 +78,13 @@ export default function CheckoutPage() {
     userId,
     initialStoreIdRef.current ?? undefined
   );
+  const [appliedDiscounts, setAppliedDiscounts] = React.useState<
+    DiscountResponse[]
+  >([]);
 
+  // const [appliedDiscounts, setAppliedDiscounts] = React.useState<
+  //   Props["appliedDiscounts"]
+  // >([]);
   // do not pass storeId to createOrder so backend can resolve nearest store
   const createOrder = useCreateOrder(userId);
 
@@ -311,6 +314,8 @@ export default function CheckoutPage() {
       ? cart.items.filter((it) => selectedIds.includes(it.id))
       : cart.items
   ).map((it) => ({ productId: it.productId, qty: it.qty }));
+
+  const productIds = cart.items.map((it) => it.productId);
 
   const handlePlaceOrder = async () => {
     try {
@@ -1069,7 +1074,10 @@ export default function CheckoutPage() {
                   <div className="flex-1">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Promo Code */}
-                      <ApplyDiscount onApplyDiscount={handleApplyDiscount} />
+                      <ApplyDiscount
+                        productIds={productIds}
+                        onApplyDiscount={setAppliedDiscounts}
+                      />
 
                       {/* Special Instructions */}
                       <Card className="bg-card rounded-2xl border border-border shadow-sm backdrop-blur-sm overflow-hidden">
@@ -1156,7 +1164,11 @@ export default function CheckoutPage() {
               {/* OrderSummary renders its own Card */}
               <OrderSummary
                 cart={cart}
-                items={items}
+                items={cart.items.map((it) => ({
+                  productId: it.productId,
+                  qty: it.qty,
+                }))}
+                appliedDiscounts={appliedDiscounts}
                 idempotencyKey={idempotencyKey}
                 setIdempotencyKey={setIdempotencyKey}
                 onPlaceOrder={handlePlaceOrder}
