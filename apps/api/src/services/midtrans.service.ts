@@ -58,10 +58,22 @@ export class MidtransService {
       };
     });
 
+    // Get frontend URL from environment or fallback
+    const frontendUrl =
+      process.env.FRONTEND_URL ||
+      process.env.NEXT_PUBLIC_FRONTEND_URL ||
+      "http://localhost:3000";
+
     const payload: any = {
       transaction_details: transactionDetails,
       item_details: items,
       credit_card: { secure: true },
+      // Configure callbacks to use frontend URLs instead of example.com
+      callbacks: {
+        finish: `${frontendUrl}/orders/${order.id}`, // Redirect to order detail page after payment
+        unfinish: `${frontendUrl}/orders/${order.id}`, // Redirect if payment is incomplete
+        error: `${frontendUrl}/orders/${order.id}`, // Redirect if payment fails
+      },
     };
 
     // Create or update payment record in DB with gatewayTransactionId (order_id)
