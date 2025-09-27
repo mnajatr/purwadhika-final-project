@@ -122,9 +122,27 @@ export function PaymentModal({
         throw new Error("Payment gateway not loaded");
       }
 
-      const snapData = await createSnapToken.mutateAsync(orderId);
+      // Prevent duplicate snap.pay calls (Midtrans throws if called when popup already present)
+      if (window.__midtransSnapInProgress) {
+        console.warn("snap.pay call skipped: snap already in progress");
+        return;
+      }
+
+      // mark that a snap.pay attempt is starting so concurrent calls are blocked
+      window.__midtransSnapInProgress = true;
+
+      // Create token after claiming the in-progress flag; if token creation fails, reset flag
+      const snapData = await (async () => {
+        try {
+          return await createSnapToken.mutateAsync(orderId);
+        } catch (e) {
+          window.__midtransSnapInProgress = false;
+          throw e;
+        }
+      })();
 
       if (!snapData.snapToken) {
+        window.__midtransSnapInProgress = false;
         throw new Error("Failed to create payment token");
       }
 
@@ -136,31 +154,33 @@ export function PaymentModal({
         }
       }
 
-      // Prevent duplicate snap.pay calls (Midtrans throws if called when popup already present)
-      if (window.__midtransSnapInProgress) {
-        console.warn("snap.pay call skipped: snap already in progress");
-        return;
-      }
-
       try {
-        window.__midtransSnapInProgress = true;
-
-        // Open Midtrans Snap
-        window.snap.pay(snapData.snapToken, {
-          onSuccess: () => {
+        // Open Midtrans Snap without redirect
+        try {
+          window.snap.pay(snapData.snapToken, {
+          onSuccess: (result: MidtransResult) => {
             try {
-              toast.success("Payment successful!");
+              toast.success(
+                "Payment successful! Your order is being processed."
+              );
+              console.log("Payment success:", result);
+              // Don't close modal immediately, let parent component handle
               onPaymentSuccess?.();
-              onClose();
+              // Close modal after a short delay to show success message
+              setTimeout(() => onClose(), 2000);
             } finally {
               window.__midtransSnapInProgress = false;
             }
           },
-          onPending: () => {
+          onPending: (result: MidtransResult) => {
             try {
-              toast.info("Payment is being processed");
+              toast.info(
+                "Payment is being processed. Please check your order status."
+              );
+              console.log("Payment pending:", result);
               onPaymentPending?.();
-              onClose();
+              // Close modal after a short delay
+              setTimeout(() => onClose(), 2000);
             } finally {
               window.__midtransSnapInProgress = false;
             }
@@ -168,34 +188,68 @@ export function PaymentModal({
           onError: (result: MidtransResult) => {
             const errorMsg = result.status_message || "Payment failed";
             try {
-              toast.error(errorMsg);
+              toast.error(`Payment failed: ${errorMsg}`);
+              console.error("Payment error:", result);
               onPaymentError?.(errorMsg);
+              // Don't close modal on error, let user try again
             } finally {
               window.__midtransSnapInProgress = false;
             }
           },
           onClose: () => {
             try {
-              // User closed payment popup without completing
-              if (!paymentAttempted) {
-                toast.info("Payment cancelled");
-              }
+              // User closed payment popup manually
+              console.log("Payment popup closed by user");
+              toast.info("Payment window closed. You can try again if needed.");
             } finally {
               window.__midtransSnapInProgress = false;
+              // Close the modal when user closes Snap popup
+              onClose();
             }
           },
-        });
+          });
+        } catch (e: unknown) {
+          // Midtrans may throw when snap.pay is invoked while popup already open
+          const msg = e instanceof Error ? e.message : String(e || "");
+          if (
+            msg.includes("Invalid state transition") ||
+            msg.includes("snap.pay is not allowed") ||
+            msg.includes("PopupInView")
+          ) {
+            console.warn("snap.pay skipped due to invalid state:", msg);
+            // inform user softly and recover
+            toast.info("Payment popup is already open");
+            window.__midtransSnapInProgress = false;
+            return;
+          }
+
+          window.__midtransSnapInProgress = false;
+          throw e;
+        }
       } catch (e) {
         window.__midtransSnapInProgress = false;
         throw e;
       }
     } catch (error) {
-      const errorMsg =
-        error instanceof Error
-          ? error.message
-          : "Payment initialization failed";
-      toast.error(errorMsg);
-      onPaymentError?.(errorMsg);
+      const errorMsg = error instanceof Error ? error.message : String(error || "");
+
+      // Handle known Midtrans invalid-state errors gracefully (do not propagate)
+      if (
+        errorMsg.includes("Invalid state transition") ||
+        errorMsg.includes("snap.pay is not allowed") ||
+        errorMsg.includes("PopupInView") ||
+        errorMsg.includes("snap.pay is not allowed to be called")
+      ) {
+        console.warn("Ignored Midtrans invalid-state error:", errorMsg);
+        toast.info("Payment popup is already open");
+        window.__midtransSnapInProgress = false;
+        return;
+      }
+
+      const shown = errorMsg || "Payment initialization failed";
+      toast.error(shown);
+      window.__midtransSnapInProgress = false;
+      onPaymentError?.(shown);
     }
   }, [
     createSnapToken,
@@ -204,7 +258,6 @@ export function PaymentModal({
     onPaymentPending,
     onPaymentError,
     onClose,
-    paymentAttempted,
   ]);
 
   // Auto-trigger payment when modal opens and Snap is loaded
