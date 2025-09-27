@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import type { Request as ExpressRequest } from "express";
 import { OrderService } from "../services/order.service.js";
 import { orderReadService } from "../services/order.read.service.js";
+import { CheckoutSchema } from "@repo/schemas";
 import {
   successResponse,
   errorResponse,
@@ -58,9 +59,6 @@ export class CheckoutController {
   const storeIdFromMiddleware = authReq.storeScopedId ?? authReq.user?.storeId;
   const storeId = storeIdFromMiddleware ?? (req.query?.storeId ? Number(req.query.storeId) : undefined);
 
-  const filters = { userId: effectiveUserId, storeId, status, q, dateFrom, dateTo, page, pageSize };
-  console.log("[DEBUG] listOrders filters:", JSON.stringify(filters));
-
   const result = await this.service.listOrders({
         userId: effectiveUserId,
         storeId,
@@ -87,75 +85,41 @@ export class CheckoutController {
         return res.status(400).json(errorResponse("Missing userId in request"));
       }
 
-      const storeId = toNumber(req.body?.storeId, undefined);
-      const items = req.body?.items;
-      const userLat = req.body?.userLat ? Number(req.body.userLat) : undefined;
-      const userLon = req.body?.userLon ? Number(req.body.userLon) : undefined;
-      const addressId = req.body?.addressId ? Number(req.body.addressId) : undefined;
-      const paymentMethod = req.body?.paymentMethod as string | undefined;
-      const shippingMethod = req.body?.shippingMethod as string | undefined;
-      const shippingOption = req.body?.shippingOption as string | undefined;
-
       const idempotencyKey =
         (req.headers["idempotency-key"] as string) ||
         req.body?.idempotencyKey ||
         req.query?.idempotencyKey;
 
-      // Enhanced validation for checkout fields
-      const validationErrors: Array<{ field: string; message: string }> = [];
+      const payload = {
+        ...req.body,
+        idempotencyKey,
+      };
 
-      if (!Array.isArray(items) || items.length === 0) {
-        validationErrors.push({ field: "items", message: "Order must contain at least one item" });
-      }
-
-      if (!addressId) {
-        validationErrors.push({ field: "addressId", message: "Delivery address is required" });
-      }
-
-      if (!shippingMethod) {
-        validationErrors.push({ field: "shippingMethod", message: "Shipping method is required" });
-      } else {
-        // Validate shipping method options
-        const validShippingMethods = ["JNE", "J&T", "Ninja Xpress"];
-        if (!validShippingMethods.includes(shippingMethod)) {
-          validationErrors.push({ 
-            field: "shippingMethod", 
-            message: `Invalid shipping method. Must be one of: ${validShippingMethods.join(", ")}` 
-          });
-        }
-      }
-
-      if (!paymentMethod) {
-        validationErrors.push({ field: "paymentMethod", message: "Payment method is required" });
-      } else {
-        // Validate payment method options
-        const validPaymentMethods = ["Manual", "Gateway"];
-        if (!validPaymentMethods.includes(paymentMethod)) {
-          validationErrors.push({ 
-            field: "paymentMethod", 
-            message: `Invalid payment method. Must be one of: ${validPaymentMethods.join(", ")}` 
-          });
-        }
-      }
-
-      // If there are validation errors, return them
-      if (validationErrors.length > 0) {
+      const parsed = CheckoutSchema.safeParse(payload);
+      if (!parsed.success) {
+        const fieldErrors = parsed.error.flatten().fieldErrors;
+        const errors = Object.entries(fieldErrors).map(([field, messages]) => ({
+          field,
+          message: Array.isArray(messages) ? messages[0] : messages,
+        }));
         return res.status(400).json(
-          errorResponse("Invalid checkout data", "Please check all required fields", validationErrors)
+          errorResponse("Invalid checkout data", "Please check all required fields", errors)
         );
       }
 
-      for (const item of items) {
-        if (!item.productId || !item.qty || item.qty <= 0) {
-          return res.status(400).json(
-            errorResponse("Invalid item structure", "Each item must have productId and positive qty")
-          );
-        }
-      }
+      const {
+        items,
+        userLat,
+        userLon,
+        addressId,
+        paymentMethod,
+        shippingMethod,
+        shippingOption,
+      } = parsed.data;
 
       const result = await this.service.createOrder(
         userId,
-        storeId,
+        toNumber(req.body?.storeId, undefined),
         items,
         idempotencyKey,
         userLat,

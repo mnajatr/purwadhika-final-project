@@ -186,13 +186,67 @@ export function PaymentModal({
             }
           },
           onError: (result: MidtransResult) => {
-            const errorMsg = result.status_message || "Payment failed";
+            // Safely parse error message with multiple fallbacks
+            let parsedMessage = "Payment failed, please try again";
+            
             try {
-              toast.error(`Payment failed: ${errorMsg}`);
-              console.error("Payment error:", result);
-              onPaymentError?.(errorMsg);
-              // Don't close modal on error, let user try again
+              // Cast to unknown first, then to Record for safe property access
+              const unknownResult = result as unknown;
+              
+              if (unknownResult && typeof unknownResult === "object") {
+                const obj = unknownResult as Record<string, unknown>;
+                
+                // Try various common Midtrans error message fields
+                if (typeof obj.status_message === "string" && obj.status_message.trim()) {
+                  parsedMessage = obj.status_message.trim();
+                } else if (typeof obj.message === "string" && obj.message.trim()) {
+                  parsedMessage = obj.message.trim();
+                } else if (typeof obj.error === "string" && obj.error.trim()) {
+                  parsedMessage = obj.error.trim();
+                } else if (obj.error && typeof (obj.error as Record<string, unknown>)?.message === "string") {
+                  const nestedMsg = (obj.error as Record<string, unknown>).message;
+                  if (typeof nestedMsg === "string" && nestedMsg.trim()) {
+                    parsedMessage = nestedMsg.trim();
+                  }
+                }
+                // For empty objects {} or objects without useful messages, keep default fallback
+              } else if (typeof unknownResult === "string" && unknownResult.trim()) {
+                parsedMessage = unknownResult.trim();
+              }
+              // If result is null/undefined/empty, keep default fallback message
+            } catch (parseError) {
+              // If parsing fails for any reason, keep default fallback
+              console.log("⚠️ Error parsing Midtrans error payload:", parseError);
+            }
+            
+            // Always handle error gracefully - no throwing, no crashing
+            try {
+              // Show user-friendly toast
+              toast.error(`Payment failed: ${parsedMessage}`);
+              
+              // Log for debugging (use console.log/warn to avoid Next.js error reporting)
+              console.log("🔴 Payment error (raw):", result);
+              console.log("📝 Payment error (parsed):", parsedMessage);
+              
+              // Notify parent component safely
+              if (typeof onPaymentError === "function") {
+                try {
+                  onPaymentError(parsedMessage);
+                } catch (callbackError) {
+                  console.warn("⚠️ onPaymentError callback failed:", callbackError);
+                }
+              }
+            } catch (handlingError) {
+              // Ultimate fallback - even if toast/logging fails, don't crash
+              console.warn("🚨 Critical error in payment error handler:", handlingError);
+              // Show fallback toast if possible
+              try {
+                toast.error("Payment failed, please try again");
+              } catch {
+                // Silent fallback - don't cascade errors
+              }
             } finally {
+              // Always reset the progress flag
               window.__midtransSnapInProgress = false;
             }
           },
