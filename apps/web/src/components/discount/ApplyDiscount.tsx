@@ -8,6 +8,7 @@ import { MdDiscount } from "react-icons/md";
 import { Tag } from "lucide-react";
 import { useDiscountsByProductIds } from "@/hooks/useDiscount";
 import { DiscountResponse } from "@/types/discount.types";
+import { useUpdateCartItem } from "@/hooks/useCart";
 
 interface ApplyDiscountProps {
   productIds: number[];
@@ -27,17 +28,43 @@ export default function ApplyDiscount({
   const [selectedDiscountIds, setSelectedDiscountIds] = React.useState<
     number[]
   >([]);
+  const [appliedDiscountIds, setAppliedDiscountIds] = React.useState<number[]>(
+    []
+  );
 
   const { data: discounts = [] } = useDiscountsByProductIds(productIds);
 
   const handleApply = () => {
+    let updated: number[];
+
+    // if all currently selected are already applied → treat as unapply
+    const allAlreadyApplied = selectedDiscountIds.every((id) =>
+      appliedDiscountIds.includes(id)
+    );
+
+    if (allAlreadyApplied) {
+      // remove them
+      updated = appliedDiscountIds.filter(
+        (id) => !selectedDiscountIds.includes(id)
+      );
+    } else {
+      // merge them in
+      updated = Array.from(
+        new Set([...appliedDiscountIds, ...selectedDiscountIds])
+      );
+    }
+
+    setAppliedDiscountIds(updated);
+
     if (onApplyDiscount) {
       const selected: DiscountResponse[] = discounts.filter((d) =>
-        selectedDiscountIds.includes(d.id)
+        updated.includes(d.id)
       );
-
       onApplyDiscount(selected);
     }
+
+    // clear selection after apply/unapply
+    setSelectedDiscountIds([]);
   };
 
   return (
@@ -85,11 +112,16 @@ export default function ApplyDiscount({
             {discounts.length === 0 ? (
               <option disabled>No discounts available</option>
             ) : (
-              discounts.map((d) => (
-                <option key={d.id} value={d.id} className="py-1">
-                  {d.product?.name ?? "Unknown Product"} – {d.name} – {d.value}
-                </option>
-              ))
+              discounts.map((d) => {
+                const isApply = appliedDiscountIds.includes(d.id);
+                return (
+                  <option key={d.id} value={d.id} className="py-1">
+                    {isApply ? "✅ " : ""}
+                    {d.product?.name ?? "Unknown Product"} – {d.name} –{" "}
+                    {d.value}
+                  </option>
+                );
+              })
             )}
           </select>
 
@@ -97,14 +129,16 @@ export default function ApplyDiscount({
             variant="outline"
             className="px-6 border-2 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
             onClick={handleApply}
-            disabled={isLoading || disabled}
+            disabled={isLoading || disabled || selectedDiscountIds.length === 0}
           >
             Apply
           </Button>
 
           <div className="text-xs text-muted-foreground flex items-center gap-1">
             <Tag className="w-3 h-3" />
-            Selected discounts will be applied automatically
+            {appliedDiscountIds.length > 0
+              ? `Applied ${appliedDiscountIds.length} discounts`
+              : "Selected discounts will be applied automatically"}
           </div>
         </div>
       </CardContent>

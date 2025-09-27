@@ -260,7 +260,6 @@ model Discount {
   productId   Int
   value       ValueType
   amount      Int?
-  percentage  Float?
   type        DiscountType
   buyQty      Int?
   getQty      Int?

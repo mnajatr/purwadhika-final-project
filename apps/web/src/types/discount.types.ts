@@ -32,7 +32,6 @@ export interface DiscountResponse {
   value: ValueType;
   type: DiscountType;
   amount?: number | null;
-  percentage?: number | null;
   minPurchase?: number | null;
   maxDiscount?: number | null;
   buyQty?: number | null;
@@ -54,7 +53,6 @@ export interface AppliedDiscount {
   value: ValueType;
   type: DiscountType;
   amount?: number;
-  percentage?: number;
   minPurchase?: number;
   maxDiscount?: number;
   buyQty?: number;

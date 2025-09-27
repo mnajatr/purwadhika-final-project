@@ -406,16 +406,8 @@ async function seedDiscounts(stores: any[], products: any[]) {
             type === "NOMINAL"
               ? faker.number.int({ min: 1000, max: 50000 })
               : null,
-          percentage:
-            type === "PERCENTAGE"
-              ? faker.number.int({ min: 5, max: 50 })
-              : null,
-          minPurchase: faker.datatype.boolean()
-            ? faker.number.int({ min: 1, max: 5 })
-            : null,
-          maxDiscount: faker.datatype.boolean()
-            ? faker.number.int({ min: 5000, max: 50000 })
-            : null,
+          minPurchase: faker.number.int({ min: 2, max: 5 }),
+          maxDiscount: faker.number.int({ min: 5000, max: 50000 }),
           expiredAt: faker.date.soon({ days: 30 }),
         },
       });

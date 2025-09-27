@@ -29,12 +29,11 @@ export interface Props {
     type: "PERCENTAGE" | "NOMINAL" | "BUYXGETX";
     value: string;
     amount?: number | null;
-    percentage?: number | null;
     buyQty?: number | null;
     getQty?: number | null;
     minPurchase?: number | null;
     maxDiscount?: number | null;
-    productId?: number;
+    product: { id: number; name: string } | null;
   }>;
 }
 function calculateDiscount(
@@ -45,17 +44,19 @@ function calculateDiscount(
   let totalDiscount = 0;
 
   for (const discount of discounts) {
-    const item = items.find((it) => it.productId === discount.productId);
+    const item = items.find((it) => it.productId === discount.product?.id);
     const productPrice =
-      cart.items.find((ci) => ci.productId === discount.productId)?.product
+      cart.items.find((ci) => ci.productId === discount.product?.id)?.product
         ?.price ?? 0;
-
     if (!item) continue;
 
     switch (discount.type) {
       case "PERCENTAGE": {
-        const raw =
-          (productPrice * item.qty * (discount.percentage ?? 0)) / 100;
+        if (discount.minPurchase && item.qty < discount.minPurchase) {
+          totalDiscount += 0;
+          break;
+        }
+        const raw = (productPrice * item.qty * (discount.amount ?? 0)) / 100;
         const capped = discount.maxDiscount
           ? Math.min(raw, discount.maxDiscount)
           : raw;
@@ -64,15 +65,19 @@ function calculateDiscount(
       }
 
       case "NOMINAL": {
-        totalDiscount += discount.amount ?? 0;
+        if (discount.minPurchase && item.qty < discount.minPurchase) {
+          totalDiscount += 0;
+          break;
+        }
+        const discountz = discount?.amount && discount.amount * item.qty;
+        const capped = discount.maxDiscount
+          ? Math.min(discountz ?? 0, discount.maxDiscount)
+          : discountz ?? 0;
+        totalDiscount += capped;
         break;
       }
 
       case "BUYXGETX": {
-        const buyQty = discount.buyQty ?? 1;
-        const getQty = discount.getQty ?? 1;
-        const freeItems = Math.floor(item.qty / (buyQty + getQty)) * getQty;
-        totalDiscount += freeItems * productPrice;
         break;
       }
     }
