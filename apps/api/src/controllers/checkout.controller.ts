@@ -93,14 +93,56 @@ export class CheckoutController {
       const userLon = req.body?.userLon ? Number(req.body.userLon) : undefined;
       const addressId = req.body?.addressId ? Number(req.body.addressId) : undefined;
       const paymentMethod = req.body?.paymentMethod as string | undefined;
+      const shippingMethod = req.body?.shippingMethod as string | undefined;
+      const shippingOption = req.body?.shippingOption as string | undefined;
 
       const idempotencyKey =
         (req.headers["idempotency-key"] as string) ||
         req.body?.idempotencyKey ||
         req.query?.idempotencyKey;
 
+      // Enhanced validation for checkout fields
+      const validationErrors: Array<{ field: string; message: string }> = [];
+
       if (!Array.isArray(items) || items.length === 0) {
-        return res.status(400).json(errorResponse("Missing items in order"));
+        validationErrors.push({ field: "items", message: "Order must contain at least one item" });
+      }
+
+      if (!addressId) {
+        validationErrors.push({ field: "addressId", message: "Delivery address is required" });
+      }
+
+      if (!shippingMethod) {
+        validationErrors.push({ field: "shippingMethod", message: "Shipping method is required" });
+      } else {
+        // Validate shipping method options
+        const validShippingMethods = ["JNE", "J&T", "Ninja Xpress"];
+        if (!validShippingMethods.includes(shippingMethod)) {
+          validationErrors.push({ 
+            field: "shippingMethod", 
+            message: `Invalid shipping method. Must be one of: ${validShippingMethods.join(", ")}` 
+          });
+        }
+      }
+
+      if (!paymentMethod) {
+        validationErrors.push({ field: "paymentMethod", message: "Payment method is required" });
+      } else {
+        // Validate payment method options
+        const validPaymentMethods = ["Manual", "Gateway"];
+        if (!validPaymentMethods.includes(paymentMethod)) {
+          validationErrors.push({ 
+            field: "paymentMethod", 
+            message: `Invalid payment method. Must be one of: ${validPaymentMethods.join(", ")}` 
+          });
+        }
+      }
+
+      // If there are validation errors, return them
+      if (validationErrors.length > 0) {
+        return res.status(400).json(
+          errorResponse("Invalid checkout data", "Please check all required fields", validationErrors)
+        );
       }
 
       for (const item of items) {
@@ -119,7 +161,9 @@ export class CheckoutController {
         userLat,
         userLon,
         addressId,
-        paymentMethod
+        paymentMethod,
+        shippingMethod,
+        shippingOption
       );
 
       return res.status(201).json(successResponse(result, "Order created"));

@@ -50,6 +50,8 @@ export function useCreateOrder(userId: number, storeId?: number) {
     userLon?: number;
     addressId?: number;
     paymentMethod?: string;
+    shippingMethod?: string;
+    shippingOption?: string;
   };
 
   return useMutation({
@@ -62,6 +64,8 @@ export function useCreateOrder(userId: number, storeId?: number) {
         userLon,
         addressId,
         paymentMethod,
+        shippingMethod,
+        shippingOption,
       } = payload;
       const key = idempotencyKey ?? uuidv4();
       const res = await orderService.createOrder(
@@ -72,7 +76,9 @@ export function useCreateOrder(userId: number, storeId?: number) {
         userLat,
         userLon,
         addressId,
-        paymentMethod
+        paymentMethod,
+        shippingMethod,
+        shippingOption
       );
       return res.data;
     },

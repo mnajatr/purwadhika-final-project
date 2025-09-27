@@ -318,16 +318,16 @@ export default function OrderSummary({
             <RippleButton
               onClick={onPlaceOrder}
               size="lg"
-              disabled={isProcessing || hasOutOfStockItems}
+              disabled={isProcessing}
               className={`w-full py-4 rounded-2xl font-semibold text-lg transition-all duration-200 ${
-                hasOutOfStockItems || isProcessing
+                isProcessing
                   ? "bg-gray-400 text-gray-700 cursor-not-allowed"
+                  : hasOutOfStockItems
+                  ? "bg-red-500 text-white hover:bg-red-600 shadow-lg hover:shadow-xl"
                   : "bg-primary-gradient text-primary-foreground hover:opacity-95 shadow-lg hover:shadow-xl"
               }`}
               rippleClassName={
-                isProcessing || hasOutOfStockItems
-                  ? "bg-input"
-                  : "bg-primary-foreground/30"
+                isProcessing ? "bg-input" : "bg-primary-foreground/30"
               }
             >
               {isProcessing ? (

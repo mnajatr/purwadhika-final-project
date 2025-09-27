@@ -123,16 +123,6 @@ export default function CheckoutPage() {
     return () => window.removeEventListener("resize", onResize);
   }, [shippingMenuOpen, updateShippingMenuWidth]);
 
-  // local payload type allowing shippingMethod to be passed through
-  type CreateOrderPayload = {
-    items: Array<{ productId: number; qty: number }>;
-    idempotencyKey: string;
-    addressId?: number | undefined;
-    shippingMethod?: string;
-    shippingOption?: string | null;
-    paymentMethod?: string;
-  };
-
   const [idempotencyKey, setIdempotencyKey] = React.useState<string | null>(
     null
   );
@@ -317,8 +307,83 @@ export default function CheckoutPage() {
 
   const productIds = cart.items.map((it) => it.productId);
 
+  // Helper function to scroll to missing field and highlight it
+  const scrollToField = (fieldType: 'address' | 'shipping' | 'payment') => {
+    let targetElement: Element | null = null;
+    
+    switch (fieldType) {
+      case 'address':
+        targetElement = document.querySelector('[data-field="address"]');
+        break;
+      case 'shipping':
+        targetElement = document.querySelector('[data-field="shipping"]');
+        break;
+      case 'payment':
+        targetElement = document.querySelector('[data-field="payment"]');
+        break;
+    }
+
+    if (targetElement) {
+      targetElement.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+      
+      // Add highlight effect with animation
+      targetElement.classList.add('ring-2', 'ring-red-500', 'ring-opacity-75', 'animate-pulse');
+      setTimeout(() => {
+        targetElement?.classList.remove('ring-2', 'ring-red-500', 'ring-opacity-75', 'animate-pulse');
+      }, 3000);
+    }
+  };
+
+  // Comprehensive validation function
+  const validateCheckoutForm = () => {
+    const errors: { field: string; message: string }[] = [];
+
+    // Validate address
+    if (!selectedAddress) {
+      errors.push({
+        field: 'address',
+        message: 'Please select a delivery address'
+      });
+    }
+
+    // Validate shipping method
+    if (!shippingMethod) {
+      errors.push({
+        field: 'shipping',
+        message: 'Please select a shipping method'
+      });
+    }
+
+    // Validate payment method
+    if (!paymentMethod) {
+      errors.push({
+        field: 'payment',
+        message: 'Please select a payment method'
+      });
+    }
+
+    return errors;
+  };
+
   const handlePlaceOrder = async () => {
     try {
+      // Validate form before proceeding
+      const validationErrors = validateCheckoutForm();
+      
+      if (validationErrors.length > 0) {
+        // Show toast error for the first missing field
+        const firstError = validationErrors[0];
+        toast.error(firstError.message);
+        
+        // Scroll to and highlight the first missing field
+        scrollToField(firstError.field as 'address' | 'shipping' | 'payment');
+        
+        return;
+      }
+
       const key = idempotencyKey ?? String(Math.random()).slice(2, 14);
       // persist key so retries keep using same idempotency
       try {
@@ -334,6 +399,7 @@ export default function CheckoutPage() {
       if (checkoutStoreId) {
         if (!addressId) {
           toast.error("Please select an address");
+          scrollToField('address');
           return;
         }
         const resp = await apiClient.get<ResolveResp>(
@@ -353,6 +419,7 @@ export default function CheckoutPage() {
               "Selected address is outside service area for any store"
             );
           }
+          scrollToField('address');
           return;
         }
         if (resolved !== checkoutStoreId) {
@@ -366,6 +433,7 @@ export default function CheckoutPage() {
               "Selected address is not served by the chosen store. Please pick an address within the store's delivery area."
             );
           }
+          scrollToField('address');
           return;
         }
       }
@@ -399,10 +467,10 @@ export default function CheckoutPage() {
         items,
         idempotencyKey: key,
         addressId,
-        shippingMethod,
-        shippingOption,
-        paymentMethod: paymentMethod ?? undefined,
-      } as CreateOrderPayload);
+        shippingMethod: shippingMethod || undefined,
+        shippingOption: shippingOption || undefined,
+        paymentMethod: paymentMethod || undefined,
+      });
       toast.success("Order created — redirecting...");
       // cleanup and redirect
       try {
@@ -410,8 +478,39 @@ export default function CheckoutPage() {
         sessionStorage.removeItem("checkout:idempotencyKey");
       } catch {}
     } catch (err) {
-      const msg =
-        (err as { message?: string })?.message || "Failed to create order";
+      // Handle different types of errors
+      const error = err as { 
+        message?: string; 
+        response?: { 
+          data?: { 
+            message?: string; 
+            errors?: Array<{ field: string; message: string }>;
+          }; 
+        }; 
+      };
+      
+      // Check if it's a validation error from backend
+      const backendErrors = error.response?.data?.errors;
+      if (backendErrors && backendErrors.length > 0) {
+        const firstError = backendErrors[0];
+        toast.error(firstError.message);
+        
+        // Map backend field names to frontend field names and scroll to them
+        const fieldMapping: Record<string, 'address' | 'shipping' | 'payment'> = {
+          'addressId': 'address',
+          'shippingMethod': 'shipping',
+          'paymentMethod': 'payment'
+        };
+        
+        const frontendField = fieldMapping[firstError.field];
+        if (frontendField) {
+          scrollToField(frontendField);
+        }
+        return;
+      }
+      
+      // Fallback to general error message
+      const msg = error.response?.data?.message || error.message || "Failed to create order";
       toast.error(msg);
     }
   };
@@ -435,7 +534,14 @@ export default function CheckoutPage() {
                 Checkout
               </h1>
               <p className="text-muted-foreground mt-1">
-                Complete your purchase securely and safely
+                {!selectedAddress 
+                  ? "Please select a delivery address to continue"
+                  : !shippingMethod 
+                  ? "Choose your preferred shipping method"
+                  : !paymentMethod
+                  ? "Select a payment method to complete your order"
+                  : "Review your order and place when ready"
+                }
               </p>
             </div>
           </div>
@@ -558,13 +664,13 @@ export default function CheckoutPage() {
                   className="hidden lg:block absolute left-7 top-0 bottom-0 w-[2px] bg-border/60"
                 />
                 {/* Delivery Address (component includes its own Card) with left bullet on large screens */}
-                <div className="flex items-center gap-6">
+                <div className={`flex items-center gap-6 transition-all duration-300 rounded-xl ${!selectedAddress ? 'bg-red-50/50 dark:bg-red-900/10' : ''}`} data-field="address">
                   <div className="hidden lg:flex flex-col items-center w-14">
                     <div
                       className={`z-10 flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all duration-300 ${
                         selectedAddress
                           ? "bg-primary text-white shadow-lg scale-110"
-                          : "bg-card border-2 border-border hover:border-primary/50"
+                          : "bg-card border-2 border-red-300 hover:border-primary/50 text-red-500"
                       }`}
                     >
                       {selectedAddress ? (
@@ -599,7 +705,7 @@ export default function CheckoutPage() {
                 </div>
 
                 {/* Shipping Method */}
-                <div className="flex items-center gap-6">
+                <div className={`flex items-center gap-6 transition-all duration-300 rounded-xl ${!shippingMethod && selectedAddress ? 'bg-orange-50/50 dark:bg-orange-900/10' : ''}`} data-field="shipping">
                   <div className="hidden lg:flex flex-col items-center w-14">
                     <div
                       className={`z-10 flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all duration-300 ${
@@ -901,7 +1007,7 @@ export default function CheckoutPage() {
                 </div>
 
                 {/* Payment Method */}
-                <div className="flex items-center gap-6">
+                <div className={`flex items-center gap-6 transition-all duration-300 rounded-xl ${!paymentMethod && shippingMethod ? 'bg-green-50/50 dark:bg-green-900/10' : ''}`} data-field="payment">
                   <div className="hidden lg:flex flex-col items-center w-14">
                     <div
                       className={`z-10 flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all duration-300 ${

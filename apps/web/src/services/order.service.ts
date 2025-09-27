@@ -14,7 +14,9 @@ export class OrderService {
     userLat?: number,
     userLon?: number,
     addressId?: number,
-    paymentMethod?: string
+    paymentMethod?: string,
+    shippingMethod?: string,
+    shippingOption?: string
   ): Promise<ApiResponse<unknown>> {
     const body: Record<string, unknown> = { items, userId };
     if (typeof storeId === "number") body.storeId = storeId;
@@ -23,6 +25,8 @@ export class OrderService {
     if (typeof userLon === "number") body.userLon = userLon;
     if (typeof addressId === "number") body.addressId = addressId;
     if (paymentMethod) body.paymentMethod = paymentMethod;
+    if (shippingMethod) body.shippingMethod = shippingMethod;
+    if (shippingOption) body.shippingOption = shippingOption;
     return apiClient.post<ApiResponse<unknown>>(this.base, body);
   }
 
@@ -62,13 +66,22 @@ export class OrderService {
   ): Promise<ApiResponse<unknown>> {
     const body: Record<string, unknown> = {};
     if (typeof requesterUserId === "number") body.userId = requesterUserId;
-    return apiClient.patch<ApiResponse<unknown>>(`${this.base}/${id}/confirm`, body);
+    return apiClient.patch<ApiResponse<unknown>>(
+      `${this.base}/${id}/confirm`,
+      body
+    );
   }
 
-  async shipOrder(id: number, actorUserId?: number): Promise<ApiResponse<unknown>> {
+  async shipOrder(
+    id: number,
+    actorUserId?: number
+  ): Promise<ApiResponse<unknown>> {
     const body: Record<string, unknown> = {};
-    if (typeof actorUserId === 'number') body.userId = actorUserId;
-    return apiClient.patch<ApiResponse<unknown>>(`${this.base}/${id}/ship`, body);
+    if (typeof actorUserId === "number") body.userId = actorUserId;
+    return apiClient.patch<ApiResponse<unknown>>(
+      `${this.base}/${id}/ship`,
+      body
+    );
   }
 }
 
