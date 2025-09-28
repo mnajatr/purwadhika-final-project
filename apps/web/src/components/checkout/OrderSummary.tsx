@@ -180,7 +180,7 @@ export default function OrderSummary({
           />
         </div>
 
-        <CardContent className="p-6 space-y-6">
+        <CardContent className="pl-6 pr-6 pb-6">
           {/* Order Items Count */}
           <div className="flex items-center justify-between py-2"></div>
 
@@ -222,7 +222,7 @@ export default function OrderSummary({
 
             <hr className="border-border" />
 
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center pb-4">
               <span className="text-lg font-semibold text-foreground">
                 Total
               </span>

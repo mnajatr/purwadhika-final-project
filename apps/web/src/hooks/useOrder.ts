@@ -82,7 +82,7 @@ export function useCreateOrder(userId: number, storeId?: number) {
       );
       return res.data;
     },
-    onSuccess: async (data) => {
+    onSuccess: (data, variables) => {
       // service may return either { data: order } or order directly
       // normalize to created order object with a small runtime guard
       type CreatedOrderShape = {
@@ -108,7 +108,39 @@ export function useCreateOrder(userId: number, storeId?: number) {
       const resolvedStoreId: number | undefined =
         created?.storeId ?? created?.order?.storeId ?? undefined;
 
+      // Store order info and payment method for post-success handling
+      const orderId = created?.id ?? created?.order?.id;
+      const paymentMethod = variables?.paymentMethod;
+
+      if (orderId) {
+        // Update payment session with actual order ID (best-effort)
+        try {
+          const pendingPaymentStr = sessionStorage.getItem("pendingPayment");
+          if (pendingPaymentStr) {
+            const pendingPayment = JSON.parse(pendingPaymentStr);
+            pendingPayment.orderId = orderId;
+            sessionStorage.setItem(
+              "pendingPayment",
+              JSON.stringify(pendingPayment)
+            );
+          }
+        } catch (error) {
+          console.warn("Failed to update payment session with orderId:", error);
+        }
+
+        // Store success info for the modal immediately so UI can read it
+        try {
+          sessionStorage.setItem(
+            "orderSuccess",
+            JSON.stringify({ orderId, paymentMethod, timestamp: Date.now() })
+          );
+        } catch (err) {
+          console.warn("Failed to set orderSuccess in sessionStorage", err);
+        }
+      }
+
       // If we have created.order.items (array with productId), remove only matching cart items
+      // Run cart synchronization in background to avoid blocking the mutation lifecycle
       try {
         const createdItems: Array<{ productId: number; qty?: number }> =
           created?.items ?? created?.order?.items ?? [];
@@ -129,51 +161,34 @@ export function useCreateOrder(userId: number, storeId?: number) {
             createdItems.some((it) => it.productId === ci.productId)
           );
 
-          // remove matching cart items (sequentially)
-          for (const it of toRemove) {
-            try {
-              await cartService.removeCartItem(it.id, userId, resolvedStoreId);
-            } catch (err) {
-              // ignore per-item removal errors; we'll invalidate cache anyway
-              console.warn("Failed to remove cart item", it.id, err);
+          (async () => {
+            for (const it of toRemove) {
+              try {
+                await cartService.removeCartItem(
+                  it.id,
+                  userId,
+                  resolvedStoreId
+                );
+              } catch (err) {
+                // ignore per-item removal errors; we'll invalidate cache anyway
+                console.warn("Failed to remove cart item", it.id, err);
+              }
             }
-          }
 
-          qc.invalidateQueries({ queryKey: ["cart", userId, resolvedStoreId] });
-          qc.invalidateQueries({
-            queryKey: ["cart", "totals", userId, resolvedStoreId],
-          });
+            try {
+              qc.invalidateQueries({
+                queryKey: ["cart", userId, resolvedStoreId],
+              });
+              qc.invalidateQueries({
+                queryKey: ["cart", "totals", userId, resolvedStoreId],
+              });
+            } catch (err) {
+              console.warn("Failed to invalidate cart queries", err);
+            }
+          })();
         }
       } catch (err) {
         console.warn("Failed to sync cart after order creation", err);
-      }
-
-      // Update payment session with actual orderId before redirect
-      try {
-        const id = created?.id ?? created?.order?.id;
-        if (id) {
-          // Update payment session with actual order ID
-          const pendingPaymentStr = sessionStorage.getItem("pendingPayment");
-          if (pendingPaymentStr) {
-            try {
-              const pendingPayment = JSON.parse(pendingPaymentStr);
-              pendingPayment.orderId = id;
-              sessionStorage.setItem(
-                "pendingPayment",
-                JSON.stringify(pendingPayment)
-              );
-            } catch (error) {
-              console.warn(
-                "Failed to update payment session with orderId:",
-                error
-              );
-            }
-          }
-
-          window.location.href = `/orders/${id}`;
-        }
-      } catch (err) {
-        console.warn("Failed to redirect to order detail", err);
       }
     },
     onError: async (err) => {
