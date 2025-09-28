@@ -126,7 +126,11 @@ export default function OrderSummary({
   const shippingFee = getShippingRate(shippingMethod, shippingOption);
   const totalWithShipping = total + shippingFee;
   // Check if cart has any out of stock items
-  const { outOfStockItems } = validateCartForCheckout(cart.items || []);
+  // Validate stock only for the items currently selected for checkout
+  const selectedCartItems = (cart.items || []).filter((ci) =>
+    items.some((it) => it.productId === ci.productId)
+  );
+  const { outOfStockItems } = validateCartForCheckout(selectedCartItems);
 
   const hasOutOfStockItems = outOfStockItems.length > 0;
 

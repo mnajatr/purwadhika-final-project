@@ -454,10 +454,13 @@ export default function CheckoutPage() {
 
       if (paymentMethod === "Gateway") {
         try {
+          // Use the same selected items that will be sent to the order API
           const cartTotal =
-            cart?.items?.reduce((sum, item) => {
-              const price = item.product?.price ?? 0;
-              return sum + price * item.qty;
+            items.reduce((sum, it) => {
+              const price =
+                cart.items.find((ci) => ci.productId === it.productId)?.product
+                  ?.price ?? 0;
+              return sum + price * it.qty;
             }, 0) ?? 0;
 
           const paymentSession = {
@@ -1319,10 +1322,7 @@ export default function CheckoutPage() {
               {/* OrderSummary renders its own Card */}
               <OrderSummary
                 cart={cart}
-                items={cart.items.map((it) => ({
-                  productId: it.productId,
-                  qty: it.qty,
-                }))}
+                items={items}
                 appliedDiscounts={appliedDiscounts}
                 onPlaceOrder={handlePlaceOrder}
                 isProcessing={createOrder.status === "pending"}
