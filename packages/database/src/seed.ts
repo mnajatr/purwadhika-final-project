@@ -405,6 +405,8 @@ async function seedDiscounts(stores: any[], products: any[]) {
           amount:
             type === "NOMINAL"
               ? faker.number.int({ min: 1000, max: 50000 })
+              : type === "PERCENTAGE"
+              ? faker.number.int({ min: 5, max: 25 }) // 5% to 25%
               : null,
           minPurchase: faker.number.int({ min: 2, max: 5 }),
           maxDiscount: faker.number.int({ min: 5000, max: 50000 }),
