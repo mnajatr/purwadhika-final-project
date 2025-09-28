@@ -8,10 +8,11 @@ import { MdDiscount } from "react-icons/md";
 import { Tag } from "lucide-react";
 import { useDiscountsByProductIds } from "@/hooks/useDiscount";
 import { DiscountResponse } from "@/types/discount.types";
-import { useUpdateCartItem } from "@/hooks/useCart";
+import type { CartResponse as Cart } from "@repo/schemas";
 
 interface ApplyDiscountProps {
-  productIds: number[];
+  cart: Cart;
+  handleUpdateCart: (itemId: number, newQty: number) => Promise<void>;
   onApplyDiscount?: (discounts: DiscountResponse[]) => void;
   isLoading?: boolean;
   className?: string;
@@ -19,7 +20,8 @@ interface ApplyDiscountProps {
 }
 
 export default function ApplyDiscount({
-  productIds,
+  handleUpdateCart,
+  cart,
   onApplyDiscount,
   isLoading = false,
   className = "",
@@ -31,27 +33,51 @@ export default function ApplyDiscount({
   const [appliedDiscountIds, setAppliedDiscountIds] = React.useState<number[]>(
     []
   );
-
+  const productIds = cart.items.map((it) => it.productId);
   const { data: discounts = [] } = useDiscountsByProductIds(productIds);
 
-  const handleApply = () => {
+  const handleApply = async () => {
     let updated: number[];
 
-    // if all currently selected are already applied → treat as unapply
     const allAlreadyApplied = selectedDiscountIds.every((id) =>
       appliedDiscountIds.includes(id)
     );
 
     if (allAlreadyApplied) {
-      // remove them
+      // UNAPPLY
       updated = appliedDiscountIds.filter(
         (id) => !selectedDiscountIds.includes(id)
       );
+      const removedDiscounts = discounts.filter((d) =>
+        selectedDiscountIds.includes(d.id)
+      );
+
+      for (const removed of removedDiscounts) {
+        if (removed.type === "BUYXGETX") {
+          const productId = removed.product?.id ?? 0;
+          const oldQty =
+            cart.items.find((element) => element.id === productId)?.qty ?? 0;
+          // await handleUpdateCart(productId, oldQty - 1);
+        }
+      }
     } else {
-      // merge them in
+      // APPLY
       updated = Array.from(
         new Set([...appliedDiscountIds, ...selectedDiscountIds])
       );
+
+      const addedDiscounts = discounts.filter((d) =>
+        selectedDiscountIds.includes(d.id)
+      );
+
+      for (const added of addedDiscounts) {
+        if (added.type === "BUYXGETX") {
+          const productId = added.product?.id ?? 0;
+          const oldQty =
+            cart.items.find((element) => element.id === productId)?.qty ?? 0;
+          // await handleUpdateCart(productId, oldQty + 1);
+        }
+      }
     }
 
     setAppliedDiscountIds(updated);
@@ -63,7 +89,6 @@ export default function ApplyDiscount({
       onApplyDiscount(selected);
     }
 
-    // clear selection after apply/unapply
     setSelectedDiscountIds([]);
   };
 
