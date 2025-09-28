@@ -165,7 +165,7 @@ export default function OrderPage({ params }: OrderPageProps) {
               refetch();
             }}
             onPaymentError={(error) => {
-              console.error("Payment error:", error);
+              console.log("Payment error:", error);
             }}
           />
         )}
@@ -350,7 +350,7 @@ export default function OrderPage({ params }: OrderPageProps) {
                         refetch();
                       }}
                       onPaymentError={(error) => {
-                        console.error("Payment error:", error);
+                        console.log("🔴 Payment error:", error);
                       }}
                     />
                     <CancelButton

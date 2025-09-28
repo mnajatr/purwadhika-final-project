@@ -22,7 +22,9 @@ export class OrderService {
     userLat?: number,
     userLon?: number,
     addressId?: number,
-    paymentMethod?: string
+    paymentMethod?: string,
+    shippingMethod?: string,
+    shippingOption?: string
   ): Promise<any> {
     return checkoutService.createCheckout(
       userId,
@@ -32,7 +34,9 @@ export class OrderService {
       userLat,
       userLon,
       addressId,
-      paymentMethod
+      paymentMethod,
+      shippingMethod,
+      shippingOption
     );
   }
 

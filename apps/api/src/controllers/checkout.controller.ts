@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import type { Request as ExpressRequest } from "express";
 import { OrderService } from "../services/order.service.js";
 import { orderReadService } from "../services/order.read.service.js";
+import { CheckoutSchema } from "@repo/schemas";
 import {
   successResponse,
   errorResponse,
@@ -45,23 +46,26 @@ export class CheckoutController {
       // do not scope the listing to a specific user. Admin endpoints should not
       // be filtered by the requesting user's id.
       const authReq = req as any;
-      const effectiveUserId = authReq.user && (authReq.user.role === "SUPER_ADMIN" || authReq.user.role === "STORE_ADMIN")
-        ? undefined
-        : userId;
+      const effectiveUserId =
+        authReq.user &&
+        (authReq.user.role === "SUPER_ADMIN" ||
+          authReq.user.role === "STORE_ADMIN")
+          ? undefined
+          : userId;
       const status = req.query.status as string | undefined;
       const q = req.query.q as string | undefined;
       const dateFrom = req.query.dateFrom as string | undefined;
       const dateTo = req.query.dateTo as string | undefined;
       const page = Number(req.query.page ?? 1);
       const pageSize = Number(req.query.pageSize ?? 20);
-  // Prefer explicitly-attached store id for admin scoping (set by admin middleware)
-  const storeIdFromMiddleware = authReq.storeScopedId ?? authReq.user?.storeId;
-  const storeId = storeIdFromMiddleware ?? (req.query?.storeId ? Number(req.query.storeId) : undefined);
+      // Prefer explicitly-attached store id for admin scoping (set by admin middleware)
+      const storeIdFromMiddleware =
+        authReq.storeScopedId ?? authReq.user?.storeId;
+      const storeId =
+        storeIdFromMiddleware ??
+        (req.query?.storeId ? Number(req.query.storeId) : undefined);
 
-  const filters = { userId: effectiveUserId, storeId, status, q, dateFrom, dateTo, page, pageSize };
-  console.log("[DEBUG] listOrders filters:", JSON.stringify(filters));
-
-  const result = await this.service.listOrders({
+      const result = await this.service.listOrders({
         userId: effectiveUserId,
         storeId,
         status,
@@ -71,7 +75,6 @@ export class CheckoutController {
         page,
         pageSize,
       });
-
 
       return res.status(200).json(successResponse(result));
     } catch (e) {
@@ -87,39 +90,55 @@ export class CheckoutController {
         return res.status(400).json(errorResponse("Missing userId in request"));
       }
 
-      const storeId = toNumber(req.body?.storeId, undefined);
-      const items = req.body?.items;
-      const userLat = req.body?.userLat ? Number(req.body.userLat) : undefined;
-      const userLon = req.body?.userLon ? Number(req.body.userLon) : undefined;
-      const addressId = req.body?.addressId ? Number(req.body.addressId) : undefined;
-      const paymentMethod = req.body?.paymentMethod as string | undefined;
-
       const idempotencyKey =
         (req.headers["idempotency-key"] as string) ||
         req.body?.idempotencyKey ||
         req.query?.idempotencyKey;
 
-      if (!Array.isArray(items) || items.length === 0) {
-        return res.status(400).json(errorResponse("Missing items in order"));
+      const payload = {
+        ...req.body,
+        idempotencyKey,
+      };
+
+      const parsed = CheckoutSchema.safeParse(payload);
+      if (!parsed.success) {
+        const fieldErrors = parsed.error.flatten().fieldErrors;
+        const errors = Object.entries(fieldErrors).map(([field, messages]) => ({
+          field,
+          message: Array.isArray(messages) ? messages[0] : messages,
+        }));
+        return res
+          .status(400)
+          .json(
+            errorResponse(
+              "Invalid checkout data",
+              "Please check all required fields",
+              errors
+            )
+          );
       }
 
-      for (const item of items) {
-        if (!item.productId || !item.qty || item.qty <= 0) {
-          return res.status(400).json(
-            errorResponse("Invalid item structure", "Each item must have productId and positive qty")
-          );
-        }
-      }
+      const {
+        items,
+        userLat,
+        userLon,
+        addressId,
+        paymentMethod,
+        shippingMethod,
+        shippingOption,
+      } = parsed.data;
 
       const result = await this.service.createOrder(
         userId,
-        storeId,
+        toNumber(req.body?.storeId, undefined),
         items,
         idempotencyKey,
         userLat,
         userLon,
         addressId,
-        paymentMethod
+        paymentMethod,
+        shippingMethod,
+        shippingOption
       );
 
       return res.status(201).json(successResponse(result, "Order created"));

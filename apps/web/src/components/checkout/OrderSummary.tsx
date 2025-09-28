@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Button } from "@/components/ui/button";
+// Button removed (idempotency UI removed)
 import { RippleButton } from "@/components/ui/ripple-button";
 import {
   Card,
@@ -15,8 +15,7 @@ import { validateCartForCheckout } from "@/utils/cartStockUtils";
 export interface Props {
   cart: Cart;
   items: Array<{ productId: number; qty: number }>;
-  idempotencyKey: string | null;
-  setIdempotencyKey: (k: string | null) => void;
+  // idempotency removed after testing
   onPlaceOrder: () => void;
   isProcessing: boolean;
   customer?: { fullName?: string; phone?: string; email?: string };
@@ -25,6 +24,8 @@ export interface Props {
     city?: string;
     postalCode?: string | number;
   };
+  shippingMethod?: string | null;
+  shippingOption?: string | null;
   appliedDiscounts?: Array<{
     type: "PERCENTAGE" | "NOMINAL" | "BUYXGETX";
     value: string;
@@ -89,13 +90,13 @@ function calculateDiscount(
 export default function OrderSummary({
   cart,
   items,
-  idempotencyKey,
-  setIdempotencyKey,
   onPlaceOrder,
   appliedDiscounts = [],
   isProcessing,
   customer,
   address,
+  shippingMethod,
+  shippingOption,
 }: Props) {
   const subtotal = items.reduce((s, it) => {
     const p =
@@ -106,6 +107,24 @@ export default function OrderSummary({
 
   const discountAmount = calculateDiscount(items, cart, appliedDiscounts);
   const total = Math.max(0, subtotal - discountAmount);
+  // Compute shipping fee based on selected carrier and option
+  function getShippingRate(method?: string | null, option?: string | null) {
+    if (!method) return 0;
+    const base: Record<string, number> = {
+      JNE: 12000,
+      "J&T": 15000,
+      "Ninja Xpress": 18000,
+      Ninja: 18000,
+    };
+    const baseRate = base[method] ?? 0;
+    // Option adjustments: "Hemat Kargo" gives a discount; "Reguler" uses base
+    if (!option) return baseRate;
+    if (option === "Hemat Kargo") return Math.round(baseRate * 0.8);
+    return baseRate;
+  }
+
+  const shippingFee = getShippingRate(shippingMethod, shippingOption);
+  const totalWithShipping = total + shippingFee;
   // Check if cart has any out of stock items
   const { outOfStockItems } = validateCartForCheckout(cart.items || []);
 
@@ -179,6 +198,27 @@ export default function OrderSummary({
                 -Rp {discountAmount.toLocaleString("id-ID")}
               </span>
             </div>
+            <div className="flex justify-between items-center">
+              <span className="text-foreground">Shipping</span>
+              <div className="flex flex-col items-end">
+                {shippingMethod ? (
+                  <>
+                    <span className="font-medium text-foreground">
+                      Rp {shippingFee.toLocaleString("id-ID")}
+                    </span>
+                    {shippingOption ? (
+                      <span className="text-xs text-muted-foreground block">
+                        {shippingMethod} • {shippingOption}
+                      </span>
+                    ) : null}
+                  </>
+                ) : (
+                  <span className="text-sm text-muted-foreground">
+                    Not selected
+                  </span>
+                )}
+              </div>
+            </div>
 
             <hr className="border-border" />
 
@@ -187,7 +227,7 @@ export default function OrderSummary({
                 Total
               </span>
               <span className="text-2xl font-bold text-primary">
-                Rp {total.toLocaleString("id-ID")}
+                Rp {totalWithShipping.toLocaleString("id-ID")}
               </span>
             </div>
           </div>
@@ -256,36 +296,7 @@ export default function OrderSummary({
             </div>
           )}
 
-          {/* Idempotency Key - Hidden in production but useful for dev */}
-          {process.env.NODE_ENV === "development" && (
-            <div className="bg-muted/20 rounded-xl p-4 space-y-2">
-              <div className="text-sm font-medium text-foreground">
-                Idempotency Key (Dev)
-              </div>
-              <div className="flex gap-2">
-                <input
-                  className="flex-1 px-3 py-2 bg-muted border border-border rounded-lg text-xs text-foreground font-mono"
-                  readOnly
-                  value={idempotencyKey ?? "(generated on submit)"}
-                  aria-label="idempotency-key"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const k = String(Math.random()).slice(2, 14);
-                    setIdempotencyKey(k);
-                    try {
-                      sessionStorage.setItem("checkout:idempotencyKey", k);
-                    } catch {}
-                  }}
-                  className="px-3 text-xs"
-                >
-                  New
-                </Button>
-              </div>
-            </div>
-          )}
+          {/* idempotency UI removed after testing */}
         </CardContent>
 
         <CardFooter className="p-6 pt-0">
@@ -323,16 +334,16 @@ export default function OrderSummary({
             <RippleButton
               onClick={onPlaceOrder}
               size="lg"
-              disabled={isProcessing || hasOutOfStockItems}
+              disabled={isProcessing}
               className={`w-full py-4 rounded-2xl font-semibold text-lg transition-all duration-200 ${
-                hasOutOfStockItems || isProcessing
+                isProcessing
                   ? "bg-gray-400 text-gray-700 cursor-not-allowed"
+                  : hasOutOfStockItems
+                  ? "bg-red-500 text-white hover:bg-red-600 shadow-lg hover:shadow-xl"
                   : "bg-primary-gradient text-primary-foreground hover:opacity-95 shadow-lg hover:shadow-xl"
               }`}
               rippleClassName={
-                isProcessing || hasOutOfStockItems
-                  ? "bg-input"
-                  : "bg-primary-foreground/30"
+                isProcessing ? "bg-input" : "bg-primary-foreground/30"
               }
             >
               {isProcessing ? (

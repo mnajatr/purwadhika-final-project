@@ -24,7 +24,9 @@ export class CheckoutService {
     userLat?: number,
     userLon?: number,
     addressId?: number,
-    paymentMethod?: string
+    paymentMethod?: string,
+    shippingMethod?: string,
+    shippingOption?: string
   ): Promise<any> {
     if (idempotencyKey) {
       const entry = idempotencyStore.get(idempotencyKey);
@@ -46,7 +48,9 @@ export class CheckoutService {
       userLat,
       userLon,
       addressId,
-      paymentMethod
+      paymentMethod,
+      shippingMethod,
+      shippingOption
     );
 
     // Store work in idempotency cache if key provided
@@ -77,7 +81,9 @@ export class CheckoutService {
     userLat?: number,
     userLon?: number,
     addressId?: number,
-    paymentMethod?: string
+    paymentMethod?: string,
+    shippingMethod?: string,
+    shippingOption?: string
   ) {
     if (!items || items.length === 0) {
       throw new Error("No items provided");
@@ -126,6 +132,15 @@ export class CheckoutService {
           paymentDeadlineAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
         },
       });
+
+      // Log shipping information for tracking (could be stored in separate shipping table later)
+      if (shippingMethod) {
+        console.log(
+          `Order ${createdOrder.id} - Shipping Method: ${shippingMethod}${
+            shippingOption ? ` - ${shippingOption}` : ""
+          }`
+        );
+      }
 
       // Create order items and reserve inventory
       for (const item of items) {

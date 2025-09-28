@@ -55,7 +55,6 @@ type ResolveResp = {
 };
 
 export default function CheckoutPage() {
-  // Prefer admin dev user selector (localStorage.devUserId) when set, otherwise sessionStorage, then seeded 4
   const devUser =
     typeof window !== "undefined" ? localStorage.getItem("devUserId") : null;
   const storedUserId =
@@ -68,24 +67,22 @@ export default function CheckoutPage() {
       : storedUserId
       ? Number(storedUserId)
       : 4;
-  // Freeze the store used during shopping at first render to avoid cart switching during checkout
+
   const initialStoreIdRef = React.useRef<number | null>(
     typeof window !== "undefined"
       ? useLocationStore.getState().nearestStoreId ?? null
       : null
   );
+
   const { data: cart, isLoading: isCartLoading } = useCart(
     userId,
     initialStoreIdRef.current ?? undefined
   );
+
   const [appliedDiscounts, setAppliedDiscounts] = React.useState<
     DiscountResponse[]
   >([]);
 
-  // const [appliedDiscounts, setAppliedDiscounts] = React.useState<
-  //   Props["appliedDiscounts"]
-  // >([]);
-  // do not pass storeId to createOrder so backend can resolve nearest store
   const createOrder = useCreateOrder(userId);
 
   // shipping method selection (null = not selected)
@@ -123,34 +120,15 @@ export default function CheckoutPage() {
     return () => window.removeEventListener("resize", onResize);
   }, [shippingMenuOpen, updateShippingMenuWidth]);
 
-  // local payload type allowing shippingMethod to be passed through
-  type CreateOrderPayload = {
-    items: Array<{ productId: number; qty: number }>;
-    idempotencyKey: string;
-    addressId?: number | undefined;
-    shippingMethod?: string;
-    shippingOption?: string | null;
-    paymentMethod?: string;
-  };
-
   const [idempotencyKey, setIdempotencyKey] = React.useState<string | null>(
     null
   );
 
-  // selected address from AddressCard (id only)
   const [selectedAddress, setSelectedAddress] = React.useState<{
     id: number;
   } | null>(null);
 
-  // payment method selection (start with no selection)
   const [paymentMethod, setPaymentMethod] = React.useState<string | null>(null);
-
-  // discount handling
-  const handleApplyDiscount = React.useCallback((code: string) => {
-    // TODO: Implement discount logic here
-    // For now, just show a success message
-    toast.success(`Discount code "${code}" applied successfully!`);
-  }, []);
 
   const handleSelectAddress = React.useCallback(
     async (a: { id: number }) => {
@@ -317,63 +295,105 @@ export default function CheckoutPage() {
 
   const productIds = cart.items.map((it) => it.productId);
 
+  const scrollToField = (fieldType: "address" | "shipping" | "payment") => {
+    let targetElement: Element | null = null;
+
+    switch (fieldType) {
+      case "address":
+        targetElement = document.querySelector('[data-field="address"]');
+        break;
+      case "shipping":
+        targetElement = document.querySelector('[data-field="shipping"]');
+        break;
+      case "payment":
+        targetElement = document.querySelector('[data-field="payment"]');
+        break;
+    }
+
+    if (targetElement) {
+      targetElement.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      targetElement.classList.add(
+        "ring-2",
+        "ring-red-500",
+        "ring-opacity-75",
+        "animate-pulse"
+      );
+      setTimeout(() => {
+        targetElement?.classList.remove(
+          "ring-2",
+          "ring-red-500",
+          "ring-opacity-75",
+          "animate-pulse"
+        );
+      }, 3000);
+    }
+  };
+
   const handlePlaceOrder = async () => {
     try {
+      if (!selectedAddress) {
+        toast.error("Please select a delivery address");
+        scrollToField("address");
+        return;
+      }
+
+      if (!shippingMethod) {
+        toast.error("Please select a shipping method");
+        scrollToField("shipping");
+        return;
+      }
+
+      if (!paymentMethod) {
+        toast.error("Please select a payment method");
+        scrollToField("payment");
+        return;
+      }
+
       const key = idempotencyKey ?? String(Math.random()).slice(2, 14);
-      // persist key so retries keep using same idempotency
       try {
         sessionStorage.setItem("checkout:idempotencyKey", key);
       } catch {}
 
-      // use selected address id
-      let addressId: number | undefined;
-      if (selectedAddress) addressId = selectedAddress.id;
+      const addressId = selectedAddress.id;
 
-      // Validate against the store used during shopping (frozen at first render)
       const checkoutStoreId = initialStoreIdRef.current;
       if (checkoutStoreId) {
-        if (!addressId) {
-          toast.error("Please select an address");
-          return;
-        }
         const resp = await apiClient.get<ResolveResp>(
           `/stores/resolve?userId=${userId}&addressId=${addressId}`
         );
         const resolved = resp.data?.nearestStore?.id ?? null;
         const distanceMeters = resp.data?.distanceMeters ?? null;
         const maxRadiusKm = resp.data?.maxRadiusKm ?? null;
+
         if (!resolved) {
-          if (distanceMeters != null && maxRadiusKm != null) {
-            const km = (distanceMeters / 1000).toFixed(1);
-            toast.error(
-              `Address is ${km} km away (limit ${maxRadiusKm} km) — outside service area`
-            );
-          } else {
-            toast.error(
-              "Selected address is outside service area for any store"
-            );
-          }
+          const km = distanceMeters ? (distanceMeters / 1000).toFixed(1) : null;
+          const message =
+            km && maxRadiusKm
+              ? `Address is ${km} km away (limit ${maxRadiusKm} km) — outside service area`
+              : "Selected address is outside service area for any store";
+          toast.error(message);
+          scrollToField("address");
           return;
         }
+
         if (resolved !== checkoutStoreId) {
-          if (distanceMeters != null && maxRadiusKm != null) {
-            const km = (distanceMeters / 1000).toFixed(1);
-            toast.error(
-              `Address is ${km} km away (limit ${maxRadiusKm} km) — not served by the chosen store.`
-            );
-          } else {
-            toast.error(
-              "Selected address is not served by the chosen store. Please pick an address within the store's delivery area."
-            );
-          }
+          const km = distanceMeters ? (distanceMeters / 1000).toFixed(1) : null;
+          const message =
+            km && maxRadiusKm
+              ? `Address is ${km} km away (limit ${maxRadiusKm} km) — not served by the chosen store.`
+              : "Selected address is not served by the chosen store. Please pick an address within the store's delivery area.";
+          toast.error(message);
+          scrollToField("address");
           return;
         }
       }
 
-      // Set payment session for Gateway payments before creating order
       if (paymentMethod === "Gateway") {
         try {
-          // Calculate total from cart items
           const cartTotal =
             cart?.items?.reduce((sum, item) => {
               const price = item.product?.price ?? 0;
@@ -381,7 +401,7 @@ export default function CheckoutPage() {
             }, 0) ?? 0;
 
           const paymentSession = {
-            orderId: 0, // Will be updated after order creation
+            orderId: 0,
             orderTotal: cartTotal,
             timestamp: Date.now(),
             paymentMethod: paymentMethod,
@@ -390,8 +410,8 @@ export default function CheckoutPage() {
             "pendingPayment",
             JSON.stringify(paymentSession)
           );
-        } catch (error) {
-          console.warn("Failed to set payment session:", error);
+        } catch {
+          // Ignore payment session errors
         }
       }
 
@@ -400,18 +420,50 @@ export default function CheckoutPage() {
         idempotencyKey: key,
         addressId,
         shippingMethod,
-        shippingOption,
-        paymentMethod: paymentMethod ?? undefined,
-      } as CreateOrderPayload);
+        shippingOption: shippingOption || undefined,
+        paymentMethod,
+      });
+
       toast.success("Order created — redirecting...");
-      // cleanup and redirect
+
       try {
         sessionStorage.removeItem("checkout:selectedIds");
         sessionStorage.removeItem("checkout:idempotencyKey");
       } catch {}
     } catch (err) {
+      const error = err as {
+        message?: string;
+        response?: {
+          data?: {
+            message?: string;
+            errors?: Array<{ field: string; message: string }>;
+          };
+        };
+      };
+
+      const backendErrors = error.response?.data?.errors;
+      if (backendErrors && backendErrors.length > 0) {
+        const firstError = backendErrors[0];
+        toast.error(firstError.message);
+
+        const fieldMapping: Record<string, "address" | "shipping" | "payment"> =
+          {
+            addressId: "address",
+            shippingMethod: "shipping",
+            paymentMethod: "payment",
+          };
+
+        const frontendField = fieldMapping[firstError.field];
+        if (frontendField) {
+          scrollToField(frontendField);
+        }
+        return;
+      }
+
       const msg =
-        (err as { message?: string })?.message || "Failed to create order";
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to create order";
       toast.error(msg);
     }
   };
@@ -435,7 +487,13 @@ export default function CheckoutPage() {
                 Checkout
               </h1>
               <p className="text-muted-foreground mt-1">
-                Complete your purchase securely and safely
+                {!selectedAddress
+                  ? "Please select a delivery address to continue"
+                  : !shippingMethod
+                  ? "Choose your preferred shipping method"
+                  : !paymentMethod
+                  ? "Select a payment method to complete your order"
+                  : "Review your order and place when ready"}
               </p>
             </div>
           </div>
@@ -486,7 +544,7 @@ export default function CheckoutPage() {
                       )}
                     </div>
                     <span className="text-xs font-medium text-center">
-                      Addr
+                      Address
                     </span>
                   </div>
 
@@ -536,7 +594,9 @@ export default function CheckoutPage() {
                     >
                       <FaLock className="w-5 h-5" />
                     </div>
-                    <span className="text-xs font-medium text-center">Rev</span>
+                    <span className="text-xs font-medium text-center">
+                      Order
+                    </span>
                   </div>
                 </div>
               </div>
@@ -558,13 +618,18 @@ export default function CheckoutPage() {
                   className="hidden lg:block absolute left-7 top-0 bottom-0 w-[2px] bg-border/60"
                 />
                 {/* Delivery Address (component includes its own Card) with left bullet on large screens */}
-                <div className="flex items-center gap-6">
+                <div
+                  className={`flex items-center gap-6 transition-all duration-300 rounded-xl ${
+                    !selectedAddress ? "bg-red-50/50 dark:bg-red-900/10" : ""
+                  }`}
+                  data-field="address"
+                >
                   <div className="hidden lg:flex flex-col items-center w-14">
                     <div
                       className={`z-10 flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all duration-300 ${
                         selectedAddress
                           ? "bg-primary text-white shadow-lg scale-110"
-                          : "bg-card border-2 border-border hover:border-primary/50"
+                          : "bg-card border-2 border-red-300 hover:border-primary/50 text-red-500"
                       }`}
                     >
                       {selectedAddress ? (
@@ -599,7 +664,14 @@ export default function CheckoutPage() {
                 </div>
 
                 {/* Shipping Method */}
-                <div className="flex items-center gap-6">
+                <div
+                  className={`flex items-center gap-6 transition-all duration-300 rounded-xl ${
+                    !shippingMethod && selectedAddress
+                      ? "bg-orange-50/50 dark:bg-orange-900/10"
+                      : ""
+                  }`}
+                  data-field="shipping"
+                >
                   <div className="hidden lg:flex flex-col items-center w-14">
                     <div
                       className={`z-10 flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all duration-300 ${
@@ -901,7 +973,14 @@ export default function CheckoutPage() {
                 </div>
 
                 {/* Payment Method */}
-                <div className="flex items-center gap-6">
+                <div
+                  className={`flex items-center gap-6 transition-all duration-300 rounded-xl ${
+                    !paymentMethod && shippingMethod
+                      ? "bg-green-50/50 dark:bg-green-900/10"
+                      : ""
+                  }`}
+                  data-field="payment"
+                >
                   <div className="hidden lg:flex flex-col items-center w-14">
                     <div
                       className={`z-10 flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all duration-300 ${
@@ -1149,7 +1228,7 @@ export default function CheckoutPage() {
                       <FaLock className="w-5 h-5" />
                     </div>
                     <div className="text-xs font-medium mt-2 text-muted-foreground">
-                      Review
+                      Order
                     </div>
                   </div>
                   <div className="flex-1" />
@@ -1169,12 +1248,12 @@ export default function CheckoutPage() {
                   qty: it.qty,
                 }))}
                 appliedDiscounts={appliedDiscounts}
-                idempotencyKey={idempotencyKey}
-                setIdempotencyKey={setIdempotencyKey}
                 onPlaceOrder={handlePlaceOrder}
                 isProcessing={createOrder.status === "pending"}
                 customer={customer ?? undefined}
                 address={selectedAddressFull ?? undefined}
+                shippingMethod={shippingMethod}
+                shippingOption={shippingOption}
               />
             </div>
           </div>
