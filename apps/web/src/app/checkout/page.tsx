@@ -295,30 +295,40 @@ export default function CheckoutPage() {
 
   const productIds = cart.items.map((it) => it.productId);
 
-  const scrollToField = (fieldType: 'address' | 'shipping' | 'payment') => {
+  const scrollToField = (fieldType: "address" | "shipping" | "payment") => {
     let targetElement: Element | null = null;
-    
+
     switch (fieldType) {
-      case 'address':
+      case "address":
         targetElement = document.querySelector('[data-field="address"]');
         break;
-      case 'shipping':
+      case "shipping":
         targetElement = document.querySelector('[data-field="shipping"]');
         break;
-      case 'payment':
+      case "payment":
         targetElement = document.querySelector('[data-field="payment"]');
         break;
     }
 
     if (targetElement) {
-      targetElement.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center' 
+      targetElement.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
       });
-      
-      targetElement.classList.add('ring-2', 'ring-red-500', 'ring-opacity-75', 'animate-pulse');
+
+      targetElement.classList.add(
+        "ring-2",
+        "ring-red-500",
+        "ring-opacity-75",
+        "animate-pulse"
+      );
       setTimeout(() => {
-        targetElement?.classList.remove('ring-2', 'ring-red-500', 'ring-opacity-75', 'animate-pulse');
+        targetElement?.classList.remove(
+          "ring-2",
+          "ring-red-500",
+          "ring-opacity-75",
+          "animate-pulse"
+        );
       }, 3000);
     }
   };
@@ -327,19 +337,19 @@ export default function CheckoutPage() {
     try {
       if (!selectedAddress) {
         toast.error("Please select a delivery address");
-        scrollToField('address');
+        scrollToField("address");
         return;
       }
 
       if (!shippingMethod) {
         toast.error("Please select a shipping method");
-        scrollToField('shipping');
+        scrollToField("shipping");
         return;
       }
 
       if (!paymentMethod) {
         toast.error("Please select a payment method");
-        scrollToField('payment');
+        scrollToField("payment");
         return;
       }
 
@@ -358,34 +368,37 @@ export default function CheckoutPage() {
         const resolved = resp.data?.nearestStore?.id ?? null;
         const distanceMeters = resp.data?.distanceMeters ?? null;
         const maxRadiusKm = resp.data?.maxRadiusKm ?? null;
-        
+
         if (!resolved) {
           const km = distanceMeters ? (distanceMeters / 1000).toFixed(1) : null;
-          const message = km && maxRadiusKm 
-            ? `Address is ${km} km away (limit ${maxRadiusKm} km) — outside service area`
-            : "Selected address is outside service area for any store";
+          const message =
+            km && maxRadiusKm
+              ? `Address is ${km} km away (limit ${maxRadiusKm} km) — outside service area`
+              : "Selected address is outside service area for any store";
           toast.error(message);
-          scrollToField('address');
+          scrollToField("address");
           return;
         }
-        
+
         if (resolved !== checkoutStoreId) {
           const km = distanceMeters ? (distanceMeters / 1000).toFixed(1) : null;
-          const message = km && maxRadiusKm
-            ? `Address is ${km} km away (limit ${maxRadiusKm} km) — not served by the chosen store.`
-            : "Selected address is not served by the chosen store. Please pick an address within the store's delivery area.";
+          const message =
+            km && maxRadiusKm
+              ? `Address is ${km} km away (limit ${maxRadiusKm} km) — not served by the chosen store.`
+              : "Selected address is not served by the chosen store. Please pick an address within the store's delivery area.";
           toast.error(message);
-          scrollToField('address');
+          scrollToField("address");
           return;
         }
       }
 
       if (paymentMethod === "Gateway") {
         try {
-          const cartTotal = cart?.items?.reduce((sum, item) => {
-            const price = item.product?.price ?? 0;
-            return sum + price * item.qty;
-          }, 0) ?? 0;
+          const cartTotal =
+            cart?.items?.reduce((sum, item) => {
+              const price = item.product?.price ?? 0;
+              return sum + price * item.qty;
+            }, 0) ?? 0;
 
           const paymentSession = {
             orderId: 0,
@@ -393,7 +406,10 @@ export default function CheckoutPage() {
             timestamp: Date.now(),
             paymentMethod: paymentMethod,
           };
-          sessionStorage.setItem("pendingPayment", JSON.stringify(paymentSession));
+          sessionStorage.setItem(
+            "pendingPayment",
+            JSON.stringify(paymentSession)
+          );
         } catch {
           // Ignore payment session errors
         }
@@ -407,43 +423,47 @@ export default function CheckoutPage() {
         shippingOption: shippingOption || undefined,
         paymentMethod,
       });
-      
+
       toast.success("Order created — redirecting...");
-      
+
       try {
         sessionStorage.removeItem("checkout:selectedIds");
         sessionStorage.removeItem("checkout:idempotencyKey");
       } catch {}
     } catch (err) {
-      const error = err as { 
-        message?: string; 
-        response?: { 
-          data?: { 
-            message?: string; 
+      const error = err as {
+        message?: string;
+        response?: {
+          data?: {
+            message?: string;
             errors?: Array<{ field: string; message: string }>;
-          }; 
-        }; 
+          };
+        };
       };
-      
+
       const backendErrors = error.response?.data?.errors;
       if (backendErrors && backendErrors.length > 0) {
         const firstError = backendErrors[0];
         toast.error(firstError.message);
-        
-        const fieldMapping: Record<string, 'address' | 'shipping' | 'payment'> = {
-          'addressId': 'address',
-          'shippingMethod': 'shipping',
-          'paymentMethod': 'payment'
-        };
-        
+
+        const fieldMapping: Record<string, "address" | "shipping" | "payment"> =
+          {
+            addressId: "address",
+            shippingMethod: "shipping",
+            paymentMethod: "payment",
+          };
+
         const frontendField = fieldMapping[firstError.field];
         if (frontendField) {
           scrollToField(frontendField);
         }
         return;
       }
-      
-      const msg = error.response?.data?.message || error.message || "Failed to create order";
+
+      const msg =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to create order";
       toast.error(msg);
     }
   };
@@ -467,14 +487,13 @@ export default function CheckoutPage() {
                 Checkout
               </h1>
               <p className="text-muted-foreground mt-1">
-                {!selectedAddress 
+                {!selectedAddress
                   ? "Please select a delivery address to continue"
-                  : !shippingMethod 
+                  : !shippingMethod
                   ? "Choose your preferred shipping method"
                   : !paymentMethod
                   ? "Select a payment method to complete your order"
-                  : "Review your order and place when ready"
-                }
+                  : "Review your order and place when ready"}
               </p>
             </div>
           </div>
@@ -525,7 +544,7 @@ export default function CheckoutPage() {
                       )}
                     </div>
                     <span className="text-xs font-medium text-center">
-                      Addr
+                      Address
                     </span>
                   </div>
 
@@ -575,7 +594,9 @@ export default function CheckoutPage() {
                     >
                       <FaLock className="w-5 h-5" />
                     </div>
-                    <span className="text-xs font-medium text-center">Rev</span>
+                    <span className="text-xs font-medium text-center">
+                      Order
+                    </span>
                   </div>
                 </div>
               </div>
@@ -597,7 +618,12 @@ export default function CheckoutPage() {
                   className="hidden lg:block absolute left-7 top-0 bottom-0 w-[2px] bg-border/60"
                 />
                 {/* Delivery Address (component includes its own Card) with left bullet on large screens */}
-                <div className={`flex items-center gap-6 transition-all duration-300 rounded-xl ${!selectedAddress ? 'bg-red-50/50 dark:bg-red-900/10' : ''}`} data-field="address">
+                <div
+                  className={`flex items-center gap-6 transition-all duration-300 rounded-xl ${
+                    !selectedAddress ? "bg-red-50/50 dark:bg-red-900/10" : ""
+                  }`}
+                  data-field="address"
+                >
                   <div className="hidden lg:flex flex-col items-center w-14">
                     <div
                       className={`z-10 flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all duration-300 ${
@@ -638,7 +664,14 @@ export default function CheckoutPage() {
                 </div>
 
                 {/* Shipping Method */}
-                <div className={`flex items-center gap-6 transition-all duration-300 rounded-xl ${!shippingMethod && selectedAddress ? 'bg-orange-50/50 dark:bg-orange-900/10' : ''}`} data-field="shipping">
+                <div
+                  className={`flex items-center gap-6 transition-all duration-300 rounded-xl ${
+                    !shippingMethod && selectedAddress
+                      ? "bg-orange-50/50 dark:bg-orange-900/10"
+                      : ""
+                  }`}
+                  data-field="shipping"
+                >
                   <div className="hidden lg:flex flex-col items-center w-14">
                     <div
                       className={`z-10 flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all duration-300 ${
@@ -940,7 +973,14 @@ export default function CheckoutPage() {
                 </div>
 
                 {/* Payment Method */}
-                <div className={`flex items-center gap-6 transition-all duration-300 rounded-xl ${!paymentMethod && shippingMethod ? 'bg-green-50/50 dark:bg-green-900/10' : ''}`} data-field="payment">
+                <div
+                  className={`flex items-center gap-6 transition-all duration-300 rounded-xl ${
+                    !paymentMethod && shippingMethod
+                      ? "bg-green-50/50 dark:bg-green-900/10"
+                      : ""
+                  }`}
+                  data-field="payment"
+                >
                   <div className="hidden lg:flex flex-col items-center w-14">
                     <div
                       className={`z-10 flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all duration-300 ${
@@ -1188,7 +1228,7 @@ export default function CheckoutPage() {
                       <FaLock className="w-5 h-5" />
                     </div>
                     <div className="text-xs font-medium mt-2 text-muted-foreground">
-                      Review
+                      Order
                     </div>
                   </div>
                   <div className="flex-1" />
@@ -1208,12 +1248,12 @@ export default function CheckoutPage() {
                   qty: it.qty,
                 }))}
                 appliedDiscounts={appliedDiscounts}
-                idempotencyKey={idempotencyKey}
-                setIdempotencyKey={setIdempotencyKey}
                 onPlaceOrder={handlePlaceOrder}
                 isProcessing={createOrder.status === "pending"}
                 customer={customer ?? undefined}
                 address={selectedAddressFull ?? undefined}
+                shippingMethod={shippingMethod}
+                shippingOption={shippingOption}
               />
             </div>
           </div>

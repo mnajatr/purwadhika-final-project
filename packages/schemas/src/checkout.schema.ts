@@ -13,10 +13,10 @@ export const CheckoutSchema = z.object({
   userLat: z.number().optional(),
   userLon: z.number().optional(),
   addressId: z.number().int().positive("Delivery address is required"),
-  paymentMethod: z.enum(["Manual", "Gateway"]).refine(val => val, {
+  paymentMethod: z.enum(["Manual", "Gateway"]).refine((val) => val, {
     message: "Payment method is required",
   }),
-  shippingMethod: z.enum(["JNE", "J&T", "Ninja Xpress"]).refine(val => val, {
+  shippingMethod: z.enum(["JNE", "J&T", "Ninja Xpress"]).refine((val) => val, {
     message: "Shipping method is required",
   }),
   shippingOption: z.string().optional(),

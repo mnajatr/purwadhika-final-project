@@ -46,20 +46,26 @@ export class CheckoutController {
       // do not scope the listing to a specific user. Admin endpoints should not
       // be filtered by the requesting user's id.
       const authReq = req as any;
-      const effectiveUserId = authReq.user && (authReq.user.role === "SUPER_ADMIN" || authReq.user.role === "STORE_ADMIN")
-        ? undefined
-        : userId;
+      const effectiveUserId =
+        authReq.user &&
+        (authReq.user.role === "SUPER_ADMIN" ||
+          authReq.user.role === "STORE_ADMIN")
+          ? undefined
+          : userId;
       const status = req.query.status as string | undefined;
       const q = req.query.q as string | undefined;
       const dateFrom = req.query.dateFrom as string | undefined;
       const dateTo = req.query.dateTo as string | undefined;
       const page = Number(req.query.page ?? 1);
       const pageSize = Number(req.query.pageSize ?? 20);
-  // Prefer explicitly-attached store id for admin scoping (set by admin middleware)
-  const storeIdFromMiddleware = authReq.storeScopedId ?? authReq.user?.storeId;
-  const storeId = storeIdFromMiddleware ?? (req.query?.storeId ? Number(req.query.storeId) : undefined);
+      // Prefer explicitly-attached store id for admin scoping (set by admin middleware)
+      const storeIdFromMiddleware =
+        authReq.storeScopedId ?? authReq.user?.storeId;
+      const storeId =
+        storeIdFromMiddleware ??
+        (req.query?.storeId ? Number(req.query.storeId) : undefined);
 
-  const result = await this.service.listOrders({
+      const result = await this.service.listOrders({
         userId: effectiveUserId,
         storeId,
         status,
@@ -69,7 +75,6 @@ export class CheckoutController {
         page,
         pageSize,
       });
-
 
       return res.status(200).json(successResponse(result));
     } catch (e) {
@@ -102,9 +107,15 @@ export class CheckoutController {
           field,
           message: Array.isArray(messages) ? messages[0] : messages,
         }));
-        return res.status(400).json(
-          errorResponse("Invalid checkout data", "Please check all required fields", errors)
-        );
+        return res
+          .status(400)
+          .json(
+            errorResponse(
+              "Invalid checkout data",
+              "Please check all required fields",
+              errors
+            )
+          );
       }
 
       const {
