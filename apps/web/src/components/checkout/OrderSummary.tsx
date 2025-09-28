@@ -46,9 +46,11 @@ function calculateDiscount(
 
   for (const discount of discounts) {
     const item = items.find((it) => it.productId === discount.product?.id);
-    const productPrice =
+    const productPriceRaw =
       cart.items.find((ci) => ci.productId === discount.product?.id)?.product
         ?.price ?? 0;
+    const productPrice = Number(productPriceRaw);
+
     if (!item) continue;
 
     switch (discount.type) {
@@ -57,10 +59,27 @@ function calculateDiscount(
           totalDiscount += 0;
           break;
         }
-        const raw = (productPrice * item.qty * (discount.amount ?? 0)) / 100;
+        const amt = discount.amount ?? 0;
+        
+        // Handle null/undefined amounts
+        if (amt === 0) {
+          break;
+        }
+        
+        // support two formats:
+        // - fraction (e.g. 0.02 means 2%)
+        // - whole percent (e.g. 2 means 2%)
+        let raw = 0;
+        if (amt <= 1) {
+          raw = productPrice * item.qty * amt; // fraction format
+        } else {
+          raw = (productPrice * item.qty * amt) / 100; // whole percent format
+        }
+        // round to nearest integer currency unit before capping
+        const rounded = Math.round(raw);
         const capped = discount.maxDiscount
-          ? Math.min(raw, discount.maxDiscount)
-          : raw;
+          ? Math.min(rounded, discount.maxDiscount)
+          : rounded;
         totalDiscount += capped;
         break;
       }
@@ -70,11 +89,18 @@ function calculateDiscount(
           totalDiscount += 0;
           break;
         }
-        const discountz = discount?.amount && discount.amount * item.qty;
-        const capped = discount.maxDiscount
-          ? Math.min(discountz ?? 0, discount.maxDiscount)
-          : discountz ?? 0;
-        totalDiscount += capped;
+        const amt = discount.amount ?? 0;
+        
+        if (amt === 0) {
+          break;
+        }
+        
+        const discountz = amt * item.qty;
+        const roundedNominal = Math.round(discountz);
+        const cappedNominal = discount.maxDiscount
+          ? Math.min(roundedNominal, discount.maxDiscount)
+          : roundedNominal;
+        totalDiscount += cappedNominal;
         break;
       }
 
@@ -126,7 +152,11 @@ export default function OrderSummary({
   const shippingFee = getShippingRate(shippingMethod, shippingOption);
   const totalWithShipping = total + shippingFee;
   // Check if cart has any out of stock items
-  const { outOfStockItems } = validateCartForCheckout(cart.items || []);
+  // Validate stock only for the items currently selected for checkout
+  const selectedCartItems = (cart.items || []).filter((ci) =>
+    items.some((it) => it.productId === ci.productId)
+  );
+  const { outOfStockItems } = validateCartForCheckout(selectedCartItems);
 
   const hasOutOfStockItems = outOfStockItems.length > 0;
 
@@ -180,7 +210,7 @@ export default function OrderSummary({
           />
         </div>
 
-        <CardContent className="p-6 space-y-6">
+        <CardContent className="pl-6 pr-6 pb-6">
           {/* Order Items Count */}
           <div className="flex items-center justify-between py-2"></div>
 
@@ -222,7 +252,7 @@ export default function OrderSummary({
 
             <hr className="border-border" />
 
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center pb-4">
               <span className="text-lg font-semibold text-foreground">
                 Total
               </span>

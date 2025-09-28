@@ -98,15 +98,91 @@ export default function OrderPage({ params }: OrderPageProps) {
     EXPIRED: "bg-gray-200 text-gray-600",
   };
 
-  // Loading state
+  // Loading state with skeleton
   if (isLoading) {
     return (
-      <div className="max-w-5xl mx-auto p-6">
-        <div className="text-center">
-          <div className="text-xl font-semibold">Loading order…</div>
-          <p className="text-sm text-muted-foreground">
-            Please wait while we fetch your order details.
-          </p>
+      <div className="max-w-5xl mx-auto p-6 space-y-6">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="h-9 w-48 bg-gray-200 rounded animate-pulse"></div>
+          <div className="flex items-center space-x-2">
+            <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </div>
+
+        {/* Order summary skeleton */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <div className="h-6 w-16 bg-gray-200 rounded animate-pulse mb-2"></div>
+              <div className="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            <div className="text-right">
+              <div className="h-6 w-12 bg-gray-200 rounded animate-pulse mb-2"></div>
+              <div className="h-8 w-32 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        {/* Shipping Information skeleton */}
+        <Card>
+          <CardHeader>
+            <div className="h-6 w-40 bg-gray-200 rounded animate-pulse"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-y-4">
+              {[...Array(4)].map((_, i) => (
+                <React.Fragment key={i}>
+                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
+                </React.Fragment>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Content skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Items skeleton */}
+          <Card>
+            <CardHeader>
+              <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex justify-between items-center border-b pb-2">
+                    <div className="space-y-2">
+                      <div className="h-4 w-40 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-3 w-24 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Payment skeleton */}
+          <Card>
+            <CardHeader>
+              <div className="h-6 w-20 bg-gray-200 rounded animate-pulse"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between">
+                  <div className="h-4 w-12 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="h-px bg-gray-200"></div>
+                <div className="flex justify-between">
+                  <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
