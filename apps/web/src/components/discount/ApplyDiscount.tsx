@@ -12,6 +12,7 @@ import type { CartResponse as Cart } from "@repo/schemas";
 
 interface ApplyDiscountProps {
   cart: Cart;
+//   productIds: number[]; //ini aku hapus mel
   handleUpdateCart: (itemId: number, newQty: number) => Promise<void>;
   onApplyDiscount?: (discounts: DiscountResponse[]) => void;
   isLoading?: boolean;

@@ -1256,6 +1256,7 @@ export default function CheckoutPage() {
                         handleUpdateCart={handleUpdateCart}
                         onApplyDiscount={setAppliedDiscounts}
                         isLoading={isCartLoading}
+                        // productIds={productIds} //ini aku hapus mel
                       />
 
                       {/* Special Instructions */}
