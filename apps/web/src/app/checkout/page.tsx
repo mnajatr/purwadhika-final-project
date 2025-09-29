@@ -80,25 +80,11 @@ export default function CheckoutPage() {
     initialStoreIdRef.current ?? undefined
   );
 
-  const updateCartItemMutation = useUpdateCartItem(
-    userId,
-    initialStoreIdRef.current ?? undefined
-  );
-
   const [appliedDiscounts, setAppliedDiscounts] = React.useState<
     DiscountResponse[]
   >([]);
 
   const createOrder = useCreateOrder(userId);
-
-  // Handler for updating cart items (used by ApplyDiscount component)
-  const handleUpdateCart = async (itemId: number, newQty: number) => {
-    try {
-      await updateCartItemMutation.mutateAsync({ itemId, qty: newQty });
-    } catch (error) {
-      console.error("Failed to update cart:", error);
-    }
-  };
 
   // shipping method selection (null = not selected)
   const [shippingMethod, setShippingMethod] = React.useState<string | null>(
@@ -142,9 +128,28 @@ export default function CheckoutPage() {
   const [selectedAddress, setSelectedAddress] = React.useState<{
     id: number;
   } | null>(null);
-
+  const updateCartItemMutation = useUpdateCartItem(
+    userId,
+    initialStoreIdRef.current ?? undefined
+  );
   const [paymentMethod, setPaymentMethod] = React.useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = React.useState(false);
+
+  const handleUpdateCart = async (itemId: number, newQty: number) => {
+    if (!cart) return; // cart belum siap
+
+    const item = cart.items.find((i) => i.id === itemId);
+    if (!item) {
+      console.warn("Cart item not found:", itemId);
+      toast.error("Cart item not found");
+      return;
+    }
+
+    await updateCartItemMutation.mutateAsync({
+      itemId,
+      qty: newQty,
+    });
+  };
 
   const handleSelectAddress = React.useCallback(
     async (a: { id: number }) => {

@@ -2,11 +2,13 @@
 
 import { useForm } from "react-hook-form";
 import { useCreateDiscount } from "@/hooks/useDiscount";
+import { useProducts } from "@/hooks/useProduct";
 import {
   CreateDiscount,
   ValueType,
   DiscountType,
 } from "@/types/discount.types";
+import { useEffect, useState } from "react";
 
 interface CreateDiscountForm extends Omit<CreateDiscount, "store" | "product"> {
   storeId: number;
@@ -16,11 +18,23 @@ interface CreateDiscountForm extends Omit<CreateDiscount, "store" | "product"> {
 export default function CreateDiscountForm() {
   const createDiscount = useCreateDiscount();
 
+  const { data } = useProducts();
+  const products = data?.products ?? [];
+
+  const [storeId, setStoreId] = useState<number>(0);
+
+  // Ambil storeId dari localStorage setelah mount
+  useEffect(() => {
+    const id = localStorage.getItem("storeId");
+    if (id) setStoreId(Number(id));
+  }, []);
+
   const {
     register,
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<CreateDiscountForm>({
     defaultValues: {
@@ -31,12 +45,17 @@ export default function CreateDiscountForm() {
       minPurchase: undefined,
       maxDiscount: undefined,
       expiredAt: "",
-      storeId: undefined,
+      storeId: 0, // sementara 0
       productId: undefined,
       buyQty: 1,
       getQty: 1,
     },
   });
+
+  // Update storeId di form setelah didapat dari localStorage
+  useEffect(() => {
+    if (storeId) setValue("storeId", storeId);
+  }, [storeId, setValue]);
 
   const selectedValue = watch("value");
 
@@ -90,21 +109,24 @@ export default function CreateDiscountForm() {
           valueAsNumber: true,
         })}
         className="w-full p-2 border rounded"
+        disabled
       />
       {errors.storeId && (
         <p className="text-sm text-red-500">{errors.storeId.message}</p>
       )}
 
-      {/* Product ID */}
-      <input
-        type="number"
-        placeholder="Product ID"
-        {...register("productId", {
-          required: "Product ID wajib diisi",
-          valueAsNumber: true,
-        })}
+      {/* Product select */}
+      <select
+        {...register("productId", { required: "Product wajib dipilih" })}
         className="w-full p-2 border rounded"
-      />
+      >
+        <option value="">-- Pilih Product --</option>
+        {products.map((prd) => (
+          <option key={prd.id} value={prd.id}>
+            {prd.name}
+          </option>
+        ))}
+      </select>
       {errors.productId && (
         <p className="text-sm text-red-500">{errors.productId.message}</p>
       )}
@@ -119,7 +141,7 @@ export default function CreateDiscountForm() {
         <option value={ValueType.BUY1GET1}>Buy 1 Get 1</option>
       </select>
 
-      {/* Type */}
+      {/* Type & Amount */}
       {selectedValue === ValueType.PRODUCT_DISCOUNT && (
         <>
           <p className="text-sm font-semibold">Type</p>
@@ -131,7 +153,6 @@ export default function CreateDiscountForm() {
             <option value={DiscountType.NOMINAL}>Nominal</option>
           </select>
 
-          {/* Amount */}
           <input
             type="number"
             placeholder="Discount Amount"
@@ -147,7 +168,7 @@ export default function CreateDiscountForm() {
         </>
       )}
 
-      {/* Buy 1 Get 1 (atau Buy X Get Y) */}
+      {/* Buy X Get Y */}
       {selectedValue === ValueType.BUY1GET1 && (
         <div className="grid grid-cols-2 gap-4">
           <input
