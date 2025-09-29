@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useCart } from "@/hooks/useCart";
+import { useCart, useUpdateCartItem } from "@/hooks/useCart";
 import useCreateOrder from "@/hooks/useOrder";
 import { Button } from "@/components/ui/button";
 import {
@@ -128,9 +128,28 @@ export default function CheckoutPage() {
   const [selectedAddress, setSelectedAddress] = React.useState<{
     id: number;
   } | null>(null);
-
+  const updateCartItemMutation = useUpdateCartItem(
+    userId,
+    initialStoreIdRef.current ?? undefined
+  );
   const [paymentMethod, setPaymentMethod] = React.useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = React.useState(false);
+
+  const handleUpdateCart = async (itemId: number, newQty: number) => {
+    if (!cart) return; // cart belum siap
+
+    const item = cart.items.find((i) => i.id === itemId);
+    if (!item) {
+      console.warn("Cart item not found:", itemId);
+      toast.error("Cart item not found");
+      return;
+    }
+
+    await updateCartItemMutation.mutateAsync({
+      itemId,
+      qty: newQty,
+    });
+  };
 
   const handleSelectAddress = React.useCallback(
     async (a: { id: number }) => {
@@ -1233,8 +1252,11 @@ export default function CheckoutPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Promo Code */}
                       <ApplyDiscount
-                        productIds={productIds}
+                        handleUpdateCart={handleUpdateCart}
+                        cart={cart}
                         onApplyDiscount={setAppliedDiscounts}
+                        isLoading={false}
+                        productIds={productIds}
                       />
 
                       {/* Special Instructions */}

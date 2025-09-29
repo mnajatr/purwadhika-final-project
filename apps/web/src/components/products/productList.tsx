@@ -60,6 +60,11 @@ export default function ProductsList() {
       selectedStore === "All" || product.store === selectedStore;
     return matchCategory && matchSearch && matchStore;
   });
+  const sorted = [...filtered].sort((a, b) => {
+    if (a.stock === 0 && b.stock !== 0) return 1;
+    if (a.stock !== 0 && b.stock === 0) return -1;
+    return 0;
+  });
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 py-12">
@@ -120,12 +125,12 @@ export default function ProductsList() {
 
       {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filtered.length === 0 ? (
+        {sorted.length === 0 ? (
           <p className="col-span-full text-center text-gray-500">
             No products found.
           </p>
         ) : (
-          filtered.map((product) => {
+          sorted.map((product) => {
             const outOfStock = product.stock === 0;
 
             return (

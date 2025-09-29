@@ -1,13 +1,15 @@
 "use client";
 
 import { useForm, Controller, useFieldArray } from "react-hook-form";
-import { useCategories } from "@/hooks/useCategory";
 import Image from "next/image";
 import { productsService } from "@/services/products.service";
-import { ProductResponse } from "@/types/products.type";
+import { useCategories } from "@/hooks/useCategory";
+import { useEffect, useState } from "react";
 
 type InventoryInput = { stockQty: number; storeId: number };
+
 type ProductForUpdate = {
+  id: number;
   name?: string;
   slug?: string;
   description?: string;
@@ -17,34 +19,54 @@ type ProductForUpdate = {
   height?: number;
   length?: number;
   categoryId?: number;
-  images?: File[];
+  images?: (File | string)[];
   inventories?: InventoryInput[];
+  stock?: number; // ✅ tambahin supaya bisa fallback ke product.stock
 };
 
-interface UpdateProductFormProps {
-  product: ProductResponse;
-}
-
-export default function UpdateProductForm({ product }: UpdateProductFormProps) {
+export default function UpdateProductForm({
+  product,
+}: {
+  product: ProductForUpdate;
+}) {
   const { data: categories = [] } = useCategories();
+  const [storeId, setStoreId] = useState(0);
+
+  // ambil storeId dari localStorage
+  useEffect(() => {
+    const sid = Number(localStorage.getItem("storeId")) || 0;
+    setStoreId(sid);
+  }, []);
+
+  // ✅ mapping inventories → fallback ke product.stock
+  const mapInventories = (
+    inv: any[] | undefined,
+    fallbackStock: number = 0
+  ): InventoryInput[] => {
+    if (inv && inv.length) {
+      return inv.map((i) => ({
+        stockQty: i.stockQty,
+        storeId: i.storeId,
+      }));
+    }
+    return [{ stockQty: fallbackStock, storeId }]; // <-- fallback ke stock
+  };
 
   const { register, handleSubmit, reset, control, setValue, watch } =
     useForm<ProductForUpdate>({
       defaultValues: {
-        name: product?.name ?? "",
-        slug: product?.slug ?? "",
-        description: product?.description ?? "",
+        id: product.id,
+        name: product?.name || "",
+        slug: product?.slug || "",
+        description: product?.description || "",
         price: product?.price ?? 0,
         weight: product?.weight ?? 0,
         width: product?.width ?? 0,
         height: product?.height ?? 0,
         length: product?.length ?? 0,
         categoryId: product?.categoryId ?? undefined,
-        images: [],
-        inventories: product?.inventories?.map((inv) => ({
-          stockQty: inv.stockQty,
-          storeId: Number(localStorage.getItem("storeId")) ?? 0,
-        })),
+        images: product?.images || [],
+        inventories: mapInventories(product?.inventories, product?.stock ?? 0), // ✅ stok fallback 318
       },
     });
 
@@ -55,13 +77,26 @@ export default function UpdateProductForm({ product }: UpdateProductFormProps) {
 
   const images = watch("images");
 
+  // reset form kalau product berubah
+  useEffect(() => {
+    reset({
+      id: product.id,
+      name: product?.name || "",
+      slug: product?.slug || "",
+      description: product?.description || "",
+      price: product?.price ?? 0,
+      weight: product?.weight ?? 0,
+      width: product?.width ?? 0,
+      height: product?.height ?? 0,
+      length: product?.length ?? 0,
+      categoryId: product?.categoryId ?? undefined,
+      images: product?.images || [],
+      inventories: mapInventories(product?.inventories, product?.stock ?? 0), // ✅ tetap isi stok 318
+    });
+  }, [product, storeId, reset]);
+
   const onSubmit = async (data: ProductForUpdate) => {
     try {
-      if (!product?.slug) {
-        alert("Produk tidak valid: slug tidak tersedia");
-        return;
-      }
-
       const formData = new FormData();
 
       formData.append("name", data.name || "");
@@ -72,21 +107,19 @@ export default function UpdateProductForm({ product }: UpdateProductFormProps) {
       if (data.width) formData.append("width", String(data.width));
       if (data.height) formData.append("height", String(data.height));
       if (data.length) formData.append("length", String(data.length));
-      if (data.categoryId)
-        formData.append("categoryId", String(data.categoryId));
-
-      // Inventories
+      formData.append("categoryId", String(data.categoryId ?? 0));
       formData.append("inventories", JSON.stringify(data.inventories));
 
-      // Images
       (data.images || []).forEach((img) => {
-        formData.append("images", img);
+        if (img instanceof File) {
+          formData.append("images", img);
+        }
       });
 
+      if (!product.slug) throw new Error("Slug produk tidak ada!");
       await productsService.updateProduct(product.slug, formData);
 
       alert("Produk berhasil diperbarui!");
-      reset(data);
     } catch (err) {
       console.error(err);
       alert("Gagal memperbarui produk");
@@ -95,7 +128,7 @@ export default function UpdateProductForm({ product }: UpdateProductFormProps) {
 
   const handleFiles = (files: FileList) => {
     const newFiles = Array.from(files);
-    setValue("images", newFiles);
+    setValue("images", [...(images || []), ...newFiles]);
   };
 
   return (
@@ -196,6 +229,8 @@ export default function UpdateProductForm({ product }: UpdateProductFormProps) {
 
             if (img instanceof File) {
               src = URL.createObjectURL(img);
+            } else if (typeof img === "string") {
+              src = img;
             }
 
             if (!src) return null;
@@ -210,12 +245,12 @@ export default function UpdateProductForm({ product }: UpdateProductFormProps) {
                 />
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
                     setValue(
                       "images",
                       images?.filter((_, i) => i !== idx) || []
-                    )
-                  }
+                    );
+                  }}
                   className="absolute top-0 right-0 bg-red-500 text-white rounded px-1"
                 >
                   X
@@ -228,7 +263,7 @@ export default function UpdateProductForm({ product }: UpdateProductFormProps) {
 
       {/* Inventories */}
       {inventoryFields.map((field, idx) => (
-        <div key={idx} className="grid grid-cols-2 gap-4">
+        <div key={field.id} className="grid grid-cols-2 gap-4">
           <Controller
             name={`inventories.${idx}.stockQty`}
             control={control}
@@ -236,6 +271,7 @@ export default function UpdateProductForm({ product }: UpdateProductFormProps) {
               <input
                 type="number"
                 {...field}
+                min={0}
                 onChange={(e) => field.onChange(Number(e.target.value))}
                 placeholder="Stok"
                 className="w-full p-2 border rounded"
@@ -250,7 +286,6 @@ export default function UpdateProductForm({ product }: UpdateProductFormProps) {
                 type="number"
                 disabled
                 {...field}
-                onChange={(e) => field.onChange(Number(e.target.value))}
                 placeholder="Store ID"
                 className="w-full p-2 border rounded"
               />
