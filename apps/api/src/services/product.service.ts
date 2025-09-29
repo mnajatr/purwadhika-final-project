@@ -3,6 +3,7 @@ import { locationService } from "./location.service.js";
 import { CreateProduct } from "../types/product.js";
 
 export class ProductService {
+  // ================= GET ALL PRODUCTS =================
   async getAll() {
     const products = await prisma.product.findMany({
       include: {
@@ -21,6 +22,7 @@ export class ProductService {
   }
 
   async getAllWithStock() {
+    // Hanya produk yang punya stock > 0
     const products = await prisma.product.findMany({
       where: { inventories: { some: { stockQty: { gt: 0 } } } },
       include: {
@@ -39,6 +41,7 @@ export class ProductService {
     return products.map((p) => ({ ...p, price: Number(p.price) }));
   }
 
+  // ================= GET BY NEAREST STORE =================
   async getByNearestStore(lat: number, lon: number) {
     try {
       const nearestStoreId = await locationService.findNearestStoreId(lat, lon);
@@ -55,15 +58,10 @@ export class ProductService {
       });
 
       const products = await prisma.product.findMany({
-        where: {
-          inventories: {
-            some: { storeId: nearestStoreId, stockQty: { gt: 0 } },
-          },
-        },
         include: {
           category: true,
           inventories: {
-            where: { storeId: nearestStoreId },
+            where: { storeId: nearestStoreId }, // Ambil semua inventori, termasuk stock 0
             select: {
               stockQty: true,
               store: { select: { id: true, name: true, locations: true } },
@@ -80,16 +78,16 @@ export class ProductService {
       };
     } catch (error) {
       console.error("Error finding products by nearest store:", error);
-      const products = await this.getAllWithStock();
+      const products = await this.getAll(); // fallback ambil semua produk
       return {
         products,
         nearestStore: null,
-        message:
-          "Showing all available products (location service unavailable)",
+        message: "Showing all products (location service unavailable)",
       };
     }
   }
 
+  // ================= GET BY STORE ID =================
   async getByStoreId(storeId: number) {
     try {
       const store = await prisma.store.findUnique({
@@ -100,11 +98,10 @@ export class ProductService {
         return { products: [], nearestStore: null, message: "Store not found" };
 
       const products = await prisma.product.findMany({
-        where: { inventories: { some: { storeId, stockQty: { gt: 0 } } } },
         include: {
           category: true,
           inventories: {
-            where: { storeId },
+            where: { storeId }, // Ambil semua inventori termasuk stock 0
             select: {
               stockQty: true,
               store: { select: { id: true, name: true, locations: true } },
@@ -121,15 +118,16 @@ export class ProductService {
       };
     } catch (error) {
       console.error("Error finding products by storeId:", error);
-      const products = await this.getAllWithStock();
+      const products = await this.getAll(); // fallback ambil semua produk
       return {
         products,
         nearestStore: null,
-        message: "Showing all available products (store lookup failed)",
+        message: "Showing all products (store lookup failed)",
       };
     }
   }
 
+  // ================= GET BY SLUG =================
   async getBySlug(slug: string) {
     return prisma.product.findUnique({
       where: { slug },
@@ -143,7 +141,6 @@ export class ProductService {
 
   // ================= CREATE PRODUCT =================
   async createProduct(data: any) {
-    // ===== Parse multipart/form-data =====
     if (typeof data.inventories === "string")
       data.inventories = JSON.parse(data.inventories);
     if (typeof data.categoryId === "string")
@@ -196,7 +193,6 @@ export class ProductService {
 
   // ================= UPDATE PRODUCT =================
   async updateProduct(slug: string, data: any) {
-    // Parse multipart/form-data
     if (typeof data.inventories === "string")
       data.inventories = JSON.parse(data.inventories);
     if (typeof data.categoryId === "string")
@@ -234,7 +230,7 @@ export class ProductService {
         },
       });
 
-      // ===== Images =====
+      // Update images
       if (data.images) {
         await tx.productImage.deleteMany({ where: { productId: product.id } });
         await tx.productImage.createMany({
@@ -245,7 +241,7 @@ export class ProductService {
         });
       }
 
-      // ===== Inventories =====
+      // Update inventories
       if (data.inventories) {
         for (const invData of data.inventories) {
           const existingInventory = await tx.storeInventory.findUnique({
@@ -318,6 +314,7 @@ export class ProductService {
     });
   }
 
+  // ================= DEACTIVATE / ACTIVATE =================
   async deactivateProduct(slug: string) {
     const product = await prisma.product.update({
       where: { slug },

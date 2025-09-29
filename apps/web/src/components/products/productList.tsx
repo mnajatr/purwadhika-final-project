@@ -33,7 +33,7 @@ export default function ProductsList() {
   }, [nearestStoreId, data]);
 
   // Only show products that are active. Treat undefined as active (backwards compat).
-  const visibleProducts = products.filter((p) => p.isActive !== false);
+  const visibleProducts = products;
 
   if (isLoading)
     return <p className="text-center py-10">Loading products...</p>;
@@ -63,7 +63,7 @@ export default function ProductsList() {
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 py-12">
-      <div className="flex flex-col md:flex-row md:items=center md:justify-between mb-8 gap-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
         <h2 className="text-3xl md:text-4xl font-bold text-center md:text-left">
           Our Products
         </h2>
@@ -125,42 +125,65 @@ export default function ProductsList() {
             No products found.
           </p>
         ) : (
-          filtered.map((product) => (
-            <div
-              key={product.id}
-              className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition flex flex-col"
-            >
-              <div className="relative w-full h-48">
-                <Image
-                  src={product.imageUrl}
-                  alt={product.name}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="p-6 flex flex-col flex-grow">
-                <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-grow">
-                  {product.description}
-                </p>
-                <p className="text-indigo-600 font-bold mb-3">
-                  Rp {Number(product.price || 0).toLocaleString("id-ID")}
-                </p>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="inline-block px-3 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-                    {product.category}
-                  </span>
-                  <span className="text-xs text-gray-500">{product.store}</span>
+          filtered.map((product) => {
+            const outOfStock = product.stock === 0;
+
+            return (
+              <div
+                key={product.id}
+                className={`bg-white rounded-2xl shadow-md overflow-hidden flex flex-col transition ${
+                  outOfStock
+                    ? "opacity-50 grayscale pointer-events-none"
+                    : "hover:shadow-lg"
+                }`}
+              >
+                <div className="relative w-full h-48">
+                  <Image
+                    src={product.imageUrl}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                  />
+                  {outOfStock && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-lg font-semibold">
+                      Out of Stock
+                    </div>
+                  )}
                 </div>
-                <Link
-                  href={`/products/${product.slug}`}
-                  className="block text-center bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition mt-auto"
-                >
-                  Lihat Detail
-                </Link>
+                <div className="p-6 flex flex-col flex-grow">
+                  <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-grow">
+                    {product.description}
+                  </p>
+                  <p className="text-indigo-600 font-bold mb-3">
+                    Rp {Number(product.price || 0).toLocaleString("id-ID")}
+                  </p>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="inline-block px-3 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                      {product.category}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {product.store}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      stock: {product.stock}
+                    </span>
+                  </div>
+                  <Link
+                    href={outOfStock ? "#" : `/products/${product.slug}`}
+                    className={`block text-center py-2 px-4 rounded-lg transition mt-auto ${
+                      outOfStock
+                        ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                        : "bg-indigo-600 text-white hover:bg-indigo-700"
+                    }`}
+                    onClick={(e) => outOfStock && e.preventDefault()}
+                  >
+                    {outOfStock ? "Out of Stock" : "Lihat Detail"}
+                  </Link>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
