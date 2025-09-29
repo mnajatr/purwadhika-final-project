@@ -15,8 +15,8 @@ declare global {
   }
 }
 
-// Custom Dialog components since @/components/ui/dialog might not exist
-const Dialog = ({
+// Custom Dialog components that work with Midtrans
+const PaymentDialog = ({
   open,
   onOpenChange,
   children,
@@ -28,43 +28,43 @@ const Dialog = ({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-40 flex items-center justify-center">
       <div
-        className="fixed inset-0 bg-black/50"
+        className="fixed inset-0 bg-black/50 transition-opacity"
         onClick={() => onOpenChange(false)}
       />
-      <div className="relative bg-background border rounded-lg shadow-lg max-w-md w-full mx-4">
+      <div className="relative bg-background border rounded-lg shadow-lg max-w-md w-full mx-4 z-41">
         {children}
       </div>
     </div>
   );
 };
 
-const DialogContent = ({
+const PaymentDialogContent = ({
   children,
-  className,
+  className = "",
 }: {
   children: React.ReactNode;
   className?: string;
-}) => <div className={className}>{children}</div>;
+}) => <div className={`p-6 ${className}`}>{children}</div>;
 
-const DialogHeader = ({ children }: { children: React.ReactNode }) => (
-  <div className="p-6 pb-4">{children}</div>
+const PaymentDialogHeader = ({ children }: { children: React.ReactNode }) => (
+  <div className="pb-4">{children}</div>
 );
 
-const DialogTitle = ({
+const PaymentDialogTitle = ({
   children,
-  className,
+  className = "",
 }: {
   children: React.ReactNode;
   className?: string;
-}) => (
-  <h2 className={`text-lg font-semibold ${className || ""}`}>{children}</h2>
-);
+}) => <h2 className={`text-lg font-semibold ${className}`}>{children}</h2>;
 
-const DialogDescription = ({ children }: { children: React.ReactNode }) => (
-  <p className="text-sm text-muted-foreground mt-1">{children}</p>
-);
+const PaymentDialogDescription = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => <p className="text-sm text-muted-foreground mt-1">{children}</p>;
 
 export interface PaymentModalProps {
   isOpen: boolean;
@@ -158,109 +158,137 @@ export function PaymentModal({
         // Open Midtrans Snap without redirect
         try {
           window.snap.pay(snapData.snapToken, {
-          onSuccess: (result: MidtransResult) => {
-            try {
-              toast.success(
-                "Payment successful! Your order is being processed."
-              );
-              console.log("Payment success:", result);
-              // Don't close modal immediately, let parent component handle
-              onPaymentSuccess?.();
-              // Close modal after a short delay to show success message
-              setTimeout(() => onClose(), 2000);
-            } finally {
-              window.__midtransSnapInProgress = false;
-            }
-          },
-          onPending: (result: MidtransResult) => {
-            try {
-              toast.info(
-                "Payment is being processed. Please check your order status."
-              );
-              console.log("Payment pending:", result);
-              onPaymentPending?.();
-              // Close modal after a short delay
-              setTimeout(() => onClose(), 2000);
-            } finally {
-              window.__midtransSnapInProgress = false;
-            }
-          },
-          onError: (result: MidtransResult) => {
-            // Safely parse error message with multiple fallbacks
-            let parsedMessage = "Payment failed, please try again";
-            
-            try {
-              // Cast to unknown first, then to Record for safe property access
-              const unknownResult = result as unknown;
-              
-              if (unknownResult && typeof unknownResult === "object") {
-                const obj = unknownResult as Record<string, unknown>;
-                
-                // Try various common Midtrans error message fields
-                if (typeof obj.status_message === "string" && obj.status_message.trim()) {
-                  parsedMessage = obj.status_message.trim();
-                } else if (typeof obj.message === "string" && obj.message.trim()) {
-                  parsedMessage = obj.message.trim();
-                } else if (typeof obj.error === "string" && obj.error.trim()) {
-                  parsedMessage = obj.error.trim();
-                } else if (obj.error && typeof (obj.error as Record<string, unknown>)?.message === "string") {
-                  const nestedMsg = (obj.error as Record<string, unknown>).message;
-                  if (typeof nestedMsg === "string" && nestedMsg.trim()) {
-                    parsedMessage = nestedMsg.trim();
+            onSuccess: (result: MidtransResult) => {
+              try {
+                toast.success(
+                  "Payment successful! Your order is being processed."
+                );
+                console.log("Payment success:", result);
+                // Don't close modal immediately, let parent component handle
+                onPaymentSuccess?.();
+                // Close modal after a short delay to show success message
+                setTimeout(() => onClose(), 2000);
+              } finally {
+                window.__midtransSnapInProgress = false;
+              }
+            },
+            onPending: (result: MidtransResult) => {
+              try {
+                toast.info(
+                  "Payment is being processed. Please check your order status."
+                );
+                console.log("Payment pending:", result);
+                onPaymentPending?.();
+                // Close modal after a short delay
+                setTimeout(() => onClose(), 2000);
+              } finally {
+                window.__midtransSnapInProgress = false;
+              }
+            },
+            onError: (result: MidtransResult) => {
+              // Safely parse error message with multiple fallbacks
+              let parsedMessage = "Payment failed, please try again";
+
+              try {
+                // Cast to unknown first, then to Record for safe property access
+                const unknownResult = result as unknown;
+
+                if (unknownResult && typeof unknownResult === "object") {
+                  const obj = unknownResult as Record<string, unknown>;
+
+                  // Try various common Midtrans error message fields
+                  if (
+                    typeof obj.status_message === "string" &&
+                    obj.status_message.trim()
+                  ) {
+                    parsedMessage = obj.status_message.trim();
+                  } else if (
+                    typeof obj.message === "string" &&
+                    obj.message.trim()
+                  ) {
+                    parsedMessage = obj.message.trim();
+                  } else if (
+                    typeof obj.error === "string" &&
+                    obj.error.trim()
+                  ) {
+                    parsedMessage = obj.error.trim();
+                  } else if (
+                    obj.error &&
+                    typeof (obj.error as Record<string, unknown>)?.message ===
+                      "string"
+                  ) {
+                    const nestedMsg = (obj.error as Record<string, unknown>)
+                      .message;
+                    if (typeof nestedMsg === "string" && nestedMsg.trim()) {
+                      parsedMessage = nestedMsg.trim();
+                    }
+                  }
+                  // For empty objects {} or objects without useful messages, keep default fallback
+                } else if (
+                  typeof unknownResult === "string" &&
+                  unknownResult.trim()
+                ) {
+                  parsedMessage = unknownResult.trim();
+                }
+                // If result is null/undefined/empty, keep default fallback message
+              } catch (parseError) {
+                // If parsing fails for any reason, keep default fallback
+                console.log(
+                  "⚠️ Error parsing Midtrans error payload:",
+                  parseError
+                );
+              }
+
+              // Always handle error gracefully - no throwing, no crashing
+              try {
+                // Show user-friendly toast
+                toast.error(`Payment failed: ${parsedMessage}`);
+
+                // Log for debugging (use console.log/warn to avoid Next.js error reporting)
+                console.log("🔴 Payment error (raw):", result);
+                console.log("📝 Payment error (parsed):", parsedMessage);
+
+                // Notify parent component safely
+                if (typeof onPaymentError === "function") {
+                  try {
+                    onPaymentError(parsedMessage);
+                  } catch (callbackError) {
+                    console.warn(
+                      "⚠️ onPaymentError callback failed:",
+                      callbackError
+                    );
                   }
                 }
-                // For empty objects {} or objects without useful messages, keep default fallback
-              } else if (typeof unknownResult === "string" && unknownResult.trim()) {
-                parsedMessage = unknownResult.trim();
-              }
-              // If result is null/undefined/empty, keep default fallback message
-            } catch (parseError) {
-              // If parsing fails for any reason, keep default fallback
-              console.log("⚠️ Error parsing Midtrans error payload:", parseError);
-            }
-            
-            // Always handle error gracefully - no throwing, no crashing
-            try {
-              // Show user-friendly toast
-              toast.error(`Payment failed: ${parsedMessage}`);
-              
-              // Log for debugging (use console.log/warn to avoid Next.js error reporting)
-              console.log("🔴 Payment error (raw):", result);
-              console.log("📝 Payment error (parsed):", parsedMessage);
-              
-              // Notify parent component safely
-              if (typeof onPaymentError === "function") {
+              } catch (handlingError) {
+                // Ultimate fallback - even if toast/logging fails, don't crash
+                console.warn(
+                  "🚨 Critical error in payment error handler:",
+                  handlingError
+                );
+                // Show fallback toast if possible
                 try {
-                  onPaymentError(parsedMessage);
-                } catch (callbackError) {
-                  console.warn("⚠️ onPaymentError callback failed:", callbackError);
+                  toast.error("Payment failed, please try again");
+                } catch {
+                  // Silent fallback - don't cascade errors
                 }
+              } finally {
+                // Always reset the progress flag
+                window.__midtransSnapInProgress = false;
               }
-            } catch (handlingError) {
-              // Ultimate fallback - even if toast/logging fails, don't crash
-              console.warn("🚨 Critical error in payment error handler:", handlingError);
-              // Show fallback toast if possible
+            },
+            onClose: () => {
               try {
-                toast.error("Payment failed, please try again");
-              } catch {
-                // Silent fallback - don't cascade errors
+                // User closed payment popup manually
+                console.log("Payment popup closed by user");
+                toast.info(
+                  "Payment window closed. You can try again if needed."
+                );
+              } finally {
+                window.__midtransSnapInProgress = false;
+                // Close the modal when user closes Snap popup
+                onClose();
               }
-            } finally {
-              // Always reset the progress flag
-              window.__midtransSnapInProgress = false;
-            }
-          },
-          onClose: () => {
-            try {
-              // User closed payment popup manually
-              console.log("Payment popup closed by user");
-              toast.info("Payment window closed. You can try again if needed.");
-            } finally {
-              window.__midtransSnapInProgress = false;
-              // Close the modal when user closes Snap popup
-              onClose();
-            }
-          },
+            },
           });
         } catch (e: unknown) {
           // Midtrans may throw when snap.pay is invoked while popup already open
@@ -285,7 +313,8 @@ export function PaymentModal({
         throw e;
       }
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error || "");
+      const errorMsg =
+        error instanceof Error ? error.message : String(error || "");
 
       // Handle known Midtrans invalid-state errors gracefully (do not propagate)
       if (
@@ -342,17 +371,17 @@ export function PaymentModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <PaymentDialog open={isOpen} onOpenChange={onClose}>
+      <PaymentDialogContent className="sm:max-w-md">
+        <PaymentDialogHeader>
+          <PaymentDialogTitle className="flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-primary" />
             Payment Gateway
-          </DialogTitle>
-          <DialogDescription>
+          </PaymentDialogTitle>
+          <PaymentDialogDescription>
             Complete your payment for Order #{orderId}
-          </DialogDescription>
-        </DialogHeader>
+          </PaymentDialogDescription>
+        </PaymentDialogHeader>
 
         <div className="space-y-4">
           {/* Order Summary */}
@@ -443,7 +472,7 @@ export function PaymentModal({
             </span>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </PaymentDialogContent>
+    </PaymentDialog>
   );
 }
