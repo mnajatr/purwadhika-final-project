@@ -60,12 +60,12 @@ function calculateDiscount(
           break;
         }
         const amt = discount.amount ?? 0;
-        
+
         // Handle null/undefined amounts
         if (amt === 0) {
           break;
         }
-        
+
         // support two formats:
         // - fraction (e.g. 0.02 means 2%)
         // - whole percent (e.g. 2 means 2%)
@@ -90,11 +90,11 @@ function calculateDiscount(
           break;
         }
         const amt = discount.amount ?? 0;
-        
+
         if (amt === 0) {
           break;
         }
-        
+
         const discountz = amt * item.qty;
         const roundedNominal = Math.round(discountz);
         const cappedNominal = discount.maxDiscount
@@ -105,6 +105,17 @@ function calculateDiscount(
       }
 
       case "BUYXGETX": {
+        if (!item) break;
+        const buyQty = discount.buyQty ?? 0;
+        const getQty = discount.getQty ?? 0;
+        const totalQty = item.qty;
+
+        if (buyQty <= 0) break;
+
+        const freeItems = Math.floor(totalQty / (buyQty + getQty)) * getQty;
+        const payableQty = totalQty - freeItems;
+
+        totalDiscount += (totalQty - payableQty) * productPrice;
         break;
       }
     }

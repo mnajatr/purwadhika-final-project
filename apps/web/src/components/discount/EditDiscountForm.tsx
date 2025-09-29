@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   DiscountResponse,
@@ -9,19 +9,20 @@ import {
   DiscountType,
 } from "@/types/discount.types";
 import { useUpdateDiscount } from "@/hooks/useDiscount";
+import { useProducts } from "@/hooks/useProduct";
 
 type FormValues = {
-  name?: string;
-  value?: ValueType;
-  type?: DiscountType;
-  amount?: number;
-  minPurchase?: number;
-  maxDiscount?: number;
-  expiredAt?: string;
-  storeId?: number;
-  productId?: number;
-  buyQty?: number;
-  getQty?: number;
+  name: string;
+  value: ValueType;
+  type: DiscountType;
+  amount: number;
+  minPurchase: number;
+  maxDiscount: number;
+  expiredAt: string;
+  storeId: number;
+  productId: number;
+  buyQty: number;
+  getQty: number;
 };
 
 export default function EditDiscountForm({
@@ -30,24 +31,29 @@ export default function EditDiscountForm({
   discount: DiscountResponse;
 }) {
   const updateDiscount = useUpdateDiscount();
+  const { data } = useProducts();
+  const products = data?.products ?? [];
+
+  const [storeId, setStoreId] = useState<number>(0);
 
   const {
     register,
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     defaultValues: {
       name: "",
       value: ValueType.PRODUCT_DISCOUNT,
       type: DiscountType.PERCENTAGE,
-      amount: undefined,
-      minPurchase: undefined,
-      maxDiscount: undefined,
+      amount: 0,
+      minPurchase: 0,
+      maxDiscount: 0,
       expiredAt: "",
-      storeId: undefined,
-      productId: undefined,
+      storeId: 0,
+      productId: 0,
       buyQty: 1,
       getQty: 1,
     },
@@ -55,6 +61,14 @@ export default function EditDiscountForm({
 
   const selectedValue = watch("value");
 
+  // Ambil storeId dari localStorage
+  useEffect(() => {
+    const id = Number(localStorage.getItem("storeId")) || 0;
+    setStoreId(id);
+    setValue("storeId", id);
+  }, [setValue]);
+
+  // Set default values dari discount
   useEffect(() => {
     if (!discount) return;
 
@@ -69,34 +83,32 @@ export default function EditDiscountForm({
       name: discount.name ?? "",
       value: discount.value ?? ValueType.PRODUCT_DISCOUNT,
       type: discount.type ?? DiscountType.PERCENTAGE,
-      amount: discount.amount ?? undefined,
-      minPurchase: discount.minPurchase ?? undefined,
-      maxDiscount: discount.maxDiscount ?? undefined,
+      amount: discount.amount ?? 0,
+      minPurchase: discount.minPurchase ?? 0,
+      maxDiscount: discount.maxDiscount ?? 0,
       expiredAt: expired,
-      storeId: discount.store?.id ?? undefined,
-      productId: discount.product?.id ?? undefined,
+      storeId: discount.store?.id ?? storeId,
+      productId: discount.product?.id ?? 0,
       buyQty: discount.buyQty ?? 1,
       getQty: discount.getQty ?? 1,
     });
-  }, [discount, reset]);
+  }, [discount, reset, storeId]);
 
   const onSubmit = (data: FormValues) => {
     const payload: UpdateDiscount = {
       name: data.name,
       value: data.value,
       type: data.type,
-      amount: data.amount !== undefined ? Number(data.amount) : undefined,
-      minPurchase:
-        data.minPurchase !== undefined ? Number(data.minPurchase) : undefined,
-      maxDiscount:
-        data.maxDiscount !== undefined ? Number(data.maxDiscount) : undefined,
+      amount: data.amount,
+      minPurchase: data.minPurchase,
+      maxDiscount: data.maxDiscount,
       expiredAt: data.expiredAt
         ? new Date(data.expiredAt + "T23:59:59Z").toISOString()
-        : undefined,
-      store: data.storeId ? { id: Number(data.storeId) } : undefined,
-      product: data.productId ? { id: Number(data.productId) } : undefined,
-      buyQty: data.buyQty ?? 1,
-      getQty: data.getQty ?? 1,
+        : "",
+      store: { id: data.storeId },
+      product: { id: data.productId },
+      buyQty: data.buyQty,
+      getQty: data.getQty,
     };
 
     updateDiscount.mutate(
@@ -129,27 +141,23 @@ export default function EditDiscountForm({
       {/* Store ID */}
       <input
         type="number"
-        placeholder="Store ID"
-        {...register("storeId", {
-          required: "Store ID wajib diisi",
-          valueAsNumber: true,
-        })}
-        className="w-full p-2 border rounded"
+        {...register("storeId")}
+        readOnly
+        className="w-full p-2 border rounded bg-gray-100"
       />
-      {errors.storeId && (
-        <p className="text-sm text-red-500">{errors.storeId.message}</p>
-      )}
 
-      {/* Product ID */}
-      <input
-        type="number"
-        placeholder="Product ID"
-        {...register("productId", {
-          required: "Product ID wajib diisi",
-          valueAsNumber: true,
-        })}
+      {/* Product select */}
+      <select
+        {...register("productId", { required: "Product wajib dipilih" })}
         className="w-full p-2 border rounded"
-      />
+      >
+        <option value="">-- Pilih Product --</option>
+        {products.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </select>
       {errors.productId && (
         <p className="text-sm text-red-500">{errors.productId.message}</p>
       )}
@@ -179,25 +187,25 @@ export default function EditDiscountForm({
           <input
             type="number"
             placeholder="Discount Amount"
-            {...register("amount", { valueAsNumber: true })}
+            {...register("amount")}
             className="w-full p-2 border rounded"
           />
         </>
       )}
 
-      {/* Buy 1 Get 1 */}
+      {/* Buy X Get Y */}
       {selectedValue === ValueType.BUY1GET1 && (
         <div className="grid grid-cols-2 gap-4">
           <input
             type="number"
             placeholder="Buy Quantity"
-            {...register("buyQty", { valueAsNumber: true })}
+            {...register("buyQty")}
             className="w-full p-2 border rounded"
           />
           <input
             type="number"
             placeholder="Get Quantity"
-            {...register("getQty", { valueAsNumber: true })}
+            {...register("getQty")}
             className="w-full p-2 border rounded"
           />
         </div>
@@ -208,13 +216,13 @@ export default function EditDiscountForm({
         <input
           type="number"
           placeholder="Minimum Purchase"
-          {...register("minPurchase", { valueAsNumber: true })}
+          {...register("minPurchase")}
           className="w-full p-2 border rounded"
         />
         <input
           type="number"
           placeholder="Maximum Discount"
-          {...register("maxDiscount", { valueAsNumber: true })}
+          {...register("maxDiscount")}
           className="w-full p-2 border rounded"
         />
       </div>

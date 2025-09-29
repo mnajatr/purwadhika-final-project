@@ -12,6 +12,7 @@ import type { CartResponse as Cart } from "@repo/schemas";
 
 interface ApplyDiscountProps {
   cart: Cart;
+  productIds: number[];
   handleUpdateCart: (itemId: number, newQty: number) => Promise<void>;
   onApplyDiscount?: (discounts: DiscountResponse[]) => void;
   isLoading?: boolean;
@@ -55,9 +56,10 @@ export default function ApplyDiscount({
       for (const removed of removedDiscounts) {
         if (removed.type === "BUYXGETX") {
           const productId = removed.product?.id ?? 0;
-          const oldQty =
-            cart.items.find((element) => element.id === productId)?.qty ?? 0;
-          // await handleUpdateCart(productId, oldQty - 1);
+          const cartItem = cart.items.find((it) => it.productId === productId);
+          if (!cartItem) continue;
+          const oldQty = cartItem.qty;
+          await handleUpdateCart(cartItem.id, oldQty - 1);
         }
       }
     } else {
@@ -73,9 +75,10 @@ export default function ApplyDiscount({
       for (const added of addedDiscounts) {
         if (added.type === "BUYXGETX") {
           const productId = added.product?.id ?? 0;
-          const oldQty =
-            cart.items.find((element) => element.id === productId)?.qty ?? 0;
-          // await handleUpdateCart(productId, oldQty + 1);
+          const cartItem = cart.items.find((it) => it.productId === productId);
+          if (!cartItem) continue; // skip jika item ga ada di cart
+          const oldQty = cartItem.qty;
+          await handleUpdateCart(cartItem.id, oldQty + 1);
         }
       }
     }

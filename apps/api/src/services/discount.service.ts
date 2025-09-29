@@ -82,7 +82,8 @@ export const discountService = {
         value: data.value,
         type: data.type,
 
-        amount: data.type === "NOMINAL" ? data.amount : null,
+        // langsung simpan amount, baik persentase maupun nominal
+        amount: data.amount ?? null,
         minPurchase: data.minPurchase ?? null,
         maxDiscount: data.maxDiscount ?? null,
         buyQty: data.type === "BUYXGETX" ? data.buyQty : null,
@@ -99,7 +100,7 @@ export const discountService = {
       name: d.name,
       value: d.value as ValueType,
       type: d.type as DiscountType,
-      amount: d.amount ?? undefined,
+      amount: d.amount ?? undefined, // selalu ada, tergantung tipe
       minPurchase: d.minPurchase ?? undefined,
       maxDiscount: d.maxDiscount ?? undefined,
       buyQty: d.buyQty ?? undefined,
