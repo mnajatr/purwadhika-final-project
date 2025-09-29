@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useCart } from "@/hooks/useCart";
+import { useCart, useUpdateCartItem } from "@/hooks/useCart";
 import useCreateOrder from "@/hooks/useOrder";
 import { Button } from "@/components/ui/button";
 import {
@@ -80,11 +80,25 @@ export default function CheckoutPage() {
     initialStoreIdRef.current ?? undefined
   );
 
+  const updateCartItemMutation = useUpdateCartItem(
+    userId,
+    initialStoreIdRef.current ?? undefined
+  );
+
   const [appliedDiscounts, setAppliedDiscounts] = React.useState<
     DiscountResponse[]
   >([]);
 
   const createOrder = useCreateOrder(userId);
+
+  // Handler for updating cart items (used by ApplyDiscount component)
+  const handleUpdateCart = async (itemId: number, newQty: number) => {
+    try {
+      await updateCartItemMutation.mutateAsync({ itemId, qty: newQty });
+    } catch (error) {
+      console.error("Failed to update cart:", error);
+    }
+  };
 
   // shipping method selection (null = not selected)
   const [shippingMethod, setShippingMethod] = React.useState<string | null>(
@@ -353,7 +367,7 @@ export default function CheckoutPage() {
       : cart.items
   ).map((it) => ({ productId: it.productId, qty: it.qty }));
 
-  const productIds = cart.items.map((it) => it.productId);
+  // Removed productIds as it's no longer needed - ApplyDiscount now gets cart directly
 
   const scrollToField = (fieldType: "address" | "shipping" | "payment") => {
     let targetElement: Element | null = null;
@@ -1233,8 +1247,10 @@ export default function CheckoutPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Promo Code */}
                       <ApplyDiscount
-                        productIds={productIds}
+                        cart={cart}
+                        handleUpdateCart={handleUpdateCart}
                         onApplyDiscount={setAppliedDiscounts}
+                        isLoading={isCartLoading}
                       />
 
                       {/* Special Instructions */}

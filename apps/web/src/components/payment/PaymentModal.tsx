@@ -33,7 +33,7 @@ const PaymentDialog = ({
         className="fixed inset-0 bg-black/50 transition-opacity"
         onClick={() => onOpenChange(false)}
       />
-      <div className="relative bg-background border rounded-lg shadow-lg max-w-md w-full mx-4 z-41">
+      <div className="relative bg-card border rounded-lg shadow-lg max-w-md w-full mx-4 z-41">
         {children}
       </div>
     </div>

@@ -20,7 +20,7 @@ interface ApplyDiscountProps {
 }
 
 export default function ApplyDiscount({
-  handleUpdateCart,
+  handleUpdateCart, // eslint-disable-line @typescript-eslint/no-unused-vars
   cart,
   onApplyDiscount,
   isLoading = false,
@@ -33,8 +33,38 @@ export default function ApplyDiscount({
   const [appliedDiscountIds, setAppliedDiscountIds] = React.useState<number[]>(
     []
   );
-  const productIds = cart.items.map((it) => it.productId);
+
+  // Get product IDs safely, defaulting to empty array if cart or items don't exist
+  const productIds = cart?.items?.map((it) => it.productId) || [];
   const { data: discounts = [] } = useDiscountsByProductIds(productIds);
+
+  // Add defensive check for cart and cart.items
+  if (!cart || !cart.items) {
+    return (
+      <Card
+        className={`bg-card rounded-2xl border border-border shadow-sm backdrop-blur-sm overflow-hidden ${className}`}
+      >
+        <CardHeader className="p-4">
+          <CardTitle className="flex items-center gap-3 text-lg">
+            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shadow-md">
+              <MdDiscount className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <div className="font-semibold text-foreground">Promo Code</div>
+              <div className="text-sm font-normal text-muted-foreground">
+                Loading discounts...
+              </div>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="text-sm text-muted-foreground">
+            Loading cart data...
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const handleApply = async () => {
     let updated: number[];
@@ -54,9 +84,9 @@ export default function ApplyDiscount({
 
       for (const removed of removedDiscounts) {
         if (removed.type === "BUYXGETX") {
-          const productId = removed.product?.id ?? 0;
-          const oldQty =
-            cart.items.find((element) => element.id === productId)?.qty ?? 0;
+          // Note: handleUpdateCart functionality is commented out for now
+          // const productId = removed.product?.id ?? 0;
+          // const oldQty = cart.items.find((element) => element.productId === productId)?.qty ?? 0;
           // await handleUpdateCart(productId, oldQty - 1);
         }
       }
@@ -72,9 +102,9 @@ export default function ApplyDiscount({
 
       for (const added of addedDiscounts) {
         if (added.type === "BUYXGETX") {
-          const productId = added.product?.id ?? 0;
-          const oldQty =
-            cart.items.find((element) => element.id === productId)?.qty ?? 0;
+          // Note: handleUpdateCart functionality is commented out for now
+          // const productId = added.product?.id ?? 0;
+          // const oldQty = cart.items.find((element) => element.productId === productId)?.qty ?? 0;
           // await handleUpdateCart(productId, oldQty + 1);
         }
       }

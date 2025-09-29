@@ -1,18 +1,24 @@
 "use client";
 
 import React from "react";
-// ...existing imports
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeft } from "lucide-react";
-import PaymentUpload from "@/components/orders/PaymentUpload";
+import { AlertCircle, RefreshCw } from "lucide-react";
+
+// Order components
+import OrderHeader from "@/components/orders/OrderHeader";
+import OrderProgress from "@/components/orders/OrderProgress";
+import ShippingInfo from "@/components/orders/ShippingInfo";
+import OrderItems from "@/components/orders/OrderItems";
+import PaymentDetails from "@/components/orders/PaymentDetails";
+import OrderActions from "@/components/orders/OrderActions";
+
+// Existing components and hooks
 import ConfirmButton from "@/components/orders/ConfirmButton";
-import { useGetOrder, OrderDetail, useCancelOrder } from "@/hooks/useOrder";
-import { AutoPaymentPopup, PayNowButton } from "@/components/payment";
+import { useGetOrder, useCancelOrder } from "@/hooks/useOrder";
+import { AutoPaymentPopup } from "@/components/payment";
 
 function CancelButton({
   orderId,
@@ -90,99 +96,45 @@ export default function OrderPage({ params }: OrderPageProps) {
       })()
     : "http://localhost:8000/api";
 
-  const statusColor: Record<string, string> = {
-    PENDING_PAYMENT: "bg-yellow-100 text-yellow-800",
-    PAID: "bg-green-100 text-green-800",
-    COMPLETED: "bg-blue-100 text-blue-800",
-    CANCELLED: "bg-red-100 text-red-800",
-    EXPIRED: "bg-gray-200 text-gray-600",
-  };
-
-  // Loading state with skeleton
+  // Loading state with enhanced skeleton
   if (isLoading) {
     return (
-      <div className="max-w-5xl mx-auto p-6 space-y-6">
+      <div className="min-h-screen bg-transparent">
         {/* Header skeleton */}
-        <div className="flex items-center justify-between">
-          <div className="h-9 w-48 bg-gray-200 rounded animate-pulse"></div>
-          <div className="flex items-center space-x-2">
-            <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
-            <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
+        <div className="border-b border-border/60 bg-card/70 backdrop-blur">
+          <div className="mx-auto max-w-5xl px-6 py-4">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <Skeleton className="h-8 w-8 rounded-lg" />
+                <div>
+                  <Skeleton className="mb-2 h-8 w-48" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-8 w-16" />
+              </div>
+            </div>
+            <Skeleton className="h-8 w-32" />
           </div>
         </div>
 
-        {/* Order summary skeleton */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <div className="h-6 w-16 bg-gray-200 rounded animate-pulse mb-2"></div>
-              <div className="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
-            </div>
-            <div className="text-right">
-              <div className="h-6 w-12 bg-gray-200 rounded animate-pulse mb-2"></div>
-              <div className="h-8 w-32 bg-gray-200 rounded animate-pulse"></div>
-            </div>
-          </CardHeader>
-        </Card>
-
-        {/* Shipping Information skeleton */}
-        <Card>
-          <CardHeader>
-            <div className="h-6 w-40 bg-gray-200 rounded animate-pulse"></div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-y-4">
-              {[...Array(4)].map((_, i) => (
-                <React.Fragment key={i}>
-                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
-                </React.Fragment>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Content skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Items skeleton */}
-          <Card>
-            <CardHeader>
-              <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex justify-between items-center border-b pb-2">
-                    <div className="space-y-2">
-                      <div className="h-4 w-40 bg-gray-200 rounded animate-pulse"></div>
-                      <div className="h-3 w-24 bg-gray-200 rounded animate-pulse"></div>
-                    </div>
-                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <div className="mx-auto max-w-5xl space-y-6 px-6 py-10">
+          <Skeleton className="h-20 w-full rounded-2xl" />
 
-          {/* Payment skeleton */}
-          <Card>
-            <CardHeader>
-              <div className="h-6 w-20 bg-gray-200 rounded animate-pulse"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <div className="h-4 w-12 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
-                </div>
-                <div className="h-px bg-gray-200"></div>
-                <div className="flex justify-between">
-                  <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <Skeleton className="h-64 w-full rounded-2xl" />
+              <Skeleton className="h-80 w-full rounded-2xl" />
+            </div>
+            <div className="space-y-6">
+              <Skeleton className="h-96 w-full rounded-2xl" />
+              <Skeleton className="h-64 w-full rounded-2xl" />
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -192,16 +144,29 @@ export default function OrderPage({ params }: OrderPageProps) {
   if (error) {
     const message = error?.message ?? "Failed to load order";
     return (
-      <div className="max-w-5xl mx-auto p-6">
-        <div className="text-center">
-          <div className="text-xl font-semibold text-red-600">{message}</div>
-          <p className="text-sm text-muted-foreground">
-            Try again or go back to your orders.
-          </p>
-          <div className="mt-4">
-            <Button onClick={() => router.back()} variant="outline">
-              Back
-            </Button>
+      <div className="flex min-h-screen items-center justify-center bg-transparent px-4">
+        <div className="mx-auto max-w-md">
+          <div className="rounded-3xl border border-border/60 bg-card/90 p-8 text-center shadow-xl backdrop-blur">
+            <AlertCircle className="mx-auto mb-4 h-12 w-12 text-rose-500" />
+            <h2 className="mb-2 text-xl font-semibold text-rose-600">
+              {message}
+            </h2>
+            <p className="mb-6 text-sm text-muted-foreground">
+              Try refreshing the page or go back to your orders.
+            </p>
+            <div className="flex justify-center gap-3">
+              <Button
+                onClick={() => window.location.reload()}
+                variant="outline"
+                className="min-w-[110px]"
+              >
+                <RefreshCw className="mr-1 h-4 w-4" />
+                Retry
+              </Button>
+              <Button className="min-w-[110px]" onClick={() => router.back()}>
+                Back
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -210,16 +175,22 @@ export default function OrderPage({ params }: OrderPageProps) {
 
   if (!order) {
     return (
-      <div className="max-w-5xl mx-auto p-6">
-        <div className="text-center">
-          <div className="text-xl">Order not found</div>
-          <p className="text-sm text-muted-foreground">
-            The requested order could not be located.
-          </p>
-          <div className="mt-4">
-            <Link href="/orders">
-              <Button variant="outline">Back to orders</Button>
-            </Link>
+      <div className="flex min-h-screen items-center justify-center bg-transparent px-4">
+        <div className="mx-auto max-w-md">
+          <div className="rounded-3xl border border-border/60 bg-card/90 p-8 text-center shadow-xl backdrop-blur">
+            <AlertCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+            <h2 className="mb-2 text-xl font-semibold text-foreground">
+              Order not found
+            </h2>
+            <p className="mb-6 text-sm text-muted-foreground">
+              The requested order could not be located.
+            </p>
+            <Button
+              onClick={() => router.push("/orders")}
+              className="min-w-[140px]"
+            >
+              Back to Orders
+            </Button>
           </div>
         </div>
       </div>
@@ -227,218 +198,104 @@ export default function OrderPage({ params }: OrderPageProps) {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
-      {/* Auto Payment Popup - checks sessionStorage and auto-opens */}
+    <div className="min-h-screen bg-transparent pb-16">
+      {/* Auto Payment Popup */}
       {order.status === "PENDING_PAYMENT" &&
         order.paymentMethod === "GATEWAY" && (
           <AutoPaymentPopup
             orderId={order.id}
             orderTotal={Number(order.grandTotal ?? 0)}
-            onPaymentSuccess={() => {
-              refetch();
-            }}
-            onPaymentPending={() => {
-              refetch();
-            }}
-            onPaymentError={(error) => {
-              console.log("Payment error:", error);
-            }}
+            onPaymentSuccess={() => refetch()}
+            onPaymentPending={() => refetch()}
+            onPaymentError={(error) => console.log("Payment error:", error)}
           />
         )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Order #{order.id}</h1>
-        <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="sm" onClick={() => refetch()}>
-            Refresh
-          </Button>
-          <Link href="/orders">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Back
-            </Button>
-          </Link>
-        </div>
-      </div>
+      {/* Order Header */}
+      <OrderHeader
+        orderId={order.id}
+        status={order.status}
+        createdAt={
+          order.createdAt ? new Date(order.createdAt).toISOString() : undefined
+        }
+        onRefresh={refetch}
+        isLoading={isLoading}
+      />
 
-      {/* Confirm button for shipped orders (buyer) */}
-      {order.status === "SHIPPED" && (
-        <div>
-          <ConfirmButton
-            orderId={order.id}
-            userId={(order as { userId?: number }).userId}
-          />
-        </div>
-      )}
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-10 sm:px-6">
+        {/* Order Progress */}
+        <OrderProgress status={order.status} />
 
-      {/* Order summary */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Status</CardTitle>
-            <Badge
-              className={`mt-2 ${statusColor[order.status] ?? "bg-gray-200"}`}
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Left Column - Order Details */}
+          <div className="space-y-6 lg:col-span-2">
+            {/* Shipping Information */}
+            <ShippingInfo
+              address={order.address || null}
+              orderStatus={order.status}
+            />
+
+            {/* Order Items */}
+            <OrderItems
+              items={order.items.map((item) => ({
+                id: item.id,
+                productId: item.productId,
+                qty: item.qty,
+                totalAmount: item.totalAmount || 0,
+                product: item.product
+                  ? {
+                      id: item.product.id,
+                      name: item.product.name || `Product #${item.productId}`,
+                      price: item.product.price || 0,
+                    }
+                  : undefined,
+              }))}
+            />
+          </div>
+
+          {/* Right Column - Payment & Actions */}
+          <div className="space-y-6 lg:pt-2">
+            {/* Payment Details */}
+            <PaymentDetails
+              order={{
+                id: order.id,
+                status: order.status,
+                paymentMethod: order.paymentMethod || "UNKNOWN",
+                grandTotal: order.grandTotal || 0,
+                payment: order.payment
+                  ? {
+                      status: order.payment.status || "PENDING",
+                      amount: order.payment.amount || 0,
+                    }
+                  : undefined,
+              }}
             >
-              {order.status}
-            </Badge>
+              {/* Confirm button for shipped orders */}
+              {order.status === "SHIPPED" && (
+                <ConfirmButton
+                  orderId={order.id}
+                  userId={(order as { userId?: number }).userId}
+                />
+              )}
+            </PaymentDetails>
+
+            {/* Order Actions */}
+            <OrderActions
+              order={{
+                id: order.id,
+                status: order.status,
+                paymentMethod: order.paymentMethod || "UNKNOWN",
+                grandTotal: order.grandTotal || 0,
+                userId: (order as { userId?: number }).userId,
+              }}
+              apiBase={apiBase}
+              onRefresh={refetch}
+              CancelButton={CancelButton}
+              ConfirmButton={ConfirmButton}
+            />
           </div>
-          <div className="text-right">
-            <CardTitle>Total</CardTitle>
-            <div className="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-rose-500">
-              {new Intl.NumberFormat("id-ID", {
-                style: "currency",
-                currency: "IDR",
-                maximumFractionDigits: 0,
-              }).format(Number(order.grandTotal ?? 0))}
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* Shipping Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Shipping Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {order.address ? (
-            <div className="grid grid-cols-2 gap-y-2 text-sm">
-              <span className="text-muted-foreground">Recipient</span>
-              <span className="font-medium">{order.address.recipientName}</span>
-
-              <span className="text-muted-foreground">Address</span>
-              <span className="font-medium">{order.address.addressLine}</span>
-
-              <span className="text-muted-foreground">City</span>
-              <span className="font-medium">
-                {order.address.city}, {order.address.province}
-              </span>
-
-              <span className="text-muted-foreground">Postal Code</span>
-              <span className="font-medium">{order.address.postalCode}</span>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No shipping address recorded
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Content */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Items */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Items</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {order.items.length > 0 ? (
-              <ul className="space-y-4">
-                {(order.items as OrderDetail["items"]).map((it) => (
-                  <li
-                    key={it.id}
-                    className="flex justify-between items-center border-b pb-2"
-                  >
-                    <div>
-                      <div className="font-medium">
-                        {it.product?.name
-                          ? it.product.name
-                          : `Product #${it.productId}`}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Quantity: {it.qty}
-                      </div>
-                    </div>
-                    <div className="font-semibold">
-                      {new Intl.NumberFormat("id-ID", {
-                        style: "currency",
-                        currency: "IDR",
-                        maximumFractionDigits: 0,
-                      }).format(Number(it.totalAmount ?? 0))}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No items in this order
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Payment */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {order.payment ? (
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Status</span>
-                  <Badge>{order.payment.status}</Badge>
-                </div>
-                <Separator />
-                <div className="flex justify-between">
-                  <span>Amount</span>
-                  <span className="font-medium">
-                    {new Intl.NumberFormat("id-ID", {
-                      style: "currency",
-                      currency: "IDR",
-                      maximumFractionDigits: 0,
-                    }).format(Number(order.payment.amount ?? 0))}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No payment recorded
-              </p>
-            )}
-
-            {/* Payment Actions */}
-            {order.status === "PENDING_PAYMENT" && (
-              <div className="mt-4 space-y-3">
-                {/* Manual Transfer: Show upload UI */}
-                {order.paymentMethod === "MANUAL_TRANSFER" && (
-                  <>
-                    <PaymentUpload orderId={order.id} apiBase={apiBase} />
-                    <CancelButton
-                      orderId={order.id}
-                      userId={(order as { userId?: number }).userId}
-                    />
-                  </>
-                )}
-
-                {/* Gateway Payment: Show Pay Now button as fallback */}
-                {order.paymentMethod === "GATEWAY" && (
-                  <div className="space-y-3">
-                    <PayNowButton
-                      orderId={order.id}
-                      orderTotal={Number(order.grandTotal ?? 0)}
-                      onPaymentSuccess={() => {
-                        refetch();
-                      }}
-                      onPaymentPending={() => {
-                        refetch();
-                      }}
-                      onPaymentError={(error) => {
-                        console.log("🔴 Payment error:", error);
-                      }}
-                    />
-                    <CancelButton
-                      orderId={order.id}
-                      userId={(order as { userId?: number }).userId}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        </div>
       </div>
     </div>
   );
