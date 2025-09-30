@@ -372,7 +372,7 @@ export default function CheckoutPage() {
       : cart.items
   ).map((it) => ({ productId: it.productId, qty: it.qty }));
 
-  const productIds = cart.items.map((it) => it.productId);
+  // Removed productIds as it's no longer needed - ApplyDiscount now gets cart directly
 
   const scrollToField = (fieldType: "address" | "shipping" | "payment") => {
     let targetElement: Element | null = null;
@@ -1252,11 +1252,11 @@ export default function CheckoutPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Promo Code */}
                       <ApplyDiscount
-                        handleUpdateCart={handleUpdateCart}
                         cart={cart}
+                        handleUpdateCart={handleUpdateCart}
                         onApplyDiscount={setAppliedDiscounts}
-                        isLoading={false}
-                        productIds={productIds}
+                        isLoading={isCartLoading}
+                        // productIds={productIds} //ini aku hapus mel
                       />
 
                       {/* Special Instructions */}
