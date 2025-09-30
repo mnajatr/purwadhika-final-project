@@ -242,22 +242,22 @@ export default function OrderOverview({
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto space-y-4 p-4">
+      <div className="max-w-6xl mx-auto space-y-4 p-2 sm:p-4">
         {/* Top Timeline Section */}
-        <div className="bg-card/80 backdrop-blur-sm rounded-2xl p-8 shadow-sm border border-border/60">
+        <div className="bg-card/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm border border-border/60">
           {/* Header Section — moved inside the top card (not sticky) */}
           <div className="mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
                 <Link href="/orders">
                   <Button variant="ghost" size="sm" className="p-2">
                     <ArrowLeft className="w-4 h-4" />
                   </Button>
                 </Link>
 
-                <div>
+                <div className="flex-1 sm:flex-none">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="text-2xl font-semibold text-foreground">
+                    <h1 className="text-xl sm:text-2xl font-semibold text-foreground">
                       Order #{order.id}
                     </h1>
                     <Button
@@ -289,19 +289,20 @@ export default function OrderOverview({
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={onRefresh}
                   disabled={isLoading}
+                  className="bg-card border border-primary text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary/90 transition-colors text-xs sm:text-sm px-2 sm:px-3"
                 >
                   <RefreshCw
-                    className={`w-4 h-4 mr-1 ${
+                    className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 ${
                       isLoading ? "animate-spin" : ""
                     }`}
                   />
-                  Refresh
+                  <span className="hidden sm:inline">Refresh</span>
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -309,6 +310,7 @@ export default function OrderOverview({
                       variant="outline"
                       size="icon"
                       aria-label="More actions"
+                      className="bg-card border border-primary text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary/90 transition-colors"
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
@@ -355,12 +357,12 @@ export default function OrderOverview({
             </div>
           )}
 
-          <div className="flex gap-8 mb-6">
+          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 mb-6">
             {/* Left side - Main content with header and progress (contained card) */}
             <div className="flex-1">
-              <div className="bg-muted/50 rounded-xl p-6 border border-border/30">
+              <div className="bg-muted/50 rounded-xl p-4 sm:p-6 border border-border/30">
                 {/* Header with Package Icon and Title inside sub-card */}
-                <div className="flex items-center gap-4 mb-6">
+                <div className="flex items-center gap-3 sm:gap-4 mb-6">
                   <div className="w-10 h-10 bg-card rounded-lg flex items-center justify-center border border-border/60 shadow-sm">
                     <Package className="w-5 h-5 text-primary" />
                   </div>
@@ -373,9 +375,9 @@ export default function OrderOverview({
 
                 {/* Chips + dashed route + progress bar (all inside this sub-card) */}
                 <div>
-                  <div className="flex items-center gap-4 mb-4">
+                  <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 mb-4">
                     {/* Start chip */}
-                    <div className="px-3 py-2 bg-card rounded-full border border-border/60 flex items-center gap-2 shadow-sm">
+                    <div className="px-3 py-2 bg-card rounded-full border border-border/60 flex items-center gap-2 shadow-sm w-full sm:w-auto justify-center sm:justify-start">
                       <Package className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm text-foreground">
                         {order.store?.name || "Store"},{" "}
@@ -384,7 +386,7 @@ export default function OrderOverview({
                     </div>
 
                     {/* dashed route */}
-                    <div className="flex-1 flex items-center justify-center">
+                    <div className="hidden sm:flex flex-1 items-center justify-center">
                       <div className="flex items-center gap-1">
                         <span className="w-1 h-1 bg-muted-foreground rounded-full"></span>
                         <span className="w-1 h-1 bg-muted-foreground rounded-full"></span>
@@ -395,7 +397,7 @@ export default function OrderOverview({
                     </div>
 
                     {/* End chip */}
-                    <div className="px-3 py-2 bg-card rounded-full border border-border/60 flex items-center gap-2 shadow-sm">
+                    <div className="px-3 py-2 bg-card rounded-full border border-border/60 flex items-center gap-2 shadow-sm w-full sm:w-auto justify-center sm:justify-start">
                       <MapPin className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm text-foreground">
                         {address?.city || "Delivery City"},{" "}
@@ -512,10 +514,10 @@ export default function OrderOverview({
             </div>
 
             {/* Right side - Two status cards */}
-            <div className="flex gap-6">
+            <div className="flex gap-3 sm:gap-4 lg:gap-6">
               {/* Order Created Card (swapped) */}
-              <div className="bg-muted/30 rounded-2xl p-6 min-w-[140px] border border-border/30">
-                <div className="flex items-center justify-center mb-4">
+              <div className="bg-muted/30 rounded-2xl p-3 sm:p-4 lg:p-6 min-w-[120px] lg:min-w-[140px] border border-border/30 flex-1 lg:flex-none">
+                <div className="flex items-start justify-start mb-20">
                   <div className="w-10 h-10 bg-card rounded-2xl flex items-center justify-center border border-border/60 shadow-sm">
                     <Calendar className="w-5 h-5 text-primary" />
                   </div>
@@ -531,8 +533,8 @@ export default function OrderOverview({
               </div>
 
               {/* Estimated Arrival Card (swapped) */}
-              <div className="bg-muted/30 rounded-2xl p-6 min-w-[140px] border border-border/30">
-                <div className="flex items-center justify-center mb-4">
+              <div className="bg-muted/30 rounded-2xl p-3 sm:p-4 lg:p-6 min-w-[120px] lg:min-w-[140px] border border-border/30 flex-1 lg:flex-none">
+                <div className="flex items-start justify-start mb-20">
                   <div className="w-10 h-10 bg-card rounded-2xl flex items-center justify-center border border-border/60 shadow-sm">
                     <Package className="w-5 h-5 text-primary" />
                   </div>
@@ -559,7 +561,7 @@ export default function OrderOverview({
           {/* Progress Bar */}
 
           {/* Two Column Layout */}
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
             {/* Timeline Column (card) */}
             <div className="bg-card/80 backdrop-blur-sm rounded-xl border border-border/60 p-4 shadow-sm">
               <h4 className="text-sm font-medium text-foreground mb-4">
@@ -739,10 +741,10 @@ export default function OrderOverview({
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-foreground mb-1">
+                  <p className="text-sm text-muted-foreground mb-1">
                     Recipient
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-foreground font-medium">
                     {address?.recipientName || "Customer"}
                   </p>
                   {address?.phoneNumber && (
@@ -753,10 +755,10 @@ export default function OrderOverview({
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-foreground mb-1">
+                  <p className="text-sm text-muted-foreground mb-1">
                     Delivery address
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-foreground font-medium">
                     {address
                       ? `${address.addressLine}, ${address.city}, ${address.province} ${address.postalCode}`
                       : "Delivery address not available"}
@@ -764,26 +766,29 @@ export default function OrderOverview({
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-foreground mb-1">
+                  <p className="text-sm text-muted-foreground mb-1">
                     Tracking No.
                   </p>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-mono text-foreground">
-                      TRK{order.id.toString().padStart(8, "0")}
-                    </p>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0 hover:bg-muted"
-                      onClick={() =>
-                        copyToClipboard(
-                          `TRK${order.id.toString().padStart(8, "0")}`,
-                          "Tracking number"
-                        )
-                      }
-                    >
-                      <Copy className="w-3 h-3" />
-                    </Button>
+                  <div className="flex items-center">
+                    <div className="flex items-center justify-between w-full max-w-sm rounded-xl border border-border/60 bg-card/90 px-4 py-2">
+                      <p className="text-sm font-mono text-foreground truncate">
+                        TRK{order.id.toString().padStart(8, "0")}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 hover:bg-muted"
+                        onClick={() =>
+                          copyToClipboard(
+                            `TRK${order.id.toString().padStart(8, "0")}`,
+                            "Tracking number"
+                          )
+                        }
+                        aria-label="Copy tracking number"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -800,17 +805,17 @@ export default function OrderOverview({
             </span>
           </h3>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {items.map((item) => (
               <div
                 key={item.id}
                 className="bg-muted/30 rounded-xl p-4 border border-border/30"
               >
-                <div className="flex gap-4">
+                <div className="flex gap-3 sm:gap-4">
                   {/* Product Image */}
                   <div className="flex-shrink-0">
                     {item.product?.images?.[0]?.url ? (
-                      <div className="w-20 h-20 bg-card rounded-lg overflow-hidden border border-border/60 shadow-sm">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-card rounded-lg overflow-hidden border border-border/60 shadow-sm">
                         <Image
                           src={item.product.images[0].url}
                           alt={
@@ -822,7 +827,7 @@ export default function OrderOverview({
                         />
                       </div>
                     ) : (
-                      <div className="w-20 h-20 bg-card rounded-lg flex items-center justify-center border border-border/60 shadow-sm">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-card rounded-lg flex items-center justify-center border border-border/60 shadow-sm">
                         <Package className="w-10 h-10 text-muted-foreground" />
                       </div>
                     )}
@@ -880,13 +885,13 @@ export default function OrderOverview({
           </div>
 
           <p className="text-sm text-muted-foreground mb-6">
-            Here&apos;s your summary for the stuff you bought.
+            Here&apos;s your summary for the product you bought.
           </p>
 
           <div className="space-y-3 mb-6">
             {items.map((item) => (
               <div key={item.id} className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
+                <span className="text-foreground font-medium">
                   {item.product?.name || `Product #${item.productId}`}
                 </span>
                 <span className="text-foreground font-medium">
@@ -908,34 +913,35 @@ export default function OrderOverview({
           </div>
 
           {/* Action Buttons - Only show for GATEWAY payments */}
-          {order.status === "PENDING_PAYMENT" && order.paymentMethod === "GATEWAY" && (
-            <div className="flex gap-3">
-              {/* Payment Now Button - using primary gradient */}
-              <PayNowButton
-                orderId={order.id}
-                orderTotal={Number(order.grandTotal)}
-                onPaymentSuccess={onRefresh}
-                onPaymentPending={onRefresh}
-                onPaymentError={(error) =>
-                  console.error("Payment error:", error)
-                }
-                className="flex-1 bg-primary-gradient hover:opacity-95"
-              />
+          {order.status === "PENDING_PAYMENT" &&
+            order.paymentMethod === "GATEWAY" && (
+              <div className="flex gap-3">
+                {/* Payment Now Button - using primary gradient */}
+                <PayNowButton
+                  orderId={order.id}
+                  orderTotal={Number(order.grandTotal)}
+                  onPaymentSuccess={onRefresh}
+                  onPaymentPending={onRefresh}
+                  onPaymentError={(error) =>
+                    console.error("Payment error:", error)
+                  }
+                  className="flex-1 bg-primary-gradient hover:opacity-95"
+                />
 
-              {/* Cancel Order Button - using destructive color */}
-              {CancelButton ? (
-                <CancelButton orderId={order.id} userId={order.userId} />
-              ) : (
-                <Button
-                  variant="destructive"
-                  className="px-8 bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                  disabled={order.status !== "PENDING_PAYMENT"}
-                >
-                  Cancel Order
-                </Button>
-              )}
-            </div>
-          )}
+                {/* Cancel Order Button - using destructive color */}
+                {CancelButton ? (
+                  <CancelButton orderId={order.id} userId={order.userId} />
+                ) : (
+                  <Button
+                    variant="destructive"
+                    className="px-8 bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                    disabled={order.status !== "PENDING_PAYMENT"}
+                  >
+                    Cancel Order
+                  </Button>
+                )}
+              </div>
+            )}
 
           {/* Payment Actions */}
           <div className="mt-4 space-y-3">
@@ -954,7 +960,10 @@ export default function OrderOverview({
                     onUploadSuccess={onRefresh}
                     cancelButton={
                       CancelButton ? (
-                        <CancelButton orderId={order.id} userId={order.userId} />
+                        <CancelButton
+                          orderId={order.id}
+                          userId={order.userId}
+                        />
                       ) : (
                         <Button
                           variant="destructive"

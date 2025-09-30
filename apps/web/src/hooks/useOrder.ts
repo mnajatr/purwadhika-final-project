@@ -17,7 +17,12 @@ export type OrderDetail = {
     productId: number;
     qty: number;
     totalAmount?: number;
-    product?: { id: number; name?: string; price?: number } | null;
+    product?: {
+      id: number;
+      name?: string;
+      price?: number;
+      images?: Array<{ imageUrl: string }>;
+    } | null;
   }>;
   payment?: { status?: string; amount?: number } | null;
   paymentMethod?: string | null;

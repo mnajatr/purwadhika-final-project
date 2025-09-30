@@ -242,9 +242,9 @@ export default function OrderPage({ params }: OrderPageProps) {
                 id: item.product.id,
                 name: item.product.name || `Product #${item.productId}`,
                 price: item.product.price || 0,
-                images: (item.product as { images?: string[] }).images?.map(
-                  (url) => ({ url })
-                ),
+                images: (
+                  item.product as { images?: Array<{ imageUrl: string }> }
+                ).images?.map((img) => ({ url: img.imageUrl })),
               }
             : undefined,
         }))}

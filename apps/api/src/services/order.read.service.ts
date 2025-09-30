@@ -84,7 +84,18 @@ export class OrderReadService {
         include: {
           items: {
             include: {
-              product: { select: { id: true, name: true, price: true } },
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  price: true,
+                  images: {
+                    select: {
+                      imageUrl: true,
+                    },
+                  },
+                },
+              },
             },
           },
           payment: true,
@@ -111,7 +122,18 @@ export class OrderReadService {
       include: {
         items: {
           include: {
-            product: { select: { id: true, name: true, price: true } },
+            product: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                images: {
+                  select: {
+                    imageUrl: true,
+                  },
+                },
+              },
+            },
           },
         },
         payment: true,

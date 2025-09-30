@@ -41,14 +41,6 @@ export function PayNowButton({
     setIsLoading(false);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
   return (
     <>
       <Button
@@ -63,7 +55,7 @@ export function PayNowButton({
         ) : (
           <CreditCard className="w-4 h-4 mr-2" />
         )}
-        Pay Now - {formatCurrency(orderTotal)}
+        Pay Now
       </Button>
 
       <PaymentModal
