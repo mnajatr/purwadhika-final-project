@@ -10,13 +10,8 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 // Order components
 import OrderHeader from "@/components/orders/OrderHeader";
 import OrderProgress from "@/components/orders/OrderProgress";
-import ShippingInfo from "@/components/orders/ShippingInfo";
-import OrderItems from "@/components/orders/OrderItems";
-import PaymentDetails from "@/components/orders/PaymentDetails";
-import OrderActions from "@/components/orders/OrderActions";
-
-// Existing components and hooks
-import ConfirmButton from "@/components/orders/ConfirmButton";
+import OrderMeta from "@/components/orders/OrderMeta";
+import OrderOverview from "@/components/orders/OrderOverview";
 import { useGetOrder, useCancelOrder } from "@/hooks/useOrder";
 import { AutoPaymentPopup } from "@/components/payment";
 
@@ -226,76 +221,53 @@ export default function OrderPage({ params }: OrderPageProps) {
         {/* Order Progress */}
         <OrderProgress status={order.status} />
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Left Column - Order Details */}
-          <div className="space-y-6 lg:col-span-2">
-            {/* Shipping Information */}
-            <ShippingInfo
-              address={order.address || null}
-              orderStatus={order.status}
-            />
+        {/* Order Meta: quick facts & countdown */}
+        <OrderMeta
+          orderId={order.id}
+          status={order.status}
+          paymentMethod={order.paymentMethod || undefined}
+          createdAt={
+            order.createdAt
+              ? new Date(order.createdAt).toISOString()
+              : undefined
+          }
+        />
 
-            {/* Order Items */}
-            <OrderItems
-              items={order.items.map((item) => ({
-                id: item.id,
-                productId: item.productId,
-                qty: item.qty,
-                totalAmount: item.totalAmount || 0,
-                product: item.product
-                  ? {
-                      id: item.product.id,
-                      name: item.product.name || `Product #${item.productId}`,
-                      price: item.product.price || 0,
-                    }
-                  : undefined,
-              }))}
-            />
-          </div>
-
-          {/* Right Column - Payment & Actions */}
-          <div className="space-y-6 lg:pt-2">
-            {/* Payment Details */}
-            <PaymentDetails
-              order={{
-                id: order.id,
-                status: order.status,
-                paymentMethod: order.paymentMethod || "UNKNOWN",
-                grandTotal: order.grandTotal || 0,
-                payment: order.payment
-                  ? {
-                      status: order.payment.status || "PENDING",
-                      amount: order.payment.amount || 0,
-                    }
-                  : undefined,
-              }}
-            >
-              {/* Confirm button for shipped orders */}
-              {order.status === "SHIPPED" && (
-                <ConfirmButton
-                  orderId={order.id}
-                  userId={(order as { userId?: number }).userId}
-                />
-              )}
-            </PaymentDetails>
-
-            {/* Order Actions */}
-            <OrderActions
-              order={{
-                id: order.id,
-                status: order.status,
-                paymentMethod: order.paymentMethod || "UNKNOWN",
-                grandTotal: order.grandTotal || 0,
-                userId: (order as { userId?: number }).userId,
-              }}
-              apiBase={apiBase}
-              onRefresh={refetch}
-              CancelButton={CancelButton}
-              ConfirmButton={ConfirmButton}
-            />
-          </div>
-        </div>
+        {/* Order Overview - Consolidated Layout */}
+        <OrderOverview
+          order={{
+            id: order.id,
+            status: order.status,
+            paymentMethod: order.paymentMethod || "UNKNOWN",
+            grandTotal: order.grandTotal || 0,
+            userId: (order as { userId?: number }).userId,
+            payment: order.payment
+              ? {
+                  status: order.payment.status || "PENDING",
+                  amount: order.payment.amount || 0,
+                  proofUrl: (order.payment as { proofUrl?: string }).proofUrl,
+                }
+              : undefined,
+          }}
+          items={order.items.map((item) => ({
+            id: item.id,
+            productId: item.productId,
+            qty: item.qty,
+            totalAmount: item.totalAmount || 0,
+            product: item.product
+              ? {
+                  id: item.product.id,
+                  name: item.product.name || `Product #${item.productId}`,
+                  price: item.product.price || 0,
+                  images: (item.product as { images?: string[] }).images?.map(url => ({ url })),
+                }
+              : undefined,
+          }))}
+          address={order.address || null}
+          apiBase={apiBase}
+          onRefresh={refetch}
+          CancelButton={CancelButton}
+        />
       </div>
     </div>
   );

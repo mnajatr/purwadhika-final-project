@@ -11,8 +11,17 @@ import {
   Calendar,
   Receipt,
   Clock,
+  Copy,
+  MoreHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface OrderHeaderProps {
   orderId: number;
@@ -111,9 +120,36 @@ export default function OrderHeader({
             </Link>
 
             <div>
-              <h1 className="text-2xl font-semibold text-foreground">
-                Order #{orderId}
-              </h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-semibold text-foreground">
+                  Order #{orderId}
+                </h1>
+                <Button
+                  aria-label="Copy Order ID"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() =>
+                    navigator.clipboard
+                      .writeText(String(orderId))
+                      .then(() => toast.success("Order ID copied"))
+                  }
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Badge
+                  className={`px-2.5 py-1 font-medium border ${getStatusColor(
+                    status
+                  )}`}
+                >
+                  <div className="flex items-center gap-1">
+                    {getStatusIcon(status)}
+                    <span className="text-xs sm:text-[0.8rem]">
+                      {status.replace("_", " ")}
+                    </span>
+                  </div>
+                </Badge>
+              </div>
               {createdAt && (
                 <div className="flex items-center text-sm text-muted-foreground mt-1">
                   <Calendar className="w-4 h-4 mr-1" />
@@ -135,50 +171,34 @@ export default function OrderHeader({
               />
               Refresh
             </Button>
-
-            <Button variant="outline" size="sm" onClick={handleDownloadReceipt}>
-              <Receipt className="w-4 h-4 mr-1" />
-              Receipt
-            </Button>
-
-            <Button variant="outline" size="sm" onClick={handleShare}>
-              <Share2 className="w-4 h-4 mr-1" />
-              Share
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="More actions">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleDownloadReceipt}>
+                  <Receipt className="mr-2 h-4 w-4" />
+                  Download receipt
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleShare}>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Share link
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() =>
+                    navigator.clipboard
+                      .writeText(String(orderId))
+                      .then(() => toast.success("Order ID copied"))
+                  }
+                >
+                  Copy Order ID
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        </div>
-
-        {/* Status Badge */}
-        <div className="flex items-center space-x-3">
-          <Badge
-            className={`px-3 py-1.5 font-medium border ${getStatusColor(
-              status
-            )}`}
-          >
-            <div className="flex items-center space-x-1">
-              {getStatusIcon(status)}
-              <span>{status.replace("_", " ")}</span>
-            </div>
-          </Badge>
-
-          {/* Additional Status Context */}
-          {status === "PENDING_PAYMENT" && (
-            <span className="text-sm text-amber-700 bg-amber-100/80 px-2 py-1 rounded-full">
-              Payment required
-            </span>
-          )}
-
-          {status === "SHIPPED" && (
-            <span className="text-sm text-indigo-700 bg-indigo-100/80 px-2 py-1 rounded-full">
-              On the way
-            </span>
-          )}
-
-          {status === "COMPLETED" && (
-            <span className="text-sm text-emerald-700 bg-emerald-100/80 px-2 py-1 rounded-full">
-              Delivered successfully
-            </span>
-          )}
         </div>
       </div>
     </div>

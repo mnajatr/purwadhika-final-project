@@ -30,10 +30,10 @@ const PaymentDialog = ({
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center">
       <div
-        className="fixed inset-0 bg-black/50 transition-opacity"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
         onClick={() => onOpenChange(false)}
       />
-      <div className="relative bg-card border rounded-lg shadow-lg max-w-md w-full mx-4 z-41">
+      <div className="relative bg-popover text-popover-foreground border border-muted/20 rounded-lg shadow-2xl max-w-md w-full mx-4 z-50 ring-1 ring-primary/10">
         {children}
       </div>
     </div>

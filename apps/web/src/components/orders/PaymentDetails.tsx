@@ -18,7 +18,6 @@ import {
   Info,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 interface PaymentDetailsProps {
   order: {
@@ -157,7 +156,9 @@ export default function PaymentDetails({
                           <p className="font-medium text-foreground">
                             BCA - Bank Central Asia
                           </p>
-                          <p className="text-sm text-muted-foreground">1234567890</p>
+                          <p className="text-sm text-muted-foreground">
+                            1234567890
+                          </p>
                           <p className="text-sm text-muted-foreground">
                             PT. Your Company
                           </p>
@@ -178,7 +179,9 @@ export default function PaymentDetails({
                       <div className="flex justify-between items-center">
                         <div>
                           <p className="font-medium text-foreground">Mandiri</p>
-                          <p className="text-sm text-muted-foreground">0987654321</p>
+                          <p className="text-sm text-muted-foreground">
+                            0987654321
+                          </p>
                           <p className="text-sm text-muted-foreground">
                             PT. Your Company
                           </p>
