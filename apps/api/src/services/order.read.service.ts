@@ -23,13 +23,22 @@ export class OrderReadService {
     });
 
     // Defensive: ensure skip/take are valid integers. If invalid, fall back to safe values
-    let safeTake = Number.isFinite(Number(take)) ? Math.max(1, Math.floor(Number(take))) : Math.max(1, Number(pageSize ?? 20));
-    let safeSkip = Number.isFinite(Number(skip)) ? Math.max(0, Math.floor(Number(skip))) : 0;
+    let safeTake = Number.isFinite(Number(take))
+      ? Math.max(1, Math.floor(Number(take)))
+      : Math.max(1, Number(pageSize ?? 20));
+    let safeSkip = Number.isFinite(Number(skip))
+      ? Math.max(0, Math.floor(Number(skip)))
+      : 0;
 
     // Log pagination to help diagnose cases where the client/server disagree
     try {
       const logger = (await import("../utils/logger.js")).default;
-      logger.info("order.read.service: pagination", { take: safeTake, skip: safeSkip, page, pageSize });
+      logger.info("order.read.service: pagination", {
+        take: safeTake,
+        skip: safeSkip,
+        page,
+        pageSize,
+      });
     } catch {}
 
     const where: any = {};
@@ -73,7 +82,11 @@ export class OrderReadService {
       prisma.order.findMany({
         where,
         include: {
-          items: { include: { product: { select: { id: true, name: true, price: true } } } },
+          items: {
+            include: {
+              product: { select: { id: true, name: true, price: true } },
+            },
+          },
           payment: true,
         },
         orderBy: { createdAt: "desc" },
@@ -96,20 +109,53 @@ export class OrderReadService {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        items: { include: { product: { select: { id: true, name: true, price: true } } } },
+        items: {
+          include: {
+            product: { select: { id: true, name: true, price: true } },
+          },
+        },
         payment: true,
         shipment: true,
+        store: {
+          select: {
+            id: true,
+            name: true,
+            locations: {
+              select: {
+                city: true,
+                province: true,
+                addressLine: true,
+              },
+              take: 1,
+            },
+          },
+        },
+        address: {
+          select: {
+            recipientName: true,
+            addressLine: true,
+            city: true,
+            province: true,
+            postalCode: true,
+            // phoneNumber isn't in the schema, but we can add it if needed
+          },
+        },
       },
     });
 
     return order;
   }
 
-  async getOrderCountsByStatus(userId: number): Promise<Record<string, number>> {
+  async getOrderCountsByStatus(
+    userId: number
+  ): Promise<Record<string, number>> {
     const logger = (await import("../utils/logger.js")).default;
     logger.info(`Getting order counts by status for userId: ${userId}`);
 
-    const orders = await prisma.order.findMany({ where: { userId }, select: { status: true } });
+    const orders = await prisma.order.findMany({
+      where: { userId },
+      select: { status: true },
+    });
 
     const counts: Record<string, number> = {
       ALL: orders.length,
@@ -121,7 +167,8 @@ export class OrderReadService {
       CANCELLED: 0,
     };
 
-    for (const order of orders) if (counts[order.status] !== undefined) counts[order.status]++;
+    for (const order of orders)
+      if (counts[order.status] !== undefined) counts[order.status]++;
 
     logger.info(`Order counts calculated:`, counts);
     return counts;

@@ -11,6 +11,7 @@ export type OrderDetail = {
   status: string;
   grandTotal?: number;
   createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
   items: Array<{
     id: number;
     productId: number;
@@ -26,6 +27,15 @@ export type OrderDetail = {
     city: string;
     province: string;
     postalCode: string;
+  } | null;
+  store?: {
+    id: number;
+    name: string;
+    locations?: Array<{
+      city: string;
+      province: string;
+      addressLine: string;
+    }>;
   } | null;
 };
 import { cartService } from "@/services/cart.service";

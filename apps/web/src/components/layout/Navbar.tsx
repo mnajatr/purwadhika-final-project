@@ -46,7 +46,7 @@ export default function Navbar() {
                 </svg>
               </div>
               <span className="text-xl font-bold text-foreground">
-                Daily Grocery
+                Growseries
               </span>
             </Link>
           </div>

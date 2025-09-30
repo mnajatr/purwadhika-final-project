@@ -21,12 +21,14 @@ interface PaymentUploadProps {
   orderId: number;
   apiBase: string;
   onUploadSuccess?: () => void;
+  cancelButton?: React.ReactNode;
 }
 
 export default function PaymentUpload({
   orderId,
   apiBase,
   onUploadSuccess,
+  cancelButton,
 }: PaymentUploadProps) {
   const qc = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
@@ -328,20 +330,23 @@ export default function PaymentUpload({
             )}
 
             {!file && (
-              <label className="flex-1">
-                <Button className="w-full" asChild>
-                  <span>
-                    <FileImage className="mr-2 h-4 w-4" />
-                    Select Image
-                  </span>
-                </Button>
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                />
-              </label>
+              <>
+                <label className="flex-1">
+                  <Button className="w-full" asChild>
+                    <span>
+                      <FileImage className="mr-2 h-4 w-4" />
+                      Select Image
+                    </span>
+                  </Button>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                  />
+                </label>
+                {cancelButton && cancelButton}
+              </>
             )}
           </div>
 
