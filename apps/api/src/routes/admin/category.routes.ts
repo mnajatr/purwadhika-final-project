@@ -1,12 +1,14 @@
 import { Router } from "express";
 import * as categoryController from "../../controllers/category.controller.js";
+import { adminAuth } from "../../middleware/admin.middleware.js";
 
 const router = Router();
 
-router.get("/", categoryController.getCategories);
-router.get("/:id", categoryController.getCategoryById);
-router.post("/", categoryController.createCategory);
-router.put("/:id", categoryController.updateCategory);
-router.delete("/:id", categoryController.deleteCategory);
+// Semua route ini wajib admin
+router.get("/", adminAuth, categoryController.getCategories);
+router.get("/:id", adminAuth, categoryController.getCategoryById);
+router.post("/", adminAuth, categoryController.createCategory);
+router.put("/:id", adminAuth, categoryController.updateCategory);
+router.delete("/:id", adminAuth, categoryController.deleteCategory);
 
 export default router;

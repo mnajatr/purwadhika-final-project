@@ -4,9 +4,17 @@ import Sidebar from "@/components/admin/sidebar";
 import Link from "next/link";
 import { useCategories } from "@/hooks/useCategory";
 import DeleteCategoryButton from "@/components/category/DeleteButtonCategory";
+import { useEffect, useState } from "react";
 
 export default function ManageCategories() {
   const { data: categories = [], isLoading } = useCategories();
+  const [role, setRole] = useState("");
+  const [storeId, setStoreId] = useState("");
+
+  useEffect(() => {
+    setRole(localStorage.getItem("role") || "");
+    setStoreId(localStorage.getItem("storeId") || "");
+  }, []);
 
   return (
     <div className="flex min-h-screen">
@@ -18,12 +26,14 @@ export default function ManageCategories() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
           <h1 className="text-2xl md:text-3xl font-bold">Manage Categories</h1>
-          <Link
-            href={`/category/create`}
-            className="text-indigo-600 hover:underline"
-          >
-            Create Category
-          </Link>
+          {role === "SUPER_ADMIN" && (
+            <Link
+              href={`/category/create`}
+              className="text-indigo-600 hover:underline"
+            >
+              Create Category
+            </Link>
+          )}
         </div>
 
         {/* Table */}
@@ -41,9 +51,11 @@ export default function ManageCategories() {
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
                   Description
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                  Actions
-                </th>
+                {role === "SUPER_ADMIN" && (
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -53,15 +65,17 @@ export default function ManageCategories() {
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {c.description ?? "-"}
                   </td>
-                  <td className="px-4 py-3 text-sm flex gap-3">
-                    <Link
-                      href={`/category/${c.id}/edit`}
-                      className="text-indigo-600 hover:underline"
-                    >
-                      Edit
-                    </Link>
-                    <DeleteCategoryButton id={c.id} />
-                  </td>
+                  {role === "SUPER_ADMIN" && (
+                    <td className="px-4 py-3 text-sm flex gap-3">
+                      <Link
+                        href={`/category/${c.id}/edit`}
+                        className="text-indigo-600 hover:underline"
+                      >
+                        Edit
+                      </Link>
+                      <DeleteCategoryButton id={c.id} />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

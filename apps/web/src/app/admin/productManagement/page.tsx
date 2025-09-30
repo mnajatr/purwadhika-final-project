@@ -14,28 +14,21 @@ export default function ProductsList() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedStore, setSelectedStore] = useState("All");
   const [role, setRole] = useState("");
+  const [storeId, setStoreId] = useState("");
 
   useEffect(() => {
-    const rolez = localStorage.getItem("role") ?? "";
-    setRole(rolez);
+    const r = localStorage.getItem("role") || "";
+    const s = localStorage.getItem("storeId") || "";
+    setRole(r);
+    setStoreId(s);
+    setSelectedStore("All");
   }, []);
-  const allowed_role = new Set(["SUPER_ADMIN", "STORE_ADMIN"]);
 
-  // Fetch products without location to get all products for admin
   const { data, isLoading, error } = useProducts();
-
-  // Extract products array from the response
   const products = data?.products || [];
-
-  if (isLoading)
-    return <p className="text-center py-10">Loading products...</p>;
-  if (error instanceof Error)
-    return (
-      <p className="text-center text-red-500 py-10">Error: {error.message}</p>
-    );
-
-  // Ensure products is an array before using map
   const safeProducts = Array.isArray(products) ? products : [];
+
+  // Ambil semua kategori & store untuk filter dropdown / tombol
   const categories = ["All", ...new Set(safeProducts.map((p) => p.category))];
   const stores = ["All", ...new Set(safeProducts.map((p) => p.store))];
 
@@ -45,10 +38,25 @@ export default function ProductsList() {
     const matchSearch = product.name
       .toLowerCase()
       .includes(search.toLowerCase());
-    const matchStore =
-      selectedStore === "All" || product.store === selectedStore;
+
+    let matchStore = true;
+    if (role === "STORE_ADMIN") {
+      matchStore = product.storeId === storeId;
+    } else if (role === "SUPER_ADMIN" && selectedStore !== "All") {
+      matchStore = product.store === selectedStore;
+    }
+
     return matchCategory && matchSearch && matchStore;
   });
+
+  if (isLoading) {
+    return <p className="text-center py-10">Loading products...</p>;
+  }
+  if (error instanceof Error) {
+    return (
+      <p className="text-center text-red-500 py-10">Error: {error.message}</p>
+    );
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -65,7 +73,7 @@ export default function ProductsList() {
             List Products
           </h2>
 
-          {allowed_role.has(role) && (
+          {role === "SUPER_ADMIN" && (
             <Link
               href="/products/create"
               className="bg-indigo-500 text-white px-5 py-2 rounded-lg shadow hover:bg-indigo-700 transition text-center"
@@ -86,20 +94,22 @@ export default function ProductsList() {
           />
         </div>
 
-        {/* Store filter */}
-        <div className="flex justify-center mb-6">
-          <select
-            value={selectedStore}
-            onChange={(e) => setSelectedStore(e.target.value)}
-            className="w-full md:w-1/3 lg:w-1/4 px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            {stores.map((store) => (
-              <option key={store} value={store}>
-                {store}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Store filter (SUPER_ADMIN only) */}
+        {role === "SUPER_ADMIN" && (
+          <div className="flex justify-center mb-6">
+            <select
+              value={selectedStore}
+              onChange={(e) => setSelectedStore(e.target.value)}
+              className="w-full md:w-1/3 lg:w-1/4 px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              {stores.map((store) => (
+                <option key={store} value={store}>
+                  {store}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Category filter */}
         <div className="flex flex-wrap justify-center gap-3 mb-10">
@@ -144,9 +154,11 @@ export default function ProductsList() {
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
                     Stock
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                    Actions
-                  </th>
+                  {role === "SUPER_ADMIN" && (
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                      Actions
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -179,22 +191,25 @@ export default function ProductsList() {
                     <td className="px-4 py-3 text-sm font-semibold text-indigo-600">
                       {product.stock}
                     </td>
-                    <td className="px-4 py-3 text-sm flex gap-2">
-                      <Link
-                        href={`/products/${product.slug}/update`}
-                        className="text-indigo-600 hover:underline"
-                      >
-                        Edit
-                      </Link>
-                      <DeleteProductButton slug={product.slug} />
-                      <DeactivateButtonProduct slug={product.slug} />
-                      {!product.isActive && (
-                        <>
-                          <span className="mx-1">|</span>
-                          <ActivateButtonProduct slug={product.slug} />
-                        </>
-                      )}
-                    </td>
+
+                    {role === "SUPER_ADMIN" && (
+                      <td className="px-4 py-3 text-sm flex gap-2">
+                        <Link
+                          href={`/products/${product.slug}/update`}
+                          className="text-indigo-600 hover:underline"
+                        >
+                          Edit
+                        </Link>
+                        <DeleteProductButton slug={product.slug} />
+                        <DeactivateButtonProduct slug={product.slug} />
+                        {!product.isActive && (
+                          <>
+                            <span className="mx-1">|</span>
+                            <ActivateButtonProduct slug={product.slug} />
+                          </>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

@@ -81,8 +81,6 @@ export const discountService = {
         name: data.name,
         value: data.value,
         type: data.type,
-
-        // langsung simpan amount, baik persentase maupun nominal
         amount: data.amount ?? null,
         minPurchase: data.minPurchase ?? null,
         maxDiscount: data.maxDiscount ?? null,
@@ -127,9 +125,11 @@ export const discountService = {
         buyQty: data.type === "BUYXGETX" ? data.buyQty : null,
         getQty: data.type === "BUYXGETX" ? data.getQty : null,
         expiredAt: data.expiredAt ? new Date(data.expiredAt) : undefined,
-        store: data.store ? { connect: { id: data.store.id } } : undefined,
+        store: data.store
+          ? { connect: { id: Number(data.store.id) } }
+          : undefined,
         product: data.product
-          ? { connect: { id: data.product.id } }
+          ? { connect: { id: Number(data.product.id) } }
           : undefined,
       },
       include: { store: true, product: true },

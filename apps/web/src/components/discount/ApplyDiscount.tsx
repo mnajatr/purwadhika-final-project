@@ -12,7 +12,6 @@ import type { CartResponse as Cart } from "@repo/schemas";
 
 interface ApplyDiscountProps {
   cart: Cart;
-//   productIds: number[]; //ini aku hapus mel
   handleUpdateCart: (itemId: number, newQty: number) => Promise<void>;
   onApplyDiscount?: (discounts: DiscountResponse[]) => void;
   isLoading?: boolean;
@@ -36,8 +35,12 @@ export default function ApplyDiscount({
   );
 
   // Get product IDs safely, defaulting to empty array if cart or items don't exist
+
   const productIds = cart?.items?.map((it) => it.productId) || [];
   const { data: discounts = [] } = useDiscountsByProductIds(productIds);
+  console.log("Cart items:", cart?.items);
+  console.log("Product IDs:", productIds);
+  console.log("Discounts from API:", discounts);
 
   // Add defensive check for cart and cart.items
   if (!cart || !cart.items) {
@@ -106,7 +109,7 @@ export default function ApplyDiscount({
         if (added.type === "BUYXGETX") {
           const productId = added.product?.id ?? 0;
           const cartItem = cart.items.find((it) => it.productId === productId);
-          if (!cartItem) continue; // skip jika item ga ada di cart
+          if (!cartItem) continue;
           const oldQty = cartItem.qty;
           await handleUpdateCart(cartItem.id, oldQty + 1);
         }
