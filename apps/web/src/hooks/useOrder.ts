@@ -11,12 +11,18 @@ export type OrderDetail = {
   status: string;
   grandTotal?: number;
   createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
   items: Array<{
     id: number;
     productId: number;
     qty: number;
     totalAmount?: number;
-    product?: { id: number; name?: string; price?: number } | null;
+    product?: {
+      id: number;
+      name?: string;
+      price?: number;
+      images?: Array<{ imageUrl: string }>;
+    } | null;
   }>;
   payment?: { status?: string; amount?: number } | null;
   paymentMethod?: string | null;
@@ -26,6 +32,15 @@ export type OrderDetail = {
     city: string;
     province: string;
     postalCode: string;
+  } | null;
+  store?: {
+    id: number;
+    name: string;
+    locations?: Array<{
+      city: string;
+      province: string;
+      addressLine: string;
+    }>;
   } | null;
 };
 import { cartService } from "@/services/cart.service";

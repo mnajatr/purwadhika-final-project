@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { useCreateSnapToken, type MidtransResult } from "@/hooks/usePayment";
@@ -27,17 +27,22 @@ const PaymentDialog = ({
 }) => {
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       <div
-        className="fixed inset-0 bg-black/50 transition-opacity"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-all duration-300"
         onClick={() => onOpenChange(false)}
       />
-      <div className="relative bg-card border rounded-lg shadow-lg max-w-md w-full mx-4 z-41">
+      <div className="relative bg-popover text-popover-foreground border border-muted/20 rounded-lg shadow-2xl max-w-md w-full mx-4 z-[10000] ring-1 ring-primary/10 animate-in fade-in-0 zoom-in-95 duration-300">
         {children}
       </div>
     </div>
   );
+
+  // Use portal to render at document body level to avoid positioning issues
+  return typeof document !== "undefined"
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };
 
 const PaymentDialogContent = ({
@@ -46,7 +51,7 @@ const PaymentDialogContent = ({
 }: {
   children: React.ReactNode;
   className?: string;
-}) => <div className={`p-6 ${className}`}>{children}</div>;
+}) => <div className={`p-8 ${className}`}>{children}</div>;
 
 const PaymentDialogHeader = ({ children }: { children: React.ReactNode }) => (
   <div className="pb-4">{children}</div>
@@ -58,7 +63,11 @@ const PaymentDialogTitle = ({
 }: {
   children: React.ReactNode;
   className?: string;
-}) => <h2 className={`text-lg font-semibold ${className}`}>{children}</h2>;
+}) => (
+  <h2 className={`text-xl font-bold text-foreground ${className}`}>
+    {children}
+  </h2>
+);
 
 const PaymentDialogDescription = ({
   children,
@@ -385,45 +394,45 @@ export function PaymentModal({
 
         <div className="space-y-4">
           {/* Order Summary */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">
-                  Order Total
-                </span>
-                <span className="text-lg font-bold text-primary">
-                  {formatCurrency(orderTotal)}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="bg-muted/30 rounded-xl p-5 border border-border/60">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium text-muted-foreground">
+                Order Total
+              </span>
+              <span className="text-xl font-bold text-primary">
+                {formatCurrency(orderTotal)}
+              </span>
+            </div>
+          </div>
 
           {/* Status */}
-          <div className="flex flex-col items-center space-y-3 py-4">
+          <div className="flex flex-col items-center space-y-4 py-6">
             {createSnapToken.isPending || !snapLoaded ? (
               <>
-                <Spinner size={32} className="text-primary" />
+                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20">
+                  <Spinner size={24} className="text-primary" />
+                </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium">
+                  <p className="text-base font-semibold text-foreground">
                     {!snapLoaded
                       ? "Loading payment gateway..."
                       : "Preparing payment..."}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Please wait a moment
                   </p>
                 </div>
               </>
             ) : createSnapToken.isError ? (
               <>
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                  <AlertCircle className="w-6 h-6 text-red-600" />
+                <div className="w-16 h-16 bg-destructive/10 rounded-2xl flex items-center justify-center border border-destructive/20">
+                  <AlertCircle className="w-8 h-8 text-destructive" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-red-600">
+                  <p className="text-base font-semibold text-destructive">
                     Payment initialization failed
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     {createSnapToken.error?.message || "Please try again"}
                   </p>
                 </div>
@@ -432,21 +441,22 @@ export function PaymentModal({
                     setPaymentAttempted(false);
                     createSnapToken.reset();
                   }}
-                  className="w-full"
+                  className="w-full bg-primary-gradient hover:opacity-95"
+                  size="lg"
                 >
                   Try Again
                 </Button>
               </>
             ) : (
               <>
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-blue-600" />
+                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20">
+                  <Clock className="w-8 h-8 text-primary" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium">
+                  <p className="text-base font-semibold text-foreground">
                     Payment window should open automatically
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     If it doesn&apos;t open, click the button below
                   </p>
                 </div>
@@ -455,8 +465,8 @@ export function PaymentModal({
                     setPaymentAttempted(false);
                     handlePayment();
                   }}
-                  className="w-full"
-                  variant="default"
+                  className="w-full bg-primary-gradient hover:opacity-95"
+                  size="lg"
                 >
                   Open Payment
                 </Button>
@@ -465,9 +475,9 @@ export function PaymentModal({
           </div>
 
           {/* Security badge */}
-          <div className="flex items-center justify-center gap-2 py-2 bg-muted/30 rounded-lg">
-            <CheckCircle className="w-4 h-4 text-green-600" />
-            <span className="text-xs text-muted-foreground">
+          <div className="flex items-center justify-center gap-2 py-3 bg-muted/30 rounded-xl border border-border/30">
+            <CheckCircle className="w-5 h-5 text-emerald-600" />
+            <span className="text-sm font-medium text-muted-foreground">
               Secured by Midtrans Payment Gateway
             </span>
           </div>

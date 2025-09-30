@@ -7,16 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, RefreshCw } from "lucide-react";
 
-// Order components
-import OrderHeader from "@/components/orders/OrderHeader";
-import OrderProgress from "@/components/orders/OrderProgress";
-import ShippingInfo from "@/components/orders/ShippingInfo";
-import OrderItems from "@/components/orders/OrderItems";
-import PaymentDetails from "@/components/orders/PaymentDetails";
-import OrderActions from "@/components/orders/OrderActions";
-
-// Existing components and hooks
-import ConfirmButton from "@/components/orders/ConfirmButton";
+import OrderOverview from "@/components/orders/OrderOverview";
 import { useGetOrder, useCancelOrder } from "@/hooks/useOrder";
 import { AutoPaymentPopup } from "@/components/payment";
 
@@ -198,7 +189,7 @@ export default function OrderPage({ params }: OrderPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-transparent pb-16">
+    <>
       {/* Auto Payment Popup */}
       {order.status === "PENDING_PAYMENT" &&
         order.paymentMethod === "GATEWAY" && (
@@ -211,92 +202,57 @@ export default function OrderPage({ params }: OrderPageProps) {
           />
         )}
 
-      {/* Order Header */}
-      <OrderHeader
-        orderId={order.id}
-        status={order.status}
-        createdAt={
-          order.createdAt ? new Date(order.createdAt).toISOString() : undefined
-        }
+      {/* Order Overview - Full Page Design */}
+      <OrderOverview
+        order={{
+          id: order.id,
+          status: order.status,
+          createdAt: order.createdAt
+            ? new Date(order.createdAt).toISOString()
+            : undefined,
+          updatedAt: order.updatedAt
+            ? new Date(order.updatedAt).toISOString()
+            : undefined,
+          paymentMethod: order.paymentMethod || "UNKNOWN",
+          grandTotal: order.grandTotal || 0,
+          userId: (order as { userId?: number }).userId,
+          payment: order.payment
+            ? {
+                status: order.payment.status || "PENDING",
+                amount: order.payment.amount || 0,
+                proofUrl: (order.payment as { proofUrl?: string }).proofUrl,
+              }
+            : undefined,
+          store: order.store
+            ? {
+                id: order.store.id,
+                name: order.store.name,
+                city: order.store.locations?.[0]?.city,
+                province: order.store.locations?.[0]?.province,
+              }
+            : undefined,
+        }}
+        items={order.items.map((item) => ({
+          id: item.id,
+          productId: item.productId,
+          qty: item.qty,
+          totalAmount: item.totalAmount || 0,
+          product: item.product
+            ? {
+                id: item.product.id,
+                name: item.product.name || `Product #${item.productId}`,
+                price: item.product.price || 0,
+                images: (
+                  item.product as { images?: Array<{ imageUrl: string }> }
+                ).images?.map((img) => ({ url: img.imageUrl })),
+              }
+            : undefined,
+        }))}
+        address={order.address || null}
+        apiBase={apiBase}
         onRefresh={refetch}
-        isLoading={isLoading}
+        CancelButton={CancelButton}
       />
-
-      <div className="mx-auto max-w-6xl space-y-6 px-4 py-10 sm:px-6">
-        {/* Order Progress */}
-        <OrderProgress status={order.status} />
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Left Column - Order Details */}
-          <div className="space-y-6 lg:col-span-2">
-            {/* Shipping Information */}
-            <ShippingInfo
-              address={order.address || null}
-              orderStatus={order.status}
-            />
-
-            {/* Order Items */}
-            <OrderItems
-              items={order.items.map((item) => ({
-                id: item.id,
-                productId: item.productId,
-                qty: item.qty,
-                totalAmount: item.totalAmount || 0,
-                product: item.product
-                  ? {
-                      id: item.product.id,
-                      name: item.product.name || `Product #${item.productId}`,
-                      price: item.product.price || 0,
-                    }
-                  : undefined,
-              }))}
-            />
-          </div>
-
-          {/* Right Column - Payment & Actions */}
-          <div className="space-y-6 lg:pt-2">
-            {/* Payment Details */}
-            <PaymentDetails
-              order={{
-                id: order.id,
-                status: order.status,
-                paymentMethod: order.paymentMethod || "UNKNOWN",
-                grandTotal: order.grandTotal || 0,
-                payment: order.payment
-                  ? {
-                      status: order.payment.status || "PENDING",
-                      amount: order.payment.amount || 0,
-                    }
-                  : undefined,
-              }}
-            >
-              {/* Confirm button for shipped orders */}
-              {order.status === "SHIPPED" && (
-                <ConfirmButton
-                  orderId={order.id}
-                  userId={(order as { userId?: number }).userId}
-                />
-              )}
-            </PaymentDetails>
-
-            {/* Order Actions */}
-            <OrderActions
-              order={{
-                id: order.id,
-                status: order.status,
-                paymentMethod: order.paymentMethod || "UNKNOWN",
-                grandTotal: order.grandTotal || 0,
-                userId: (order as { userId?: number }).userId,
-              }}
-              apiBase={apiBase}
-              onRefresh={refetch}
-              CancelButton={CancelButton}
-              ConfirmButton={ConfirmButton}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }
