@@ -43,31 +43,36 @@ export const discountController = {
 
   async create(req: Request, res: Response) {
     try {
-      const { type, amount } = req.body;
+      const { type, amount, value } = req.body;
 
-      if (amount === undefined || amount <= 0) {
-        return res
-          .status(400)
-          .json({ message: "Amount wajib diisi dan harus lebih dari 0" });
+      // Validasi hanya kalau PRODUCT_DISCOUNT
+      if (value === "PRODUCT_DISCOUNT") {
+        if (amount === undefined || amount <= 0) {
+          return res
+            .status(400)
+            .json({ message: "Amount wajib diisi dan harus lebih dari 0" });
+        }
       }
 
+      // Kalau tipe BUY1GET1 / BUYXGETX → amount tidak dicek
       const discount = await discountService.createDiscount(req.body);
       res.status(201).json(discount);
     } catch (err) {
       res.status(500).json({ message: (err as Error).message });
     }
   },
-
   async update(req: Request, res: Response) {
     try {
       const id = Number(req.params.id);
+      const { type, amount, value } = req.body;
 
-      const { type, amount } = req.body;
-
-      if (amount === undefined || amount <= 0) {
-        return res
-          .status(400)
-          .json({ message: "Amount wajib diisi dan harus lebih dari 0" });
+      // Validasi amount hanya untuk PRODUCT_DISCOUNT
+      if (value === "PRODUCT_DISCOUNT") {
+        if (amount === undefined || amount <= 0) {
+          return res
+            .status(400)
+            .json({ message: "Amount wajib diisi dan harus lebih dari 0" });
+        }
       }
 
       const discount = await discountService.updateDiscount(id, req.body);
@@ -76,7 +81,6 @@ export const discountController = {
       res.status(500).json({ message: (err as Error).message });
     }
   },
-
   async delete(req: Request, res: Response) {
     try {
       const id = Number(req.params.id);

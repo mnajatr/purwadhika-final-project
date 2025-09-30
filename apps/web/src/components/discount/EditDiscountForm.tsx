@@ -187,7 +187,7 @@ export default function EditDiscountForm({
           <input
             type="number"
             placeholder="Discount Amount"
-            {...register("amount")}
+            {...register("amount", { valueAsNumber: true })}
             className="w-full p-2 border rounded"
           />
         </>

@@ -44,6 +44,7 @@ import { MdLocalShipping, MdPayment, MdMessage } from "react-icons/md";
 import { TbTruckDelivery, TbCreditCard, TbDiscount } from "react-icons/tb";
 import { DiscountResponse } from "@/types/discount.types";
 import OrderSuccessModal from "@/components/checkout/OrderSuccessModal";
+import { getDiscountsByProductIds } from "@/services/discount.service";
 type ResolveResp = {
   success?: boolean;
   data?: {
@@ -1256,7 +1257,6 @@ export default function CheckoutPage() {
                         handleUpdateCart={handleUpdateCart}
                         onApplyDiscount={setAppliedDiscounts}
                         isLoading={isCartLoading}
-                        // productIds={productIds} //ini aku hapus mel
                       />
 
                       {/* Special Instructions */}

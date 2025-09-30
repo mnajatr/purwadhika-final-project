@@ -105,17 +105,6 @@ function calculateDiscount(
       }
 
       case "BUYXGETX": {
-        if (!item) break;
-        const buyQty = discount.buyQty ?? 0;
-        const getQty = discount.getQty ?? 0;
-        const totalQty = item.qty;
-
-        if (buyQty <= 0) break;
-
-        const freeItems = Math.floor(totalQty / (buyQty + getQty)) * getQty;
-        const payableQty = totalQty - freeItems;
-
-        totalDiscount += (totalQty - payableQty) * productPrice;
         break;
       }
     }
