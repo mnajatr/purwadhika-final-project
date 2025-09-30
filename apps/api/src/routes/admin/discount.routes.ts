@@ -1,13 +1,14 @@
 import { Router } from "express";
 import { discountController } from "../../controllers/discount.controller.js";
+import { adminAuth } from "../../middleware/admin.middleware.js";
 
 const router = Router();
 
-router.get("/", discountController.getAll);
+router.get("/", adminAuth, discountController.getAll);
 router.post("/by-products", discountController.getDiscountsByProductIds);
 router.get("/:id", discountController.getById);
-router.post("/", discountController.create);
-router.put("/:id", discountController.update);
-router.delete("/:id", discountController.delete);
+router.post("/", adminAuth, discountController.create);
+router.put("/:id", adminAuth, discountController.update);
+router.delete("/:id", adminAuth, discountController.delete);
 
 export default router;

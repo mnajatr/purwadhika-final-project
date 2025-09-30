@@ -1,12 +1,36 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { useProducts } from "@/hooks/useProduct";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/admin/sidebar";
 
-export default function admin() {
+export default function AdminDashboardPage() {
+  const router = useRouter();
+  const [role, setRole] = useState("");
+  const [storeId, setStoreId] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Ambil data dari localStorage
+    const storedRole = localStorage.getItem("role") || "";
+    const storedStoreId = localStorage.getItem("storeId") || "";
+
+    setRole(storedRole);
+    setStoreId(storedStoreId);
+
+    // Cek role
+    if (storedRole !== "SUPER_ADMIN" && storedRole !== "STORE_ADMIN") {
+      router.replace("/unauthorized"); // redirect jika bukan admin
+      return;
+    }
+
+    setLoading(false); // user valid, lanjut render
+  }, [router]);
+
+  if (loading) {
+    return <div>Checking access...</div>; // loading sementara redirect
+  }
+
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
@@ -16,10 +40,9 @@ export default function admin() {
 
       {/* Konten utama */}
       <div className="flex-1 px-4 sm:px-6 lg:px-8 py-12 overflow-x-auto">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
-          <h1>Hello</h1>
-        </div>
+        <h1>Hello Admin</h1>
+        <p>Role: {role}</p>
+        <p>Store ID: {storeId}</p>
       </div>
     </div>
   );

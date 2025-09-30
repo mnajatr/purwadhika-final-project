@@ -63,16 +63,27 @@ export default function CreateDiscountForm() {
     const payload: CreateDiscount = {
       name: data.name,
       value: data.value,
-      type: data.type,
-      amount: data.amount ? Number(data.amount) : undefined,
+      type:
+        data.value === ValueType.PRODUCT_DISCOUNT
+          ? data.type!
+          : DiscountType.BUYXGETX,
       minPurchase: data.minPurchase ? Number(data.minPurchase) : undefined,
       maxDiscount: data.maxDiscount ? Number(data.maxDiscount) : undefined,
       expiredAt: new Date(data.expiredAt + "T23:59:59Z").toISOString(),
       store: { id: Number(data.storeId) },
       product: { id: Number(data.productId) },
-      buyQty: data.buyQty ?? 1,
-      getQty: data.getQty ?? 1,
     };
+
+    if (data.value === ValueType.PRODUCT_DISCOUNT) {
+      payload.amount = Number(data.amount);
+    }
+
+    if (data.value === ValueType.BUY1GET1) {
+      payload.buyQty = data.buyQty ?? 1;
+      payload.getQty = data.getQty ?? 1;
+    }
+
+    console.log("Payload final:", payload);
 
     createDiscount.mutate(payload, {
       onSuccess: () => {

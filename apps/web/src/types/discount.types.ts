@@ -14,7 +14,6 @@ export interface CreateDiscount {
   value: ValueType;
   type: DiscountType;
   amount?: number;
-  percentage?: number;
   minPurchase?: number;
   maxDiscount?: number;
   buyQty?: number;

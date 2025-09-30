@@ -59,13 +59,19 @@ export default function Sidebar() {
           </div>
         )}
         <ul className="space-y-2">
-          {menus.map((menu) => (
-            <li key={menu.path}>
-              <Link href={menu.path} className="hover:text-blue-400">
-                {menu.name}
-              </Link>
-            </li>
-          ))}
+          {menus
+            .filter((menu) => {
+              // Kalau menu "Users", hanya tampil untuk SUPER_ADMIN
+              if (menu.name === "Users" && role !== "SUPER_ADMIN") return false;
+              return true;
+            })
+            .map((menu) => (
+              <li key={menu.path}>
+                <Link href={menu.path} className="hover:text-blue-400">
+                  {menu.name}
+                </Link>
+              </li>
+            ))}
         </ul>
       </aside>
     </div>

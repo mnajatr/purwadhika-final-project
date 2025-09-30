@@ -63,6 +63,7 @@ class ProductsService {
             : true,
           category: product.category.name,
           store: storeName,
+          storeId: String(inventory?.store?.id ?? 1),
           imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
           stock: inventory?.stockQty ?? 0,
         };
