@@ -7,75 +7,57 @@ import {
   DiscountType,
 } from "../types/discount.js";
 
-export const discountService = {
+export class DiscountService {
+  // ================= GET ALL DISCOUNTS =================
   async getAll(): Promise<DiscountResponse[]> {
     const discounts = await prisma.discount.findMany({
       include: { store: true, product: true },
     });
+    return this.formatDiscounts(discounts);
+  }
 
-    return discounts.map((d) => ({
-      id: d.id,
-      name: d.name,
-      value: d.value as ValueType, // konversi enum Prisma → enum lokal
-      type: d.type as DiscountType,
-      amount: d.amount ?? undefined,
-      minPurchase: d.minPurchase ?? undefined,
-      maxDiscount: d.maxDiscount ?? undefined,
-      expiredAt: d.expiredAt.toISOString(), // Date → string
-      store: { id: d.store.id, name: d.store.name },
-      product: { id: d.product.id, name: d.product.name },
-    }));
-  },
+  // ================= GET ALL WITH PAGINATION =================
+  async getAllPaginated(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
 
+    const [discounts, total] = await Promise.all([
+      prisma.discount.findMany({
+        skip,
+        take: limit,
+        include: { store: true, product: true },
+      }),
+      prisma.discount.count(),
+    ]);
+
+    return {
+      data: this.formatDiscounts(discounts),
+      total,
+      page,
+      limit,
+    };
+  }
+
+  // ================= GET BY ID =================
   async getById(id: number): Promise<DiscountResponse | null> {
     const d = await prisma.discount.findUnique({
       where: { id },
       include: { store: true, product: true },
     });
-
     if (!d) return null;
+    return this.formatDiscount(d);
+  }
 
-    return {
-      id: d.id,
-      name: d.name,
-      value: d.value as ValueType,
-      type: d.type as DiscountType,
-      amount: d.amount ?? undefined,
-      minPurchase: d.minPurchase ?? undefined,
-      maxDiscount: d.maxDiscount ?? undefined,
-      buyQty: d.buyQty ?? undefined,
-      getQty: d.getQty ?? undefined,
-      expiredAt: d.expiredAt.toISOString(),
-      store: { id: d.store.id, name: d.store.name },
-      product: { id: d.product.id, name: d.product.name },
-    };
-  },
-
+  // ================= GET BY PRODUCT IDS =================
   async getByProductIds(productIds: number[]): Promise<DiscountResponse[]> {
     const discounts = await prisma.discount.findMany({
-      where: {
-        productId: { in: productIds },
-      },
+      where: { productId: { in: productIds } },
       include: { store: true, product: true },
     });
+    return this.formatDiscounts(discounts);
+  }
 
-    return discounts.map((d) => ({
-      id: d.id,
-      name: d.name,
-      value: d.value as ValueType,
-      type: d.type as DiscountType,
-      amount: d.amount ?? undefined,
-      minPurchase: d.minPurchase ?? undefined,
-      maxDiscount: d.maxDiscount ?? undefined,
-      buyQty: d.buyQty ?? undefined,
-      getQty: d.getQty ?? undefined,
-      expiredAt: d.expiredAt.toISOString(),
-      store: { id: d.store.id, name: d.store.name },
-      product: { id: d.product.id, name: d.product.name },
-    }));
-  },
-
-  async createDiscount(data: CreateDiscount): Promise<DiscountResponse> {
+  // ================= CREATE DISCOUNT =================
+  async create(data: CreateDiscount): Promise<DiscountResponse> {
     const d = await prisma.discount.create({
       data: {
         name: data.name,
@@ -93,26 +75,11 @@ export const discountService = {
       include: { store: true, product: true },
     });
 
-    return {
-      id: d.id,
-      name: d.name,
-      value: d.value as ValueType,
-      type: d.type as DiscountType,
-      amount: d.amount ?? undefined, // selalu ada, tergantung tipe
-      minPurchase: d.minPurchase ?? undefined,
-      maxDiscount: d.maxDiscount ?? undefined,
-      buyQty: d.buyQty ?? undefined,
-      getQty: d.getQty ?? undefined,
-      expiredAt: d.expiredAt.toISOString(),
-      store: { id: d.store.id, name: d.store.name },
-      product: { id: d.product.id, name: d.product.name },
-    };
-  },
+    return this.formatDiscount(d);
+  }
 
-  async updateDiscount(
-    id: number,
-    data: UpdateDiscount
-  ): Promise<DiscountResponse> {
+  // ================= UPDATE DISCOUNT =================
+  async update(id: number, data: UpdateDiscount): Promise<DiscountResponse> {
     const d = await prisma.discount.update({
       where: { id },
       data: {
@@ -135,28 +102,21 @@ export const discountService = {
       include: { store: true, product: true },
     });
 
-    return {
-      id: d.id,
-      name: d.name,
-      value: d.value as ValueType,
-      type: d.type as DiscountType,
-      amount: d.amount ?? undefined,
-      minPurchase: d.minPurchase ?? undefined,
-      maxDiscount: d.maxDiscount ?? undefined,
-      buyQty: d.buyQty ?? undefined,
-      getQty: d.getQty ?? undefined,
-      expiredAt: d.expiredAt.toISOString(),
-      store: { id: d.store.id, name: d.store.name },
-      product: { id: d.product.id, name: d.product.name },
-    };
-  },
+    return this.formatDiscount(d);
+  }
 
-  async deleteDiscount(id: number): Promise<DiscountResponse> {
+  // ================= DELETE DISCOUNT =================
+  async delete(id: number): Promise<DiscountResponse> {
     const d = await prisma.discount.delete({
       where: { id },
       include: { store: true, product: true },
     });
 
+    return this.formatDiscount(d);
+  }
+
+  // ================= PRIVATE HELPER =================
+  private formatDiscount(d: any): DiscountResponse {
     return {
       id: d.id,
       name: d.name,
@@ -171,5 +131,9 @@ export const discountService = {
       store: { id: d.store.id, name: d.store.name },
       product: { id: d.product.id, name: d.product.name },
     };
-  },
-};
+  }
+
+  private formatDiscounts(discounts: any[]): DiscountResponse[] {
+    return discounts.map((d) => this.formatDiscount(d));
+  }
+}

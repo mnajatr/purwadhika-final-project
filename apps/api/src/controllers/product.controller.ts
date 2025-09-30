@@ -16,12 +16,15 @@ cloudinary.config({
 
 export class ProductController {
   static async getAll(req: Request, res: Response) {
-    const { lat, lon, storeId } = req.query;
+    const { lat, lon, storeId, page = "1", limit = "10" } = req.query;
+
+    const pageNumber = parseInt(page as string) || 1;
+    const limitNumber = parseInt(limit as string) || 10;
 
     if (storeId) {
       const sid = Number(storeId);
       if (!Number.isNaN(sid)) {
-        const result = await service.getByStoreId(sid);
+        const result = await service.getByStoreId(sid, pageNumber, limitNumber);
         return res.json(result);
       }
     }
@@ -31,14 +34,19 @@ export class ProductController {
       const userLon = parseFloat(lon as string);
 
       if (!isNaN(userLat) && !isNaN(userLon)) {
-        const result = await service.getByNearestStore(userLat, userLon);
+        const result = await service.getByNearestStore(
+          userLat,
+          userLon,
+          pageNumber,
+          limitNumber
+        );
         return res.json(result);
       }
     }
 
-    const products = await service.getAllWithStock();
+    const result = await service.getAllWithStock(pageNumber, limitNumber);
     res.json({
-      products,
+      ...result,
       nearestStore: null,
       message: "Showing all available products",
     });

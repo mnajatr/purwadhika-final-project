@@ -3,9 +3,11 @@ import { locationService } from "./location.service.js";
 import { CreateProduct } from "../types/product.js";
 
 export class ProductService {
-  // ================= GET ALL PRODUCTS =================
-  async getAll() {
+  async getAll(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
     const products = await prisma.product.findMany({
+      skip,
+      take: limit,
       include: {
         category: true,
         inventories: {
@@ -17,14 +19,24 @@ export class ProductService {
         images: true,
       },
     });
+    const total = await prisma.product.count();
 
-    return products.map((p) => ({ ...p, price: Number(p.price) }));
+    // Kembalian diperbaiki supaya konsisten dengan method lain
+    return {
+      data: products.map((p) => ({ ...p, price: Number(p.price) })),
+      total,
+      page,
+      limit,
+    };
   }
 
-  async getAllWithStock() {
+  async getAllWithStock(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
     // Hanya produk yang punya stock > 0
     const products = await prisma.product.findMany({
       where: { inventories: { some: { stockQty: { gt: 0 } } } },
+      skip,
+      take: limit,
       include: {
         category: true,
         inventories: {
@@ -37,18 +49,34 @@ export class ProductService {
         images: true,
       },
     });
+    const total = await prisma.product.count({
+      where: { inventories: { some: { stockQty: { gt: 0 } } } },
+    });
 
-    return products.map((p) => ({ ...p, price: Number(p.price) }));
+    return {
+      data: products.map((p) => ({ ...p, price: Number(p.price) })),
+      total,
+      page,
+      limit,
+    };
   }
 
   // ================= GET BY NEAREST STORE =================
-  async getByNearestStore(lat: number, lon: number) {
+  async getByNearestStore(
+    lat: number,
+    lon: number,
+    page: number = 1,
+    limit: number = 10
+  ) {
     try {
       const nearestStoreId = await locationService.findNearestStoreId(lat, lon);
       if (!nearestStoreId)
         return {
           products: [],
           nearestStore: null,
+          page,
+          limit,
+          total: 0,
           message: "No store found within service area",
         };
 
@@ -57,11 +85,15 @@ export class ProductService {
         select: { id: true, name: true, locations: true },
       });
 
+      const skip = (page - 1) * limit;
+
       const products = await prisma.product.findMany({
+        skip,
+        take: limit,
         include: {
           category: true,
           inventories: {
-            where: { storeId: nearestStoreId }, // Ambil semua inventori, termasuk stock 0
+            where: { storeId: nearestStoreId },
             select: {
               stockQty: true,
               store: { select: { id: true, name: true, locations: true } },
@@ -70,17 +102,25 @@ export class ProductService {
           images: true,
         },
       });
+      const total = await prisma.product.count({
+        where: { inventories: { some: { storeId: nearestStoreId } } },
+      });
 
       return {
         products: products.map((p) => ({ ...p, price: Number(p.price) })),
         nearestStore: store,
+        total,
+        page,
+        limit,
         message: `Showing products from ${store?.name || "nearest store"}`,
       };
     } catch (error) {
       console.error("Error finding products by nearest store:", error);
-      const products = await this.getAll(); // fallback ambil semua produk
+      const products = await this.getAll(page, limit);
       return {
         products,
+        page,
+        limit,
         nearestStore: null,
         message: "Showing all products (location service unavailable)",
       };
@@ -88,20 +128,32 @@ export class ProductService {
   }
 
   // ================= GET BY STORE ID =================
-  async getByStoreId(storeId: number) {
+  async getByStoreId(storeId: number, page: number = 1, limit: number = 10) {
     try {
       const store = await prisma.store.findUnique({
         where: { id: storeId },
         select: { id: true, name: true, locations: true },
       });
       if (!store)
-        return { products: [], nearestStore: null, message: "Store not found" };
+        return {
+          products: [],
+          total: 0,
+          page,
+          limit,
+          nearestStore: null,
+          message: "Store not found",
+        };
+
+      const skip = (page - 1) * limit;
 
       const products = await prisma.product.findMany({
+        where: { inventories: { some: { storeId } } },
+        skip,
+        take: limit,
         include: {
           category: true,
           inventories: {
-            where: { storeId }, // Ambil semua inventori termasuk stock 0
+            where: { storeId },
             select: {
               stockQty: true,
               store: { select: { id: true, name: true, locations: true } },
@@ -111,14 +163,21 @@ export class ProductService {
         },
       });
 
+      const total = await prisma.product.count({
+        where: { inventories: { some: { storeId } } },
+      });
+
       return {
         products: products.map((p) => ({ ...p, price: Number(p.price) })),
         nearestStore: store,
+        total,
+        page,
+        limit,
         message: `Showing products from ${store?.name || "selected store"}`,
       };
     } catch (error) {
       console.error("Error finding products by storeId:", error);
-      const products = await this.getAll(); // fallback ambil semua produk
+      const products = await this.getAll();
       return {
         products,
         nearestStore: null,
