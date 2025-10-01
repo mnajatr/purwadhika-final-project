@@ -1154,6 +1154,8 @@ export default function OrderOverview({
                   "COMPLETED",
                 ].includes(order.status)
                   ? "bg-emerald-100/80 text-emerald-700 border-emerald-200"
+                  : order.payment?.status === "REJECTED"
+                  ? "bg-red-100/80 text-red-700 border-red-200"
                   : order.status === "PENDING_PAYMENT"
                   ? "bg-amber-100/80 text-amber-700 border-amber-200"
                   : "bg-muted text-muted-foreground border-border/60"
@@ -1168,6 +1170,8 @@ export default function OrderOverview({
                 "COMPLETED",
               ].includes(order.status)
                 ? "Payment Success"
+                : order.payment?.status === "REJECTED"
+                ? "Payment Rejected"
                 : order.status === "PENDING_PAYMENT"
                 ? "Payment Pending"
                 : "Payment Review"}
@@ -1226,10 +1230,20 @@ export default function OrderOverview({
           {order.status === "PENDING_PAYMENT" &&
             order.paymentMethod === "MANUAL_TRANSFER" && (
               <div className="space-y-3 mt-4">
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2 text-destructive">
-                  <AlertCircle className="w-4 h-4" />
-                  <p className="text-sm">Upload payment proof to proceed</p>
-                </div>
+                {order.payment?.status === "REJECTED" ? (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+                    <AlertCircle className="w-4 h-4" />
+                    <p className="text-sm font-medium">
+                      Your payment proof was rejected. Please upload a new
+                      payment proof.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2 text-destructive">
+                    <AlertCircle className="w-4 h-4" />
+                    <p className="text-sm">Upload payment proof to proceed</p>
+                  </div>
+                )}
                 <PaymentUpload
                   orderId={order.id}
                   apiBase={apiBase}

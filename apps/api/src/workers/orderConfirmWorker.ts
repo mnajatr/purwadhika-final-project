@@ -30,18 +30,42 @@ const worker = new Worker<ConfirmOrderJobData>(
           return { skipped: true };
         }
 
+        const now = new Date();
+
+        // Update order status to CONFIRMED
         const updated = await tx.order.update({
           where: { id: orderId },
           data: { status: "CONFIRMED" },
         });
 
+        // Update shipment with deliveredAt timestamp
+        const shipment = await tx.shipment.findUnique({ where: { orderId } });
+        if (shipment) {
+          await tx.shipment.update({
+            where: { orderId },
+            data: {
+              status: "DELIVERED",
+              deliveredAt: now,
+            },
+          });
+          logger.info(`Updated shipment deliveredAt for order ${orderId}`);
+        } else {
+          logger.warn(
+            `No shipment record found for order ${orderId} during auto-confirm`
+          );
+        }
+
         return { skipped: false, updated };
       });
 
-      logger.info(`✅ Confirm job done for order=${orderId}: ${JSON.stringify(result)}`);
+      logger.info(
+        `✅ Confirm job done for order=${orderId}: ${JSON.stringify(result)}`
+      );
       return result;
     } catch (err) {
-      logger.error(`❌ Failed confirm job for order=${orderId}: ${String(err)}`);
+      logger.error(
+        `❌ Failed confirm job for order=${orderId}: ${String(err)}`
+      );
       throw err;
     }
   },
@@ -50,13 +74,17 @@ const worker = new Worker<ConfirmOrderJobData>(
 
 worker.on("failed", (job: Job<ConfirmOrderJobData> | undefined, err: Error) => {
   logger.error(
-    `❌ Order confirm job failed. id=${job?.id} data=${JSON.stringify(job?.data)} error=${String(err)}`
+    `❌ Order confirm job failed. id=${job?.id} data=${JSON.stringify(
+      job?.data
+    )} error=${String(err)}`
   );
 });
 
 worker.on("completed", (job: Job<ConfirmOrderJobData>) => {
   logger.info(
-    `🎉 Order confirm job completed. id=${job.id} data=${JSON.stringify(job.data)}`
+    `🎉 Order confirm job completed. id=${job.id} data=${JSON.stringify(
+      job.data
+    )}`
   );
 });
 

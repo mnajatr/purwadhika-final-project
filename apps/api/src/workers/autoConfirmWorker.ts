@@ -18,7 +18,11 @@ export const autoConfirmWorker = new Worker(
           id: true,
           status: true,
           userId: true,
-          updatedAt: true,
+          shipment: {
+            select: {
+              shippedAt: true,
+            },
+          },
         },
       });
 
@@ -34,11 +38,19 @@ export const autoConfirmWorker = new Worker(
         return;
       }
 
+      // Check if shipment has shippedAt timestamp
+      const shippedAt = order.shipment?.shippedAt;
+      if (!shippedAt) {
+        logger.warn(
+          `Auto-confirm: Order ${orderId} has no shipment.shippedAt, cannot calculate 7 days. Skipping auto-confirmation.`
+        );
+        return;
+      }
+
       // Check if 7 days have passed since the order was shipped
       const now = new Date();
-      const shippedAt = new Date(order.updatedAt);
       const daysSinceShipped =
-        (now.getTime() - shippedAt.getTime()) / (1000 * 60 * 60 * 24);
+        (now.getTime() - new Date(shippedAt).getTime()) / (1000 * 60 * 60 * 24);
 
       if (daysSinceShipped < 7) {
         logger.info(
@@ -51,16 +63,27 @@ export const autoConfirmWorker = new Worker(
         throw new Error(`Reschedule in ${remainingMs}ms`);
       }
 
-      // Update order status to CONFIRMED
-      await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          status: "CONFIRMED",
-          updatedAt: now,
-        },
+      // Update order status to CONFIRMED and set shipment deliveredAt
+      await prisma.$transaction(async (tx) => {
+        await tx.order.update({
+          where: { id: orderId },
+          data: {
+            status: "CONFIRMED",
+          },
+        });
+
+        await tx.shipment.update({
+          where: { orderId },
+          data: {
+            status: "DELIVERED",
+            deliveredAt: now,
+          },
+        });
       });
 
-      logger.info(`✅ Auto-confirmed order ${orderId} after 7 days`);
+      logger.info(
+        `✅ Auto-confirmed order ${orderId} after 7 days and set deliveredAt`
+      );
     } catch (error) {
       logger.error(
         `❌ Error in auto-confirmation for order ${orderId}:`,

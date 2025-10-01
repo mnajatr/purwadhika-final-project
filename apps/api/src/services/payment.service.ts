@@ -21,21 +21,33 @@ export class PaymentService {
     payment: PaymentMinimal | null;
     orderStatus: string;
   }> {
-
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: { payment: true },
     });
     if (!order) throw new Error("Order not found");
 
+    // Allow upload only when order is PENDING_PAYMENT (including after rejection)
     if (order.status !== "PENDING_PAYMENT") {
       throw createConflictError(
         `Cannot upload payment proof: order is already ${order.status}`
       );
     }
 
+    // Additional check: if payment exists and is not PENDING or REJECTED, don't allow re-upload
+    if (
+      order.payment &&
+      !["PENDING", "REJECTED"].includes(order.payment.status)
+    ) {
+      throw createConflictError(
+        `Cannot upload payment proof: payment is already ${order.payment.status}`
+      );
+    }
+
     // Upload directly from buffer (multer.memoryStorage used in controller)
-    const proofUrl = await fileService.uploadBuffer(Buffer.from(fileBuffer), { resource_type: "auto" });
+    const proofUrl = await fileService.uploadBuffer(Buffer.from(fileBuffer), {
+      resource_type: "auto",
+    });
 
     let paymentRecord: PaymentMinimal | null = null;
 

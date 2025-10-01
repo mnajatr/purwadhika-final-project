@@ -106,6 +106,20 @@ const worker = new Worker<CancelOrderJobData>(
           data: { status: "CANCELLED" },
         });
 
+        // Update payment status to FAILED if payment exists
+        if (order.payment) {
+          logger.info(
+            `[TX] Updating payment status to FAILED for order ${orderId}...`
+          );
+          await tx.payment.update({
+            where: { id: order.payment.id },
+            data: { status: "FAILED" },
+          });
+          logger.info(
+            `[TX] Payment status updated to FAILED for order ${orderId}`
+          );
+        }
+
         logger.info(
           `[TX] Order ${orderId} status updated to ${updated.status}`
         );
