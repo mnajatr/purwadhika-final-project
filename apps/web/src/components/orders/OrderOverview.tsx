@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import {
   MapPin,
   Copy,
@@ -18,11 +20,14 @@ import {
   Clock,
   MoreHorizontal,
   Timer,
+  X,
+  Upload,
+  FileImage,
+  CheckCircle,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PayNowButton } from "@/components/payment";
-import PaymentUpload from "./PaymentUpload";
-import ConfirmButton from "./ConfirmButton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +35,397 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useQueryClient } from "@tanstack/react-query";
+import { useConfirmOrder } from "@/hooks/useOrder";
+import type { OrderDetail } from "@/hooks/useOrder";
+
+// ===== INTERNAL COMPONENTS =====
+
+// ConfirmButton Component
+function ConfirmButton({
+  orderId,
+  userId,
+}: {
+  orderId: number;
+  userId?: number;
+}) {
+  const confirm = useConfirmOrder();
+  const [loading, setLoading] = React.useState(false);
+  const [errMsg, setErrMsg] = React.useState<string | null>(null);
+
+  const handle = async () => {
+    setErrMsg(null);
+    setLoading(true);
+    try {
+      await confirm.mutateAsync({ orderId, userId });
+    } catch (e) {
+      setErrMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <Button onClick={handle} disabled={loading}>
+        {loading ? "Confirming..." : "Confirm Receipt"}
+      </Button>
+      {errMsg && <div className="text-sm text-red-600 mt-2">{errMsg}</div>}
+    </div>
+  );
+}
+
+// PaymentUpload Component
+interface PaymentUploadProps {
+  orderId: number;
+  apiBase: string;
+  onUploadSuccess?: () => void;
+  cancelButton?: React.ReactNode;
+}
+
+function PaymentUpload({
+  orderId,
+  apiBase,
+  onUploadSuccess,
+  cancelButton,
+}: PaymentUploadProps) {
+  const qc = useQueryClient();
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<
+    "idle" | "uploading" | "success" | "error"
+  >("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const maxFileSize = 5 * 1024 * 1024; // 5MB
+  const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+  const validateFile = (file: File): string | null => {
+    if (!allowedTypes.includes(file.type)) {
+      return "Please upload a valid image file (JPG, PNG, WebP)";
+    }
+    if (file.size > maxFileSize) {
+      return "File size must be less than 5MB";
+    }
+    return null;
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+
+    const validationError = validateFile(selectedFile);
+    if (validationError) {
+      setErrorMessage(validationError);
+      setUploadStatus("error");
+      return;
+    }
+
+    setFile(selectedFile);
+    setErrorMessage(null);
+    setUploadStatus("idle");
+
+    // Create preview URL
+    const url = URL.createObjectURL(selectedFile);
+    setPreviewUrl(url);
+  };
+
+  const handleUpload = async () => {
+    if (!file) {
+      setErrorMessage("Please select a payment proof image");
+      setUploadStatus("error");
+      return;
+    }
+
+    setLoading(true);
+    setUploadStatus("uploading");
+    setUploadProgress(0);
+    setErrorMessage(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("proof", file);
+
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 200);
+
+      const response = await fetch(
+        `${apiBase}/orders/${orderId}/payment-proof`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Upload failed: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
+      const payload = result?.data ?? result;
+
+      setUploadStatus("success");
+      toast.success("Payment proof uploaded successfully!");
+
+      // Update cached order data
+      try {
+        const returnedOrder = payload.order ?? payload;
+        if (returnedOrder && typeof returnedOrder === "object") {
+          qc.setQueryData<OrderDetail | undefined>(
+            ["order", orderId],
+            (prev) =>
+              ({
+                ...(prev ?? {}),
+                ...returnedOrder,
+                status:
+                  returnedOrder.orderStatus ||
+                  returnedOrder.status ||
+                  prev?.status,
+              } as OrderDetail)
+          );
+        } else {
+          qc.invalidateQueries({ queryKey: ["order", orderId] });
+        }
+      } catch {
+        qc.invalidateQueries({ queryKey: ["order", orderId] });
+      }
+
+      // Reset form after successful upload
+      setTimeout(() => {
+        handleClear();
+        onUploadSuccess?.();
+      }, 2000);
+    } catch (error) {
+      setUploadStatus("error");
+      const message = error instanceof Error ? error.message : "Upload failed";
+      setErrorMessage(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClear = () => {
+    setFile(null);
+    setPreviewUrl(null);
+    setUploadProgress(0);
+    setUploadStatus("idle");
+    setErrorMessage(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  return (
+    <Card className="w-full rounded-2xl border border-border/60 bg-card/80 shadow-sm">
+      <CardContent className="p-6">
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="text-center">
+            <h3 className="mb-2 text-lg font-semibold text-foreground">
+              Upload Payment Proof
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Upload a clear image of your payment receipt or transfer
+              confirmation
+            </p>
+          </div>
+
+          {/* File Upload Area */}
+          <div className="space-y-4">
+            {!file ? (
+              <label className="flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/60 bg-muted/40 transition-colors hover:bg-muted/60">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <Upload className="mb-4 h-8 w-8 text-muted-foreground" />
+                  <p className="mb-2 text-sm text-muted-foreground">
+                    <span className="font-semibold">Click to upload</span> or
+                    drag and drop
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    PNG, JPG, WebP (MAX. 5MB)
+                  </p>
+                </div>
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                />
+              </label>
+            ) : (
+              <div className="space-y-4">
+                {/* File Preview */}
+                <div className="flex items-center space-x-4 rounded-xl border border-border/60 bg-muted/30 p-4">
+                  <div className="flex-shrink-0">
+                    {previewUrl ? (
+                      <div className="relative">
+                        <Image
+                          src={previewUrl}
+                          alt="Payment proof preview"
+                          width={64}
+                          height={64}
+                          className="h-16 w-16 rounded-lg object-cover"
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="absolute -right-2 -top-2 h-6 w-6 p-0"
+                          onClick={() => window.open(previewUrl, "_blank")}
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-border/60 bg-muted/40">
+                        <FileImage className="h-8 w-8 text-muted-foreground/60" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {file.name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatFileSize(file.size)}
+                    </p>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleClear}
+                    disabled={loading}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {/* Upload Progress */}
+                {uploadStatus === "uploading" && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Uploading...</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <Progress value={uploadProgress} className="w-full" />
+                  </div>
+                )}
+
+                {/* Success Message */}
+                {uploadStatus === "success" && (
+                  <div className="flex items-center space-x-2 rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 text-emerald-700">
+                    <CheckCircle className="h-5 w-5" />
+                    <span className="text-sm font-medium text-emerald-900">
+                      Payment proof uploaded successfully! Awaiting
+                      verification.
+                    </span>
+                  </div>
+                )}
+
+                {/* Error Message */}
+                {uploadStatus === "error" && errorMessage && (
+                  <div className="flex items-center space-x-2 rounded-xl border border-rose-200 bg-rose-50/80 p-3 text-rose-700">
+                    <AlertCircle className="h-5 w-5" />
+                    <span className="text-sm font-medium">{errorMessage}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            {file && uploadStatus !== "success" && (
+              <Button
+                onClick={handleUpload}
+                disabled={loading || uploadStatus === "uploading"}
+                className="flex-1"
+              >
+                {loading ? (
+                  <>
+                    <Upload className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Payment Proof
+                  </>
+                )}
+              </Button>
+            )}
+
+            {file && (
+              <Button
+                variant="outline"
+                onClick={handleClear}
+                disabled={loading}
+              >
+                Clear
+              </Button>
+            )}
+
+            {!file && (
+              <>
+                <label className="flex-1">
+                  <Button className="w-full" asChild>
+                    <span>
+                      <FileImage className="mr-2 h-4 w-4" />
+                      Select Image
+                    </span>
+                  </Button>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                  />
+                </label>
+                {cancelButton && cancelButton}
+              </>
+            )}
+          </div>
+
+          {/* Guidelines */}
+          <div className="space-y-1 border-t border-border/60 pt-4 text-xs text-muted-foreground">
+            <p className="font-medium">Upload Guidelines:</p>
+            <ul className="space-y-1 ml-4">
+              <li>• Ensure the image is clear and readable</li>
+              <li>• Include transaction details and amount</li>
+              <li>• File size should be less than 5MB</li>
+              <li>• Supported formats: JPG, PNG, WebP</li>
+            </ul>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ===== MAIN COMPONENT =====
 
 // Types
 type OrderOverviewProps = {
@@ -304,27 +700,38 @@ export default function OrderOverview({
               </div>
               {/* Chips + dashed route + progress bar */}
               <div>
-                <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 mb-4">
-                  <div className="px-3 py-2 bg-card rounded-full border border-border/60 flex items-center gap-2 shadow-sm w-full sm:w-auto justify-center sm:justify-start">
-                    <Package className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-foreground">
+                <div className="flex flex-col sm:flex-row items-center gap-3 mb-4">
+                  <div className="px-3 py-2 bg-card rounded-2xl flex items-center justify-center border border-border/60 shadow-sm gap-2 w-full sm:w-auto sm:justify-start">
+                    <div className="p-1 bg-primary/10 rounded-full">
+                      <Package className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <span className="text-xs sm:text-sm font-medium text-foreground">
                       {order.store?.name || "Store"},{" "}
                       {order.store?.city || "City"}
                     </span>
                   </div>
-                  <div className="hidden sm:flex flex-1 items-center justify-center">
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <span
-                          key={i}
-                          className="w-1 h-1 bg-muted-foreground rounded-full"
-                        ></span>
-                      ))}
+                  <div className="hidden sm:flex flex-1 items-center justify-center px-3">
+                    <div className="flex items-center gap-2">
+                      {["CANCELLED", "EXPIRED"].includes(order.status) ? (
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-rose-100/80 text-rose-700 border border-rose-200">
+                          <X className="w-4 h-4" />
+                        </div>
+                      ) : (
+                        Array.from({ length: 6 }).map((_, i) => (
+                          <span
+                            key={i}
+                            className="w-1.5 h-1.5 bg-gradient-to-r from-primary to-primary/60 rounded-full animate-pulse"
+                            style={{ animationDelay: `${i * 0.1}s` }}
+                          ></span>
+                        ))
+                      )}
                     </div>
                   </div>
-                  <div className="px-3 py-2 bg-card rounded-full border border-border/60 flex items-center gap-2 shadow-sm w-full sm:w-auto justify-center sm:justify-start">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-foreground">
+                  <div className="px-3 py-2 bg-card rounded-2xl flex items-center justify-center border border-border/60 shadow-sm gap-2 w-full sm:w-auto sm:justify-start">
+                    <div className="p-1 bg-primary/10 rounded-full">
+                      <MapPin className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <span className="text-xs sm:text-sm font-medium text-foreground">
                       {address?.city || "Delivery City"},{" "}
                       {address?.province || "Province"}
                     </span>
@@ -348,17 +755,17 @@ export default function OrderOverview({
                         : 0;
                     if (["CANCELLED", "EXPIRED"].includes(order.status))
                       return (
-                        <div className="flex items-center justify-center py-2">
-                          <span className="text-sm text-destructive font-medium">
+                        <div className="flex items-center justify-center py-3 bg-destructive/10 rounded-lg border border-destructive/20">
+                          <span className="text-xs sm:text-sm text-destructive font-semibold">
                             Order {order.status.toLowerCase()}
                           </span>
                         </div>
                       );
                     return (
                       <>
-                        <div className="h-2 bg-muted rounded-full overflow-hidden mb-3">
+                        <div className="h-3 bg-gradient-to-r from-muted via-muted to-muted/80 rounded-full overflow-hidden mb-4 shadow-inner">
                           <div
-                            className="h-2 bg-primary rounded-full transition-all duration-500"
+                            className="h-3 bg-gradient-to-r from-primary via-primary to-primary/80 rounded-full transition-all duration-700 ease-out shadow-lg"
                             style={{ width: `${progressPercentage}%` }}
                           />
                         </div>
@@ -369,19 +776,19 @@ export default function OrderOverview({
                             return (
                               <div
                                 key={step}
-                                className="flex flex-col items-center"
+                                className="flex flex-col items-center gap-1.5"
                               >
                                 <div
-                                  className={`w-3 h-3 rounded-full border-2 transition-all ${
+                                  className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${
                                     isCompleted || isCurrent
-                                      ? "bg-primary border-primary"
-                                      : "bg-muted border-border"
+                                      ? "bg-gradient-to-br from-primary to-primary/80 border-primary scale-110"
+                                      : "bg-muted border-border/60"
                                   }`}
                                 />
                                 <span
-                                  className={`text-xs mt-1 ${
+                                  className={`text-[0.65rem] sm:text-xs font-medium ${
                                     isCompleted || isCurrent
-                                      ? "text-primary font-medium"
+                                      ? "text-primary font-semibold"
                                       : "text-muted-foreground"
                                   }`}
                                 >

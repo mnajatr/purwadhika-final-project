@@ -23,6 +23,19 @@ export const CART_INCLUDE = {
           description: true,
           price: true,
           isActive: true,
+          images: {
+            select: {
+              id: true,
+              imageUrl: true,
+            },
+            take: 1,
+          },
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       },
     },
