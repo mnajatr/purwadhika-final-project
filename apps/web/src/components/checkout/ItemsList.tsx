@@ -83,7 +83,12 @@ export default function ItemsList({ cart, selectedIds }: Props) {
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                 {/* Product Image */}
                 <div className="flex-shrink-0">
-                  <CartItemImage productId={Number(item.productId)} alt={item.product?.name || 'Product image'} />
+                  <CartItemImage 
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    imageUrl={(item.product as any)?.images?.[0]?.imageUrl}
+                    productId={Number(item.productId)} 
+                    alt={item.product?.name || 'Product image'} 
+                  />
                 </div>
 
                 {/* Product Details */}

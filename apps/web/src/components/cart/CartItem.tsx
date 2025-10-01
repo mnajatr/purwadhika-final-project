@@ -5,7 +5,6 @@ import { useStockHandler } from "@/hooks/useStockHandler";
 import { getRemainingStock } from "@/utils/cartStockUtils";
 import type { CartItemResponse as CartItemType } from "@repo/schemas";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import CartItemImage from "./CartItemImage";
 import CategoryBadge from "./CategoryBadge";
 import { toast } from "sonner";
@@ -13,7 +12,6 @@ import ConfirmDialog from "@/components/ui/confirm-dialog";
 import formatIDR from "@/utils/formatCurrency";
 import { TrashIcon } from "./CartItemIcons";
 import QuantityControls from "./QuantityControls";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface CartItemProps {
   item: CartItemType;
@@ -68,20 +66,11 @@ export default function CartItem({
   const updateCartItemMutation = useUpdateCartItem(userId, storeId);
   const removeCartItemMutation = useRemoveCartItem(userId, storeId);
 
-  // Get product details to get the correct category
-  const { data: productsData } = useQuery({
-    queryKey: ["products"],
-    queryFn: () =>
-      import("@/services/products.service").then((s) =>
-        s.productsService.getProducts()
-      ),
-  });
-
-  // Find the product with matching ID to get category
-  const productDetails = productsData?.products?.find(
-    (p: { id: string; category: string }) => parseInt(p.id) === item.productId
-  );
-  const productCategory = productDetails?.category || "General";
+  // Get category and image from cart item product data
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const productCategory = (item.product as any)?.category?.name || "General";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const productImageUrl = (item.product as any)?.images?.[0]?.imageUrl;
 
   const clearPending = () => {
     if (debounceTimerRef.current) {
@@ -260,7 +249,11 @@ export default function CartItem({
         <div className="flex flex-col sm:flex-row items-center gap-3">
           {/* Product Image */}
           <div className="relative">
-            <CartItemImage productId={item.productId} alt={item.product.name} />
+            <CartItemImage 
+              imageUrl={productImageUrl}
+              productId={item.productId} 
+              alt={item.product.name} 
+            />
             {isUpdating && (
               <div className="absolute inset-0 bg-card/50 rounded-xl flex items-center justify-center">
                 <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
