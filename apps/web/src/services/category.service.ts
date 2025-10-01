@@ -1,13 +1,22 @@
 import apiClient from "@/lib/axios-client";
 import { ProductCategoryResponse } from "@/types/category.type";
 
+export interface paginationData<T> {
+  data: T;
+  total: number;
+  page: number;
+  limit: number;
+}
+
 class CategoriesService {
   private readonly basePath = "/category";
 
-  async getCategories() {
-    const categories = await apiClient.get<ProductCategoryResponse[]>(
-      this.basePath
-    );
+  async getCategories(page: number) {
+    const params: Record<string, unknown> = {};
+    params.page = page;
+    const categories = await apiClient.get<
+      paginationData<ProductCategoryResponse[]>
+    >(this.basePath, params);
     return categories;
   }
 
@@ -44,7 +53,8 @@ class CategoriesService {
 }
 
 export const categoriesService = new CategoriesService();
-export const getCategories = () => categoriesService.getCategories();
+export const getCategories = (page: number) =>
+  categoriesService.getCategories(page);
 export const getCategoryById = (id: number) =>
   categoriesService.getCategoryById(id);
 export const createCategory = (data: { name: string; description?: string }) =>

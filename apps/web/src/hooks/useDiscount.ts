@@ -13,10 +13,10 @@ import {
   UpdateDiscount,
 } from "../types/discount.types";
 
-export function useDiscounts() {
+export function useDiscounts(page: number) {
   return useQuery({
-    queryKey: ["discounts"],
-    queryFn: () => discountsService.getDiscounts(),
+    queryKey: ["discounts", page],
+    queryFn: () => discountsService.getDiscounts(page),
   });
 }
 

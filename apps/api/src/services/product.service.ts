@@ -3,8 +3,8 @@ import { locationService } from "./location.service.js";
 import { CreateProduct } from "../types/product.js";
 
 export class ProductService {
-  async getAll(page: number = 1, limit: number = 10) {
-    const skip = (page - 1) * limit;
+  async getAll(page: number = 0, limit: number = 10) {
+    const skip = page === 0 ? 0 : (page - 1) * limit;
     const products = await prisma.product.findMany({
       skip,
       take: limit,
@@ -19,11 +19,23 @@ export class ProductService {
         images: true,
       },
     });
+    const productsz = await prisma.product.findMany({
+      include: {
+        category: true,
+        inventories: {
+          select: {
+            stockQty: true,
+            store: { select: { id: true, name: true, locations: true } },
+          },
+        },
+        images: true,
+      },
+    });
+    const realproduct = page === 0 ? productsz : products;
     const total = await prisma.product.count();
 
-    // Kembalian diperbaiki supaya konsisten dengan method lain
     return {
-      data: products.map((p) => ({ ...p, price: Number(p.price) })),
+      data: realproduct.map((p) => ({ ...p, price: Number(p.price) })),
       total,
       page,
       limit,
@@ -128,7 +140,7 @@ export class ProductService {
   }
 
   // ================= GET BY STORE ID =================
-  async getByStoreId(storeId: number, page: number = 1, limit: number = 10) {
+  async getByStoreId(storeId: number, page: number = 0, limit: number = 10) {
     try {
       const store = await prisma.store.findUnique({
         where: { id: storeId },
@@ -136,7 +148,7 @@ export class ProductService {
       });
       if (!store)
         return {
-          products: [],
+          data: [],
           total: 0,
           page,
           limit,
@@ -144,12 +156,12 @@ export class ProductService {
           message: "Store not found",
         };
 
-      const skip = (page - 1) * limit;
+      const skip = page === 0 ? 0 : (page - 1) * limit;
 
       const products = await prisma.product.findMany({
         where: { inventories: { some: { storeId } } },
         skip,
-        take: limit,
+        take: page === 0 ? undefined : limit,
         include: {
           category: true,
           inventories: {
@@ -168,7 +180,7 @@ export class ProductService {
       });
 
       return {
-        products: products.map((p) => ({ ...p, price: Number(p.price) })),
+        data: products.map((p) => ({ ...p, price: Number(p.price) })),
         nearestStore: store,
         total,
         page,
@@ -208,7 +220,7 @@ export class ProductService {
 
     if (data.inventories) {
       data.inventories = data.inventories.map((inv: any) => ({
-        stockQty: Number(inv.stockQty),
+        stockQty: 0,
         storeId: Number(inv.storeId),
       }));
     }
@@ -260,7 +272,6 @@ export class ProductService {
 
     if (data.inventories) {
       data.inventories = data.inventories.map((inv: any) => ({
-        stockQty: Number(inv.stockQty),
         storeId: Number(inv.storeId),
       }));
     }
@@ -298,40 +309,6 @@ export class ProductService {
             imageUrl: img.imageUrl,
           })),
         });
-      }
-
-      // Update inventories
-      if (data.inventories) {
-        for (const invData of data.inventories) {
-          const existingInventory = await tx.storeInventory.findUnique({
-            where: {
-              storeId_productId: {
-                storeId: invData.storeId,
-                productId: product.id,
-              },
-            },
-          });
-
-          if (existingInventory) {
-            await tx.storeInventory.update({
-              where: {
-                storeId_productId: {
-                  storeId: invData.storeId,
-                  productId: product.id,
-                },
-              },
-              data: { stockQty: invData.stockQty },
-            });
-          } else {
-            await tx.storeInventory.create({
-              data: {
-                storeId: invData.storeId,
-                productId: product.id,
-                stockQty: invData.stockQty,
-              },
-            });
-          }
-        }
       }
 
       const updatedProduct = await tx.product.findUnique({

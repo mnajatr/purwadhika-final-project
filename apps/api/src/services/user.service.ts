@@ -13,7 +13,6 @@ export class UsersService {
           ? {
               create: {
                 fullName: data.profile.fullName,
-                avatarUrl: data.profile.avatarUrl,
               },
             }
           : undefined,
@@ -30,7 +29,7 @@ export class UsersService {
         email: true,
         role: true,
         createdAt: true,
-        profile: { select: { fullName: true, avatarUrl: true } },
+        profile: { select: { fullName: true } },
       },
     });
   }
@@ -48,7 +47,7 @@ export class UsersService {
           email: true,
           role: true,
           createdAt: true,
-          profile: { select: { fullName: true, avatarUrl: true } },
+          profile: { select: { fullName: true } },
         },
       }),
       prisma.user.count(),
@@ -86,11 +85,9 @@ export class UsersService {
               upsert: {
                 create: {
                   fullName: data.profile.fullName,
-                  avatarUrl: data.profile.avatarUrl,
                 },
                 update: {
                   fullName: data.profile.fullName,
-                  avatarUrl: data.profile.avatarUrl,
                 },
               },
             }

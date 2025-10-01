@@ -6,7 +6,7 @@ const router = Router();
 
 router.get("/", ProductController.getAll);
 router.get("/:slug", ProductController.getBySlug);
-router.post("/", adminAuth, ProductController.create);
+router.post("/", ProductController.create);
 router.put("/:slug", adminAuth, ProductController.update);
 router.patch("/:slug/deactivate", adminAuth, ProductController.deactivate);
 router.patch("/:slug/activate", adminAuth, ProductController.activate);

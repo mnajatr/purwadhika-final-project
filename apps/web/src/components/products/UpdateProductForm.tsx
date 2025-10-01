@@ -4,9 +4,10 @@ import { useForm, Controller, useFieldArray } from "react-hook-form";
 import Image from "next/image";
 import { productsService } from "@/services/products.service";
 import { useCategories } from "@/hooks/useCategory";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
-type InventoryInput = { stockQty: number; storeId: number };
+type InventoryInput = { storeId: number };
 
 type ProductForUpdate = {
   id: number;
@@ -21,7 +22,6 @@ type ProductForUpdate = {
   categoryId?: number;
   images?: (File | string)[];
   inventories?: InventoryInput[];
-  stock?: number; // ✅ tambahin supaya bisa fallback ke product.stock
 };
 
 export default function UpdateProductForm({
@@ -29,27 +29,20 @@ export default function UpdateProductForm({
 }: {
   product: ProductForUpdate;
 }) {
-  const { data: categories = [] } = useCategories();
-  const [storeId, setStoreId] = useState(0);
-
-  // ambil storeId dari localStorage
-  useEffect(() => {
-    const sid = Number(localStorage.getItem("storeId")) || 0;
-    setStoreId(sid);
-  }, []);
+  const { data } = useCategories(0);
+  const categories = data?.data ?? [];
+  const searchParams = useSearchParams();
+  const storeIdz = searchParams.get("storeId") ?? "1";
+  const storeId = Number(storeIdz);
 
   // ✅ mapping inventories → fallback ke product.stock
-  const mapInventories = (
-    inv: any[] | undefined,
-    fallbackStock: number = 0
-  ): InventoryInput[] => {
+  const mapInventories = (inv: any[] | undefined): InventoryInput[] => {
     if (inv && inv.length) {
       return inv.map((i) => ({
-        stockQty: i.stockQty,
         storeId: i.storeId,
       }));
     }
-    return [{ stockQty: fallbackStock, storeId }]; // <-- fallback ke stock
+    return [{ storeId }];
   };
 
   const { register, handleSubmit, reset, control, setValue, watch } =
@@ -66,7 +59,7 @@ export default function UpdateProductForm({
         length: product?.length ?? 0,
         categoryId: product?.categoryId ?? undefined,
         images: product?.images || [],
-        inventories: mapInventories(product?.inventories, product?.stock ?? 0), // ✅ stok fallback 318
+        inventories: mapInventories(product?.inventories),
       },
     });
 
@@ -91,7 +84,7 @@ export default function UpdateProductForm({
       length: product?.length ?? 0,
       categoryId: product?.categoryId ?? undefined,
       images: product?.images || [],
-      inventories: mapInventories(product?.inventories, product?.stock ?? 0), // ✅ tetap isi stok 318
+      inventories: mapInventories(product?.inventories), //
     });
   }, [product, storeId, reset]);
 
@@ -264,20 +257,6 @@ export default function UpdateProductForm({
       {/* Inventories */}
       {inventoryFields.map((field, idx) => (
         <div key={field.id} className="grid grid-cols-2 gap-4">
-          <Controller
-            name={`inventories.${idx}.stockQty`}
-            control={control}
-            render={({ field }) => (
-              <input
-                type="number"
-                {...field}
-                min={0}
-                onChange={(e) => field.onChange(Number(e.target.value))}
-                placeholder="Stok"
-                className="w-full p-2 border rounded"
-              />
-            )}
-          />
           <Controller
             name={`inventories.${idx}.storeId`}
             control={control}

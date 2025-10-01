@@ -17,7 +17,7 @@ export default function Home() {
   const nearestStoreId = useLocationStore((s) => s.nearestStoreId);
 
   // Fetch products by nearest store id (preferred)
-  const { data } = useProducts(nearestStoreId ?? undefined);
+  const { data } = useProducts(1, nearestStoreId ?? undefined); //1 page
 
   const products = data?.products || [];
   const nearestStore = data?.nearestStore || null;
@@ -112,9 +112,9 @@ export default function Home() {
               </h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-              {featuredProducts.map((product) => (
+              {featuredProducts.map((product, index) => (
                 <div
-                  key={product.id}
+                  key={index + 1}
                   className="bg-card rounded-3xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-border"
                 >
                   <div className="relative w-full h-48 bg-gradient-to-br from-primary/5 to-primary/10">

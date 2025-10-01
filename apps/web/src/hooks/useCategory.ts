@@ -1,22 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   categoriesService,
-  getCategories,
   getCategoryById,
   createCategory,
   updateCategory,
   deleteCategory,
 } from "@/services/category.service";
-import {
-  ProductCategoryResponse,
-  ProductCategoryInput,
-} from "@/types/category.type";
+import { ProductCategoryInput } from "@/types/category.type";
 
-
-export function useCategories() {
+export function useCategories(page: number) {
   return useQuery({
-    queryKey: ["categories"],
-    queryFn: () => categoriesService.getCategories(),
+    queryKey: ["categories", page],
+    queryFn: () => categoriesService.getCategories(page),
   });
 }
 

@@ -1,9 +1,14 @@
 import { apiClient } from "@/lib/axios-client";
 import { UserResponse } from "@/types/user.types";
 import { UserAddressResponse } from "@/types/address.type";
+import { paginationData } from "./category.service";
 
-export async function getUsers(): Promise<UserResponse[]> {
-  return apiClient.get<UserResponse[]>("/users");
+export async function getUsers(
+  page: number
+): Promise<paginationData<UserResponse[]>> {
+  const params: Record<string, unknown> = {};
+  params.page = page;
+  return apiClient.get<paginationData<UserResponse[]>>("/users", params);
 }
 
 export async function getUser(id: number): Promise<UserResponse> {

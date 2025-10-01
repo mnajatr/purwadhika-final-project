@@ -1,15 +1,11 @@
 "use client";
 
 import { useForm, Controller, useFieldArray } from "react-hook-form";
-import useLocationStore from "@/stores/locationStore";
 import { useCategories } from "@/hooks/useCategory";
 import Image from "next/image";
 import { productsService } from "@/services/products.service";
-import { file } from "zod";
-import { useEffect, useState } from "react";
-
-type ImageInput = { imageUrl: string };
-type InventoryInput = { stockQty: number; storeId: number };
+import { useStores } from "@/hooks/useStores";
+type InventoryInput = { storeId: number };
 
 type ProductForCreate = {
   name?: string;
@@ -26,7 +22,9 @@ type ProductForCreate = {
 };
 
 export default function AddProductForm() {
-  const { data: categories = [] } = useCategories();
+  const { data } = useCategories(0);
+  const categories = data?.data ?? [];
+  const { data: stores, isLoading } = useStores();
   const { register, handleSubmit, reset, control, setValue, watch } =
     useForm<ProductForCreate>({
       defaultValues: {
@@ -42,8 +40,7 @@ export default function AddProductForm() {
         images: [],
         inventories: [
           {
-            stockQty: 0,
-            storeId: Number(localStorage.getItem("storeId")) ?? 0,
+            storeId: Number("storeId") ?? 0,
           },
         ],
       },
@@ -71,19 +68,6 @@ export default function AddProductForm() {
       formData.append("categoryId", String(data.categoryId));
       formData.append("inventories", JSON.stringify(data.inventories));
 
-      // Append inventories
-      // (data.inventories || []).forEach((inv, i) => {
-      //   formData.append(
-      //     `inventories[${i}][stockQty]`,
-      //     String(inv.stockQty ?? 0)
-      //   );
-      //   formData.append(
-      //     `inventories[${i}][storeId]`,
-      //     String(inv.storeId ?? nearestStoreId)
-      //   );
-      // });
-
-      // Append images
       (data.images || []).forEach((img) => {
         formData.append("images", img as File);
       });
@@ -235,34 +219,25 @@ export default function AddProductForm() {
         </div>
       </div>
 
-      {/* Inventories */}
       {inventoryFields.map((field, idx) => (
-        <div key={idx} className="grid grid-cols-2 gap-4">
-          <Controller
-            name={`inventories.${idx}.stockQty`}
-            control={control}
-            render={({ field }) => (
-              <input
-                type="number"
-                {...field}
-                onChange={(e) => field.onChange(Number(e.target.value))}
-                placeholder="Stok"
-                className="w-full p-2 border rounded"
-              />
-            )}
-          />
+        <div key={field.id} className="grid grid-cols-2 gap-4">
           <Controller
             name={`inventories.${idx}.storeId`}
             control={control}
             render={({ field }) => (
-              <input
-                type="number"
-                disabled
+              <select
                 {...field}
+                value={field.value ?? ""}
                 onChange={(e) => field.onChange(Number(e.target.value))}
-                placeholder="Store ID"
                 className="w-full p-2 border rounded"
-              />
+              >
+                <option value="">-- Pilih Store --</option>
+                {stores?.map((store) => (
+                  <option key={store.id} value={store.id}>
+                    {store.name}
+                  </option>
+                ))}
+              </select>
             )}
           />
         </div>

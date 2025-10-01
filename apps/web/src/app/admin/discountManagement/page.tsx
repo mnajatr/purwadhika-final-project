@@ -6,8 +6,11 @@ import { useDiscounts, useDeleteDiscount } from "@/hooks/useDiscount";
 import { useEffect, useState } from "react";
 
 export default function ManageDiscounts() {
-  const { data: discounts = [], isLoading } = useDiscounts();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const { data, isLoading } = useDiscounts(page);
   const deleteDiscount = useDeleteDiscount();
+  const totalData = data?.total;
 
   const [role, setRole] = useState("");
   const [storeId, setStoreId] = useState("");
@@ -16,6 +19,7 @@ export default function ManageDiscounts() {
     setRole(localStorage.getItem("role") || "");
     setStoreId(localStorage.getItem("storeId") || "");
   }, []);
+  const discounts = data?.data ?? [];
 
   const filteredDiscounts = discounts.filter((d) => {
     if (role === "SUPER_ADMIN") return true;
@@ -36,7 +40,7 @@ export default function ManageDiscounts() {
       <div className="flex-1 px-4 sm:px-6 lg:px-8 py-12 overflow-x-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
           <h1 className="text-2xl md:text-3xl font-bold">Manage Discounts</h1>
-          {(role === "SUPER_ADMIN" || role === "STORE_ADMIN") && (
+          {role === "STORE_ADMIN" && (
             <Link
               href={`/discount/create`}
               className="text-indigo-600 hover:underline"
@@ -72,9 +76,11 @@ export default function ManageDiscounts() {
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
                   Expired At
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                  Actions
-                </th>
+                {role === "STORE_ADMIN" && (
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -90,10 +96,10 @@ export default function ManageDiscounts() {
                   <td className="px-4 py-3 text-sm text-gray-600">{d.type}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{d.value}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">
-                    {new Date(d.expiredAt).toLocaleDateString()}
+                    {d.expiredAt?.toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-3 text-sm flex gap-3">
-                    {(role === "SUPER_ADMIN" || role === "STORE_ADMIN") && (
+                  {role === "STORE_ADMIN" && (
+                    <td className="px-4 py-3 text-sm flex gap-3">
                       <>
                         <Link
                           href={`/discount/${d.id}/update`}
@@ -109,13 +115,36 @@ export default function ManageDiscounts() {
                           {deleteDiscount.isPending ? "Deleting..." : "Delete"}
                         </button>
                       </>
-                    )}
-                  </td>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         )}
+        <div className="mt-6 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <button
+              className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </button>
+            <button
+              className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={page * pageSize >= (totalData ?? 0)}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </button>
+          </div>
+          <div className="text-sm text-gray-700">
+            Showing {(page - 1) * pageSize + 1} to{" "}
+            {Math.min(page * pageSize, totalData ?? 0)} of {totalData ?? 0}{" "}
+            results
+          </div>
+        </div>
       </div>
     </div>
   );

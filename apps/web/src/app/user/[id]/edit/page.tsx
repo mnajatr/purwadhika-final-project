@@ -18,7 +18,6 @@ export default function UpdateUserPage() {
     role: user.role,
     profile: {
       fullName: user.profile?.fullName || "",
-      avatarUrl: user.profile?.avatarUrl || "",
     },
   };
 
