@@ -30,7 +30,6 @@ export function useOrders(opts?: {
   const result = useQuery<ListResp, Error>({
     queryKey,
     queryFn: async () => {
-      console.log("useOrders calling getAdminOrders with opts:", opts);
       const data = await getAdminOrders({
         page: opts?.page ?? 1,
         pageSize: opts?.pageSize ?? 10,
@@ -38,7 +37,6 @@ export function useOrders(opts?: {
         q: opts?.q,
         storeId: opts?.storeId,
       });
-      console.log("useOrders received data:", data);
       return data;
     },
   });

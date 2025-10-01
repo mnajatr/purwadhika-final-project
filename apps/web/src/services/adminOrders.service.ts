@@ -25,17 +25,10 @@ class AdminOrdersService {
     if (opts?.q) params.q = opts.q;
     if (typeof opts?.storeId === "number") params.storeId = opts.storeId;
 
-    console.log(
-      "AdminOrders service calling:",
-      this.basePath,
-      "with params:",
-      params
-    );
     const envelope = await apiClient.get<{ success: boolean; data: ListResp }>(
       this.basePath,
       params
     );
-    console.log("AdminOrders service received envelope:", envelope);
     return envelope.data;
   }
 
@@ -44,12 +37,10 @@ class AdminOrdersService {
     action: "confirm" | "ship" | "cancel"
   ) {
     const endpoint = `${this.basePath}/${orderId}/${action}`;
-    console.log("AdminOrders service calling:", endpoint);
     const response = await apiClient.patch<{
       success: boolean;
       message: string;
     }>(endpoint);
-    console.log("AdminOrders service action response:", response);
     return response;
   }
 

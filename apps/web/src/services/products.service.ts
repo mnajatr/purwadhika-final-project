@@ -37,27 +37,15 @@ class ProductsService {
     params.page = page;
 
     // Use apiClient.get(url, params) so axios handles querystring safely
-    try {
-      console.debug("products.getProducts params:", params);
-    } catch {}
     const response = await apiClient.get<NearestStoreResponse>(
       this.basePath,
       params
     );
-    try {
-      console.debug(
-        "products.getProducts nearest:",
-        response.nearestStore,
-        "message:",
-        response.message
-      );
-    } catch {}
 
     // apiClient returns response data directly (see axios-client wrapper)
     const nearest = response.nearestStore ?? null;
     const hehe = response.data.map((product) => {
       const inventory = product.inventories?.[0];
-      console.log(storeId);
       // Prefer the nearest store name (if the backend returned it) for consistency
       const storeName = nearest?.name ?? inventory?.store?.name ?? "Unknown";
       return {
