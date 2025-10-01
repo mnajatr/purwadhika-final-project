@@ -2,7 +2,8 @@ import { prisma } from "@repo/database";
 import { CreateUserInput, UpdateUserInput } from "@repo/schemas";
 
 export class UsersService {
-  static async createUser(data: CreateUserInput) {
+  // ================= CREATE USER =================
+  async createUser(data: CreateUserInput) {
     return prisma.user.create({
       data: {
         email: data.email,
@@ -20,7 +21,9 @@ export class UsersService {
       include: { profile: true },
     });
   }
-  static async getUsers() {
+
+  // ================= GET ALL USERS =================
+  async getAll() {
     return prisma.user.findMany({
       select: {
         id: true,
@@ -32,14 +35,46 @@ export class UsersService {
     });
   }
 
-  static async getUserById(id: number) {
-    return prisma.user.findUnique({
+  // ================= GET ALL WITH PAGINATION =================
+  async getAllPaginated(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          createdAt: true,
+          profile: { select: { fullName: true, avatarUrl: true } },
+        },
+      }),
+      prisma.user.count(),
+    ]);
+
+    return {
+      data: users,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  // ================= GET USER BY ID =================
+  async getById(id: number) {
+    const user = await prisma.user.findUnique({
       where: { id },
       include: { profile: true },
     });
+
+    if (!user) throw new Error(`User with id ${id} not found`);
+    return user;
   }
 
-  static async updateUser(id: number, data: UpdateUserInput) {
+  // ================= UPDATE USER =================
+  async updateUser(id: number, data: UpdateUserInput) {
     return prisma.user.update({
       where: { id },
       data: {
@@ -65,11 +100,13 @@ export class UsersService {
     });
   }
 
-  static async deleteUser(id: number) {
+  // ================= DELETE USER =================
+  async deleteUser(id: number) {
     return prisma.user.delete({ where: { id } });
   }
 
-  static async getUserAddresses(userId: number) {
+  // ================= GET USER ADDRESSES =================
+  async getUserAddresses(userId: number) {
     return prisma.userAddress.findMany({
       where: { userId },
       select: {
