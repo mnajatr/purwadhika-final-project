@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useProducts } from "@/hooks/useProduct";
 import useLocationStore from "@/stores/locationStore";
 import NearestStoreIndicator from "./NearestStoreIndicator";
+import { useCategories } from "@/hooks/useCategory";
 
 export default function ProductsList() {
   const [search, setSearch] = useState("");
@@ -13,11 +14,16 @@ export default function ProductsList() {
   const [selectedStore, setSelectedStore] = useState("All");
 
   const nearestStoreId = useLocationStore((s) => s.nearestStoreId);
-
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   // Fetch products by nearest store id (preferred)
-  const { data, isLoading, error } = useProducts(nearestStoreId ?? undefined);
+  const { data, isLoading, error } = useProducts(
+    page,
+    nearestStoreId ?? undefined
+  );
 
   const products = data?.products || [];
+  const totalData = data?.total;
   const nearestStore = data?.nearestStore || null;
   const storeMessage = data?.message || "Loading...";
 
@@ -34,6 +40,8 @@ export default function ProductsList() {
 
   // Only show products that are active. Treat undefined as active (backwards compat).
   const visibleProducts = products;
+  const { data: dataz } = useCategories(0);
+  const categories = dataz?.data ?? [];
 
   if (isLoading)
     return <p className="text-center py-10">Loading products...</p>;
@@ -41,13 +49,6 @@ export default function ProductsList() {
     return (
       <p className="text-center text-red-500 py-10">Error: {error.message}</p>
     );
-
-  // Kategori dan store unik (only from visible products)
-  const categories = [
-    "All",
-    ...new Set(visibleProducts.map((p) => p.category)),
-  ];
-  const stores = ["All", ...new Set(visibleProducts.map((p) => p.store))];
 
   // Filter produk
   const filtered = visibleProducts.filter((product) => {
@@ -91,34 +92,19 @@ export default function ProductsList() {
         />
       </div>
 
-      {/* Store filter */}
-      <div className="flex justify-center mb-6">
-        <select
-          value={selectedStore}
-          onChange={(e) => setSelectedStore(e.target.value)}
-          className="w-full md:w-1/3 lg:w-1/4 px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          {stores.map((store) => (
-            <option key={store} value={store}>
-              {store}
-            </option>
-          ))}
-        </select>
-      </div>
-
       {/* Category filter */}
       <div className="flex flex-wrap justify-center gap-3 mb-10">
         {categories.map((category) => (
           <button
-            key={category}
+            key={category.id}
             className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-              selectedCategory === category
+              selectedCategory === category.name
                 ? "bg-indigo-600 text-white shadow-md"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300"
             }`}
-            onClick={() => setSelectedCategory(category)}
+            onClick={() => setSelectedCategory(category.name)}
           >
-            {category}
+            {category.name}
           </button>
         ))}
       </div>
@@ -190,6 +176,29 @@ export default function ProductsList() {
             );
           })
         )}
+      </div>
+      <div className="mt-6 flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <button
+            className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            Previous
+          </button>
+          <button
+            className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={page * pageSize >= (totalData ?? 0)}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </button>
+        </div>
+        <div className="text-sm text-gray-700">
+          Showing {(page - 1) * pageSize + 1} to{" "}
+          {Math.min(page * pageSize, totalData ?? 0)} of {totalData ?? 0}{" "}
+          results
+        </div>
       </div>
     </div>
   );

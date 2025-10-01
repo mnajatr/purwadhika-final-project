@@ -2,11 +2,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import usersService from "@/services/users.service";
 import { UserResponse } from "@/types/user.types";
 import { UserAddressResponse } from "@/types/address.type";
+import { paginationData } from "@/services/category.service";
 
-export function useUsers() {
-  return useQuery<UserResponse[]>({
-    queryKey: ["users"],
-    queryFn: () => usersService.getUsers(),
+export function useUsers(page: number) {
+  return useQuery<paginationData<UserResponse[]>>({
+    queryKey: ["users", page],
+    queryFn: () => usersService.getUsers(page),
   });
 }
 

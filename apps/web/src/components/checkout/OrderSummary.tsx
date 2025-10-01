@@ -61,7 +61,6 @@ function calculateDiscount(
         }
         const amt = discount.amount ?? 0;
 
-        // Handle null/undefined amounts
         if (amt === 0) {
           break;
         }
@@ -105,6 +104,7 @@ function calculateDiscount(
       }
 
       case "BUYXGETX": {
+        totalDiscount += productPrice;
         break;
       }
     }

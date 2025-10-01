@@ -7,7 +7,11 @@ import DeleteCategoryButton from "@/components/category/DeleteButtonCategory";
 import { useEffect, useState } from "react";
 
 export default function ManageCategories() {
-  const { data: categories = [], isLoading } = useCategories();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const { data, isLoading } = useCategories(page);
+  const categories = data?.data ?? [];
+  const totalData = data?.total;
   const [role, setRole] = useState("");
   const [storeId, setStoreId] = useState("");
 
@@ -81,6 +85,29 @@ export default function ManageCategories() {
             </tbody>
           </table>
         )}
+        <div className="mt-6 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <button
+              className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </button>
+            <button
+              className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={page * pageSize >= (totalData ?? 0)}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </button>
+          </div>
+          <div className="text-sm text-gray-700">
+            Showing {(page - 1) * pageSize + 1} to{" "}
+            {Math.min(page * pageSize, totalData ?? 0)} of {totalData ?? 0}{" "}
+            results
+          </div>
+        </div>
       </div>
     </div>
   );

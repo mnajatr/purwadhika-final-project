@@ -1,8 +1,8 @@
 import apiClient from "@/lib/axios-client";
-import { ProductResponse, ProductCreateRequest } from "@/types/products.type";
+import { ProductResponse } from "@/types/products.type";
 
 interface NearestStoreResponse {
-  products: ProductResponse[];
+  data: ProductResponse[];
   nearestStore: {
     id: number;
     name: string;
@@ -14,18 +14,27 @@ interface NearestStoreResponse {
     }>;
   } | null;
   message: string;
+  page: number;
+  total: number;
+  limit: number;
 }
 
 class ProductsService {
   private readonly basePath = "/products";
 
-  async getProducts(storeId?: number, lat?: number, lon?: number) {
+  async getProducts(
+    page: number,
+    storeId?: number,
+    lat?: number,
+    lon?: number
+  ) {
     const params: Record<string, unknown> = {};
     if (typeof storeId === "number") params.storeId = storeId;
     else if (lat !== undefined && lon !== undefined) {
       params.lat = lat;
       params.lon = lon;
     }
+    params.page = page;
 
     // Use apiClient.get(url, params) so axios handles querystring safely
     try {
@@ -46,11 +55,29 @@ class ProductsService {
 
     // apiClient returns response data directly (see axios-client wrapper)
     const nearest = response.nearestStore ?? null;
-
-    return {
-      products: response.products.map((product) => {
-        const inventory = product.inventories?.[0];
-        // Prefer the nearest store name (if the backend returned it) for consistency
+    const hehe = response.data.map((product) => {
+      const inventory = product.inventories?.[0];
+      console.log(storeId);
+      // Prefer the nearest store name (if the backend returned it) for consistency
+      const storeName = nearest?.name ?? inventory?.store?.name ?? "Unknown";
+      return {
+        id: product.id,
+        slug: product.slug,
+        name: product.name,
+        description: product.description,
+        price: Number(product.price),
+        isActive: Object.prototype.hasOwnProperty.call(product, "isActive")
+          ? (product as unknown as { isActive?: boolean }).isActive
+          : true,
+        category: product.category.name,
+        store: storeName,
+        storeId: String(inventory?.store?.id ?? 1),
+        imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
+        stock: inventory?.stockQty ?? 0,
+      };
+    });
+    const hihi = response.data.flatMap((product) => {
+      return (product.inventories ?? []).map((inventory) => {
         const storeName = nearest?.name ?? inventory?.store?.name ?? "Unknown";
         return {
           id: product.id,
@@ -67,9 +94,15 @@ class ProductsService {
           imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
           stock: inventory?.stockQty ?? 0,
         };
-      }),
+      });
+    });
+    return {
+      products: storeId ? hehe : hihi,
       nearestStore: nearest,
       message: response.message,
+      total: response.total,
+      limit: response.limit,
+      page: response.page,
     };
   }
   async getProductBySlug(slug: string) {
@@ -134,8 +167,12 @@ class ProductsService {
 }
 
 export const productsService = new ProductsService();
-export const getProducts = (storeId?: number, lat?: number, lon?: number) =>
-  productsService.getProducts(storeId, lat, lon);
+export const getProducts = (
+  page: number,
+  storeId?: number,
+  lat?: number,
+  lon?: number
+) => productsService.getProducts(page, storeId, lat, lon);
 export const getProductBySlug = (slug: string) =>
   productsService.getProductBySlug(slug);
 export const createProduct = (data: FormData) =>

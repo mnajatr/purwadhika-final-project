@@ -7,7 +7,6 @@ export const CreateUserSchema = z.object({
   profile: z
     .object({
       fullName: z.string().min(3, "Full name must be at least 3 characters"),
-      avatarUrl: z.string().url("Invalid URL").optional(),
     })
     .optional(),
 });
@@ -23,7 +22,6 @@ export const UpdateUserSchema = z.object({
   profile: z
     .object({
       fullName: z.string().min(3, "Full name must be at least 3 characters"),
-      avatarUrl: z.string().url("Invalid URL").optional(),
     })
     .optional(),
 });

@@ -4,31 +4,43 @@ import {
   CreateDiscount,
   UpdateDiscount,
 } from "@/types/discount.types";
+import { paginationData } from "./category.service";
 
 class DiscountsService {
   private readonly basePath = "/discounts";
 
-  async getDiscounts() {
-    const response = await apiClient.get<DiscountResponse[]>(this.basePath);
+  async getDiscounts(page: number) {
+    const params: Record<string, unknown> = {};
+    params.page = page;
+    const response = await apiClient.get<paginationData<DiscountResponse[]>>(
+      this.basePath,
+      params
+    );
+    console.log(response);
 
-    return response.map((discount) => ({
-      id: discount.id,
-      name: discount.name,
-      type: discount.type,
-      value: discount.value,
-      amount: discount.amount ?? null,
-      minPurchase: discount.minPurchase ?? null,
-      maxDiscount: discount.maxDiscount ?? null,
-      buyQty: discount.buyQty ?? null,
-      getQty: discount.getQty ?? null,
-      expiredAt: discount.expiredAt ? new Date(discount.expiredAt) : null,
-      store: discount.store
-        ? { id: discount.store.id, name: discount.store.name }
-        : null,
-      product: discount.product
-        ? { id: discount.product.id, name: discount.product.name }
-        : null,
-    }));
+    return {
+      data: response.data.map((discount) => ({
+        id: discount.id,
+        name: discount.name,
+        type: discount.type,
+        value: discount.value,
+        amount: discount.amount ?? null,
+        minPurchase: discount.minPurchase ?? null,
+        maxDiscount: discount.maxDiscount ?? null,
+        buyQty: discount.buyQty ?? null,
+        getQty: discount.getQty ?? null,
+        expiredAt: discount.expiredAt ? new Date(discount.expiredAt) : null,
+        store: discount.store
+          ? { id: discount.store.id, name: discount.store.name }
+          : null,
+        product: discount.product
+          ? { id: discount.product.id, name: discount.product.name }
+          : null,
+      })),
+      total: response.total,
+      page: response.page,
+      limit: response.limit,
+    };
   }
 
   async getDiscountById(id: number) {
@@ -142,7 +154,8 @@ class DiscountsService {
 
 export const discountsService = new DiscountsService();
 
-export const getDiscounts = () => discountsService.getDiscounts();
+export const getDiscounts = (page: number) =>
+  discountsService.getDiscounts(page);
 export const getDiscountById = (id: number) =>
   discountsService.getDiscountById(id);
 export const getDiscountsByProductIds = (productIds: number[]) =>

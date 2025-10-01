@@ -18,9 +18,6 @@ interface CreateDiscountForm extends Omit<CreateDiscount, "store" | "product"> {
 export default function CreateDiscountForm() {
   const createDiscount = useCreateDiscount();
 
-  const { data } = useProducts();
-  const products = data?.products ?? [];
-
   const [storeId, setStoreId] = useState<number>(0);
 
   // Ambil storeId dari localStorage setelah mount
@@ -28,6 +25,9 @@ export default function CreateDiscountForm() {
     const id = localStorage.getItem("storeId");
     if (id) setStoreId(Number(id));
   }, []);
+  const { data } = useProducts(0, storeId);
+  const products = data?.products ?? [];
+  console.log(data);
 
   const {
     register,

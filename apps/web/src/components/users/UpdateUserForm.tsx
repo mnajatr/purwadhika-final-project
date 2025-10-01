@@ -109,21 +109,6 @@ export default function UpdateUserForm({
         )}
       </div>
 
-      {/* Avatar URL */}
-      <div>
-        <label className="block font-medium mb-1">Avatar URL</label>
-        <input
-          type="text"
-          {...register("profile.avatarUrl")}
-          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
-        />
-        {errors.profile?.avatarUrl && (
-          <p className="text-red-500 text-sm">
-            {errors.profile.avatarUrl.message}
-          </p>
-        )}
-      </div>
-
       <button
         type="submit"
         disabled={isSubmitting}

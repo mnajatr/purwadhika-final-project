@@ -8,6 +8,8 @@ import Sidebar from "@/components/admin/sidebar";
 import DeleteProductButton from "@/components/products/DeleteButtonProduct";
 import DeactivateButtonProduct from "@/components/products/DeactivateButtonProduct";
 import ActivateButtonProduct from "@/components/products/ActivateButtonProduct";
+import { useStores } from "@/hooks/useStores";
+import { useCategories } from "@/hooks/useCategory";
 
 export default function ProductsList() {
   const [search, setSearch] = useState("");
@@ -24,14 +26,19 @@ export default function ProductsList() {
     setSelectedStore("All");
   }, []);
 
-  const { data, isLoading, error } = useProducts();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const { data, isLoading, error } = useProducts(
+    page,
+    Number(storeId) === 0 ? undefined : Number(storeId)
+  );
+
   const products = data?.products || [];
+  const totalData = data?.total;
   const safeProducts = Array.isArray(products) ? products : [];
-
-  // Ambil semua kategori & store untuk filter dropdown / tombol
-  const categories = ["All", ...new Set(safeProducts.map((p) => p.category))];
-  const stores = ["All", ...new Set(safeProducts.map((p) => p.store))];
-
+  const { data: dataz } = useCategories(0);
+  const categories = dataz?.data ?? [];
+  const { data: stores } = useStores();
   const filtered = safeProducts.filter((product) => {
     const matchCategory =
       selectedCategory === "All" || product.category === selectedCategory;
@@ -39,14 +46,10 @@ export default function ProductsList() {
       .toLowerCase()
       .includes(search.toLowerCase());
 
-    let matchStore = true;
-    if (role === "STORE_ADMIN") {
-      matchStore = product.storeId === storeId;
-    } else if (role === "SUPER_ADMIN" && selectedStore !== "All") {
-      matchStore = product.store === selectedStore;
-    }
-
-    return matchCategory && matchSearch && matchStore;
+    const matchStore = product.store === selectedStore;
+    return selectedStore === "All"
+      ? matchCategory && matchSearch
+      : matchCategory && matchSearch && matchStore;
   });
 
   if (isLoading) {
@@ -102,9 +105,10 @@ export default function ProductsList() {
               onChange={(e) => setSelectedStore(e.target.value)}
               className="w-full md:w-1/3 lg:w-1/4 px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              {stores.map((store) => (
-                <option key={store} value={store}>
-                  {store}
+              <option value="All"> All Store </option>
+              {stores?.map((store) => (
+                <option key={store.id} value={store.name}>
+                  {store.name}
                 </option>
               ))}
             </select>
@@ -115,15 +119,15 @@ export default function ProductsList() {
         <div className="flex flex-wrap justify-center gap-3 mb-10">
           {categories.map((category) => (
             <button
-              key={category}
+              key={category.id}
               className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-                selectedCategory === category
+                selectedCategory === category.name
                   ? "bg-indigo-600 text-white shadow-md"
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
-              onClick={() => setSelectedCategory(category)}
+              onClick={() => setSelectedCategory(category.name)}
             >
-              {category}
+              {category.name}
             </button>
           ))}
         </div>
@@ -162,8 +166,8 @@ export default function ProductsList() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filtered.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50">
+                {filtered.map((product, index) => (
+                  <tr key={index + 1} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
                       {product.imageUrl && (
                         <div className="w-16 h-16 relative rounded-md overflow-hidden">
@@ -195,7 +199,7 @@ export default function ProductsList() {
                     {role === "SUPER_ADMIN" && (
                       <td className="px-4 py-3 text-sm flex gap-2">
                         <Link
-                          href={`/products/${product.slug}/update`}
+                          href={`/products/${product.slug}/update?storeId=${product.storeId}`}
                           className="text-indigo-600 hover:underline"
                         >
                           Edit
@@ -215,6 +219,29 @@ export default function ProductsList() {
               </tbody>
             </table>
           )}
+        </div>
+        <div className="mt-6 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <button
+              className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </button>
+            <button
+              className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={page * pageSize >= (totalData ?? 0)}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </button>
+          </div>
+          <div className="text-sm text-gray-700">
+            Showing {(page - 1) * pageSize + 1} to{" "}
+            {Math.min(page * pageSize, totalData ?? 0)} of {totalData ?? 0}{" "}
+            results
+          </div>
         </div>
       </div>
     </div>

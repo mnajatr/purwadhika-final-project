@@ -7,12 +7,12 @@ export class CategoryService {
   }
 
   // ================= GET ALL WITH PAGINATION =================
-  async getAllPaginated(page: number = 1, limit: number = 10) {
-    const skip = (page - 1) * limit;
+  async getAllPaginated(page: number = 0, limit: number = 10) {
+    const skip = page === 0 ? 0 : (page - 1) * limit;
     const [categories, total] = await Promise.all([
       prisma.productCategory.findMany({
         skip,
-        take: limit,
+        take: page === 0 ? undefined : limit,
       }),
       prisma.productCategory.count(),
     ]);

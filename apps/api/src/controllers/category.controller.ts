@@ -10,7 +10,7 @@ export class CategoryController {
       const { page, limit } = req.query;
 
       if (page || limit) {
-        const pageNumber = parseInt(page as string) || 1;
+        const pageNumber = parseInt(page as string) || 0;
         const limitNumber = parseInt(limit as string) || 10;
         const result = await service.getAllPaginated(pageNumber, limitNumber);
         return res.json(result);
