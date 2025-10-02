@@ -1,15 +1,13 @@
 "use client";
 
-import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import Image from "next/image";
 import { productsService } from "@/services/products.service";
 import { useCategories } from "@/hooks/useCategory";
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
-type InventoryInput = { storeId: number };
-
-type ProductForUpdate = {
+export type ProductForUpdate = {
   id: number;
   name?: string;
   slug?: string;
@@ -20,8 +18,7 @@ type ProductForUpdate = {
   height?: number;
   length?: number;
   categoryId?: number;
-  images?: (File | string)[];
-  inventories?: InventoryInput[];
+  images?: File[];
 };
 
 export default function UpdateProductForm({
@@ -35,17 +32,7 @@ export default function UpdateProductForm({
   const storeIdz = searchParams.get("storeId") ?? "1";
   const storeId = Number(storeIdz);
 
-  // ✅ mapping inventories → fallback ke product.stock
-  const mapInventories = (inv: any[] | undefined): InventoryInput[] => {
-    if (inv && inv.length) {
-      return inv.map((i) => ({
-        storeId: i.storeId,
-      }));
-    }
-    return [{ storeId }];
-  };
-
-  const { register, handleSubmit, reset, control, setValue, watch } =
+  const { register, handleSubmit, reset, setValue, watch } =
     useForm<ProductForUpdate>({
       defaultValues: {
         id: product.id,
@@ -58,35 +45,35 @@ export default function UpdateProductForm({
         height: product?.height ?? 0,
         length: product?.length ?? 0,
         categoryId: product?.categoryId ?? undefined,
-        images: product?.images || [],
-        inventories: mapInventories(product?.inventories),
+        images: [],
       },
     });
-
-  const { fields: inventoryFields } = useFieldArray({
-    control,
-    name: "inventories",
-  });
 
   const images = watch("images");
 
   // reset form kalau product berubah
   useEffect(() => {
-    reset({
-      id: product.id,
-      name: product?.name || "",
-      slug: product?.slug || "",
-      description: product?.description || "",
-      price: product?.price ?? 0,
-      weight: product?.weight ?? 0,
-      width: product?.width ?? 0,
-      height: product?.height ?? 0,
-      length: product?.length ?? 0,
-      categoryId: product?.categoryId ?? undefined,
-      images: product?.images || [],
-      inventories: mapInventories(product?.inventories), //
-    });
-  }, [product, storeId, reset]);
+    async function initForm() {
+      reset({
+        id: product.id,
+        name: product?.name || "",
+        slug: product?.slug || "",
+        description: product?.description || "",
+        price: product?.price ?? 0,
+        weight: product?.weight ?? 0,
+        width: product?.width ?? 0,
+        height: product?.height ?? 0,
+        length: product?.length ?? 0,
+        categoryId:
+          categories.length > 0 ? product?.categoryId ?? undefined : undefined,
+        images: product.images,
+      });
+    }
+
+    if (product) {
+      initForm();
+    }
+  }, [product, storeId, reset, categories]);
 
   const onSubmit = async (data: ProductForUpdate) => {
     try {
@@ -101,7 +88,6 @@ export default function UpdateProductForm({
       if (data.height) formData.append("height", String(data.height));
       if (data.length) formData.append("length", String(data.length));
       formData.append("categoryId", String(data.categoryId ?? 0));
-      formData.append("inventories", JSON.stringify(data.inventories));
 
       (data.images || []).forEach((img) => {
         if (img instanceof File) {
@@ -255,23 +241,13 @@ export default function UpdateProductForm({
       </div>
 
       {/* Inventories */}
-      {inventoryFields.map((field, idx) => (
-        <div key={field.id} className="grid grid-cols-2 gap-4">
-          <Controller
-            name={`inventories.${idx}.storeId`}
-            control={control}
-            render={({ field }) => (
-              <input
-                type="number"
-                disabled
-                {...field}
-                placeholder="Store ID"
-                className="w-full p-2 border rounded"
-              />
-            )}
-          />
-        </div>
-      ))}
+      <input
+        type="number"
+        disabled
+        value={storeId}
+        placeholder="Store ID"
+        className="w-full p-2 border rounded"
+      />
 
       <button
         type="submit"

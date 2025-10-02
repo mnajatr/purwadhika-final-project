@@ -27,7 +27,6 @@ export default function CreateDiscountForm() {
   }, []);
   const { data } = useProducts(0, storeId);
   const products = data?.products ?? [];
-  console.log(data);
 
   const {
     register,

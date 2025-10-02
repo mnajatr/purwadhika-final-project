@@ -31,10 +31,9 @@ export default function EditDiscountForm({
   discount: DiscountResponse;
 }) {
   const updateDiscount = useUpdateDiscount();
-  const { data } = useProducts();
-  const products = data?.products ?? [];
-
   const [storeId, setStoreId] = useState<number>(0);
+  const { data } = useProducts(0, storeId);
+  const products = data?.products ?? [];
 
   const {
     register,
@@ -115,7 +114,7 @@ export default function EditDiscountForm({
       { id: discount.id, data: payload },
       {
         onSuccess: () => alert("✅ Discount updated"),
-        onError: (err: any) => alert("Update failed: " + (err?.message ?? err)),
+        onError: (err) => alert("Update failed: " + (err?.message ?? err)),
       }
     );
   };

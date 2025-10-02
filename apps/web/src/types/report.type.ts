@@ -28,12 +28,18 @@ export interface SalesReportItem {
 }
 
 export interface SalesByCategoryItem {
-  category: string;
+  categoryId: number;
+  categoryName: string;
+  productId: number;
+  productName: string;
+  totalQty: number;
   totalSales: number;
 }
 
 export interface SalesByProductItem {
-  product: string;
+  productId: number;
+  productName: string;
+  totalQty: number;
   totalSales: number;
 }
 

@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/axios-client';
+import { apiClient } from "@/lib/axios-client";
 
 export interface Store {
   id: number;
@@ -61,13 +61,18 @@ export interface TransferRequest {
 export const inventoryApi = {
   // Get all stores
   getStores: async (): Promise<Store[]> => {
-    const response = await apiClient.get<{ data: Store[] }>('/stores');
+    const response = await apiClient.get<{ data: Store[] }>("/stores");
     return response.data;
   },
 
   // Get store inventory
-  getStoreInventory: async (storeId: number, limit = 1000): Promise<Product[]> => {
-    const response = await apiClient.get<{ data: { inventories: InventoryItem[] } }>(`/admin/inventory/stores/${storeId}?limit=${limit}`);
+  getStoreInventory: async (
+    storeId: number,
+    limit = 1000
+  ): Promise<Product[]> => {
+    const response = await apiClient.get<{
+      data: { inventories: InventoryItem[] };
+    }>(`/admin/inventory/stores/${storeId}?limit=${limit}`);
     return response.data.inventories.map((inv: InventoryItem) => ({
       id: inv.product.id,
       name: inv.product.name,
@@ -82,30 +87,37 @@ export const inventoryApi = {
     storeId?: string;
     startDate?: string;
     endDate?: string;
+    page?: number;
     limit?: number;
-  }): Promise<StockJournal[]> => {
+  }): Promise<{ journals: StockJournal[]; total: number }> => {
     const searchParams = new URLSearchParams();
-    if (params.storeId) searchParams.append('storeId', params.storeId);
-    if (params.startDate) searchParams.append('startDate', params.startDate);
-    if (params.endDate) searchParams.append('endDate', params.endDate);
-    searchParams.append('limit', (params.limit || 50).toString());
+    if (params.storeId) searchParams.append("storeId", params.storeId);
+    if (params.startDate) searchParams.append("startDate", params.startDate);
+    if (params.endDate) searchParams.append("endDate", params.endDate);
+    searchParams.append("limit", (params.limit || 50).toString());
+    searchParams.append("page", (params.page || 1).toString());
 
-    const response = await apiClient.get<{ data: { journals: StockJournal[] } }>(`/admin/inventory/stock-journals?${searchParams.toString()}`);
-    return response.data.journals;
+    const response = await apiClient.get<{
+      data: { journals: StockJournal[]; pagination: { total: number } };
+    }>(`/admin/inventory/stock-journals?${searchParams.toString()}`);
+    return {
+      journals: response.data.journals,
+      total: response.data.pagination.total,
+    };
   },
 
   // Transfer inventory
   transferInventory: async (data: TransferRequest): Promise<void> => {
-    await apiClient.post('/admin/inventory/transfer', data);
+    await apiClient.post("/admin/inventory/transfer", data);
   },
 
   // Manual stock adjustment
   adjustStock: async (data: {
     storeId: number;
     productId: number;
-    changeQty: number;
+    qtyChange: number;
     reason: string;
   }): Promise<void> => {
-    await apiClient.post('/admin/inventory/update-stock', data);
+    await apiClient.post("/admin/inventory/update-stock", data);
   },
 };
