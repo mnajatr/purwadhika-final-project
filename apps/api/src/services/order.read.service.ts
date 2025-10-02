@@ -46,17 +46,55 @@ export class OrderReadService {
     if (typeof userId === "number") where.userId = userId;
     if (status && status.trim() !== "") where.status = status.trim();
 
+    // Handle search query - support partial matching for order IDs
+    let searchFilteredIds: number[] | null = null;
     if (q) {
       const qTrimmed = String(q).trim();
-      const qn = Number(qTrimmed);
-      if (!Number.isNaN(qn) && qn > 0) {
-        where.id = qn;
-      } else if (qTrimmed !== "") {
-        where.items = {
-          some: {
-            product: { name: { contains: qTrimmed, mode: "insensitive" } },
-          },
-        };
+      
+      if (qTrimmed !== "") {
+        // For numeric search, find all order IDs that contain the search term
+        const qn = Number(qTrimmed);
+        if (!Number.isNaN(qn)) {
+          // Fetch all order IDs and filter for partial matches in memory
+          // This allows searching "8" to match 8, 18, 28, 80, 81, etc.
+          const allOrders = await prisma.order.findMany({
+            where: { ...where }, // Apply other filters
+            select: { id: true },
+          });
+          
+          searchFilteredIds = allOrders
+            .filter((order) => String(order.id).includes(qTrimmed))
+            .map((order) => order.id);
+          
+          // If no IDs match, also check product names
+          if (searchFilteredIds.length === 0) {
+            // Fall back to product name search only
+            where.items = {
+              some: {
+                product: { name: { contains: qTrimmed, mode: "insensitive" } },
+              },
+            };
+          } else {
+            // Use OR: either ID matches OR product name matches
+            where.OR = [
+              { id: { in: searchFilteredIds } },
+              {
+                items: {
+                  some: {
+                    product: { name: { contains: qTrimmed, mode: "insensitive" } },
+                  },
+                },
+              },
+            ];
+          }
+        } else {
+          // Non-numeric search: only search product names
+          where.items = {
+            some: {
+              product: { name: { contains: qTrimmed, mode: "insensitive" } },
+            },
+          };
+        }
       }
     }
 
@@ -65,17 +103,20 @@ export class OrderReadService {
       if (dateFrom) {
         try {
           where.createdAt.gte = new Date(dateFrom);
+          console.log("📅 Date filter - dateFrom:", dateFrom, "→", where.createdAt.gte);
         } catch (e) {
-          // ignore invalid dateFrom
+          console.error("❌ Invalid dateFrom:", dateFrom, e);
         }
       }
       if (dateTo) {
         try {
           where.createdAt.lte = new Date(dateTo);
+          console.log("📅 Date filter - dateTo:", dateTo, "→", where.createdAt.lte);
         } catch (e) {
-          // ignore invalid dateTo
+          console.error("❌ Invalid dateTo:", dateTo, e);
         }
       }
+      console.log("📅 Final date filter:", where.createdAt);
     }
 
     const [items, total] = await Promise.all([
@@ -99,6 +140,11 @@ export class OrderReadService {
             },
           },
           payment: true,
+          address: {
+            select: {
+              recipientName: true,
+            },
+          },
         },
         orderBy: { createdAt: "desc" },
         skip: safeSkip,
