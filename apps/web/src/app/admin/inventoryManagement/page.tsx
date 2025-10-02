@@ -3,13 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { inventoryApi, type Store, type Product, type StockJournal } from "@/services/inventory.service";
+import { inventoryApi } from "@/services/inventory.service";
 import { ApiError } from "@/lib/axios-client";
 
 interface TransferItem {
@@ -21,8 +15,10 @@ interface TransferItem {
 
 export default function InventoryManagementPage() {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"transfer" | "adjustment" | "journal">("transfer");
-  
+  const [activeTab, setActiveTab] = useState<
+    "transfer" | "adjustment" | "journal"
+  >("transfer");
+
   // Transfer states
   const [fromStoreId, setFromStoreId] = useState<string>("");
   const [toStoreId, setToStoreId] = useState<string>("");
@@ -30,45 +26,59 @@ export default function InventoryManagementPage() {
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [transferQty, setTransferQty] = useState<number>(1);
   const [transferNote, setTransferNote] = useState<string>("");
-  
+
   // Manual adjustment states
   const [adjustmentStoreId, setAdjustmentStoreId] = useState<string>("");
   const [adjustmentProductId, setAdjustmentProductId] = useState<string>("");
   const [adjustmentQty, setAdjustmentQty] = useState<number>(1);
   const [adjustmentReason, setAdjustmentReason] = useState<string>("ADD");
-  
+
   // Stock journal states
-  const [selectedStoreForJournal, setSelectedStoreForJournal] = useState<string>("");
+  const [selectedStoreForJournal, setSelectedStoreForJournal] =
+    useState<string>("");
   const [journalDateFrom, setJournalDateFrom] = useState<string>("");
   const [journalDateTo, setJournalDateTo] = useState<string>("");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   // React Query hooks
-  const { data: stores = [], isLoading: storesLoading } = useQuery({
-    queryKey: ['stores'],
+  const { data: stores = [] } = useQuery({
+    queryKey: ["stores"],
     queryFn: inventoryApi.getStores,
   });
 
   const { data: products = [], isLoading: productsLoading } = useQuery({
-    queryKey: ['storeInventory', fromStoreId],
+    queryKey: ["storeInventory", fromStoreId],
     queryFn: () => inventoryApi.getStoreInventory(parseInt(fromStoreId)),
     enabled: !!fromStoreId,
   });
 
   const { data: adjustmentProducts = [] } = useQuery({
-    queryKey: ['storeInventory', adjustmentStoreId],
+    queryKey: ["storeInventory", adjustmentStoreId],
     queryFn: () => inventoryApi.getStoreInventory(parseInt(adjustmentStoreId)),
     enabled: !!adjustmentStoreId,
   });
 
-  const { data: stockJournals = [], isLoading: journalsLoading, refetch: refetchJournals } = useQuery({
-    queryKey: ['stockJournals', selectedStoreForJournal, journalDateFrom, journalDateTo],
-    queryFn: () => inventoryApi.getStockJournals({
-      storeId: selectedStoreForJournal,
-      startDate: journalDateFrom,
-      endDate: journalDateTo,
-    }),
-    enabled: activeTab === 'journal',
+  const { data, isLoading: journalsLoading } = useQuery({
+    queryKey: [
+      "stockJournals",
+      selectedStoreForJournal,
+      journalDateFrom,
+      journalDateTo,
+      page,
+    ],
+    queryFn: () =>
+      inventoryApi.getStockJournals({
+        storeId: selectedStoreForJournal,
+        startDate: journalDateFrom,
+        endDate: journalDateTo,
+        limit: pageSize,
+        page: page,
+      }),
+    enabled: activeTab === "journal",
   });
+  const stockJournals = data?.journals ?? [];
+  const totalData = data?.total ?? 0;
 
   // Mutations
   const transferMutation = useMutation({
@@ -79,8 +89,8 @@ export default function InventoryManagementPage() {
       setFromStoreId("");
       setToStoreId("");
       setTransferNote("");
-      queryClient.invalidateQueries({ queryKey: ['storeInventory'] });
-      queryClient.invalidateQueries({ queryKey: ['stockJournals'] });
+      queryClient.invalidateQueries({ queryKey: ["storeInventory"] });
+      queryClient.invalidateQueries({ queryKey: ["stockJournals"] });
     },
     onError: (error: ApiError) => {
       alert(error.response?.data?.message || "Failed to transfer inventory");
@@ -95,8 +105,8 @@ export default function InventoryManagementPage() {
       setAdjustmentProductId("");
       setAdjustmentQty(1);
       setAdjustmentReason("ADD");
-      queryClient.invalidateQueries({ queryKey: ['storeInventory'] });
-      queryClient.invalidateQueries({ queryKey: ['stockJournals'] });
+      queryClient.invalidateQueries({ queryKey: ["storeInventory"] });
+      queryClient.invalidateQueries({ queryKey: ["stockJournals"] });
     },
     onError: (error: ApiError) => {
       alert(error.response?.data?.message || "Failed to adjust stock");
@@ -105,7 +115,12 @@ export default function InventoryManagementPage() {
 
   // Handler functions
   const handleManualAdjustment = () => {
-    if (!adjustmentStoreId || !adjustmentProductId || !adjustmentQty || !adjustmentReason) {
+    if (
+      !adjustmentStoreId ||
+      !adjustmentProductId ||
+      !adjustmentQty ||
+      !adjustmentReason
+    ) {
       alert("Please fill all fields");
       return;
     }
@@ -118,7 +133,7 @@ export default function InventoryManagementPage() {
     adjustmentMutation.mutate({
       storeId: parseInt(adjustmentStoreId),
       productId: parseInt(adjustmentProductId),
-      changeQty: adjustmentQty,
+      qtyChange: adjustmentQty,
       reason: adjustmentReason,
     });
   };
@@ -128,7 +143,7 @@ export default function InventoryManagementPage() {
       return;
     }
 
-    const product = products.find(p => p.id === parseInt(selectedProductId));
+    const product = products.find((p) => p.id === parseInt(selectedProductId));
     if (!product) {
       alert("Product not found");
       return;
@@ -139,16 +154,20 @@ export default function InventoryManagementPage() {
       return;
     }
 
-    const existingIndex = transferItems.findIndex(item => item.productId === product.id);
+    const existingIndex = transferItems.findIndex(
+      (item) => item.productId === product.id
+    );
     if (existingIndex >= 0) {
       const updatedItems = [...transferItems];
       const newQty = updatedItems[existingIndex].qty + transferQty;
-      
+
       if (newQty > product.stockQty) {
-        alert(`Total quantity exceeds available stock. Available: ${product.stockQty}`);
+        alert(
+          `Total quantity exceeds available stock. Available: ${product.stockQty}`
+        );
         return;
       }
-      
+
       updatedItems[existingIndex].qty = newQty;
       setTransferItems(updatedItems);
     } else {
@@ -188,7 +207,7 @@ export default function InventoryManagementPage() {
     transferMutation.mutate({
       fromStoreId: parseInt(fromStoreId),
       toStoreId: parseInt(toStoreId),
-      items: transferItems.map(item => ({
+      items: transferItems.map((item) => ({
         productId: item.productId,
         qty: item.qty,
       })),
@@ -197,22 +216,33 @@ export default function InventoryManagementPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString() + " " + new Date(dateString).toLocaleTimeString();
+    return (
+      new Date(dateString).toLocaleDateString() +
+      " " +
+      new Date(dateString).toLocaleTimeString()
+    );
   };
 
   const getReasonBadgeColor = (reason: string) => {
     switch (reason) {
-      case "ADD": return "bg-green-100 text-green-800";
-      case "REMOVE": return "bg-red-100 text-red-800";
-      case "TRANSFER_IN": return "bg-blue-100 text-blue-800";
-      case "TRANSFER_OUT": return "bg-orange-100 text-orange-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "ADD":
+        return "bg-green-100 text-green-800";
+      case "REMOVE":
+        return "bg-red-100 text-red-800";
+      case "TRANSFER_IN":
+        return "bg-blue-100 text-blue-800";
+      case "TRANSFER_OUT":
+        return "bg-orange-100 text-orange-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   return (
     <div className="max-w-6xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-8 text-gray-900">Inventory Management</h1>
+      <h1 className="text-3xl font-bold mb-8 text-gray-900">
+        Inventory Management
+      </h1>
 
       {/* Tab Navigation */}
       <div className="mb-8">
@@ -232,6 +262,13 @@ export default function InventoryManagementPage() {
             >
               Stock Journal
             </Button>
+            <Button
+              variant={activeTab === "adjustment" ? "default" : "ghost"}
+              onClick={() => setActiveTab("adjustment")}
+              className="py-2 px-1 border-b-2 font-medium text-sm"
+            >
+              Manual Adjustment
+            </Button>
           </nav>
         </div>
       </div>
@@ -239,16 +276,18 @@ export default function InventoryManagementPage() {
       {/* Transfer Tab */}
       {activeTab === "transfer" && (
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-semibold mb-6 text-gray-800">Inventory Transfer</h2>
-          
+          <h2 className="text-xl font-semibold mb-6 text-gray-800">
+            Inventory Transfer
+          </h2>
+
           {/* Store Selection */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 From Store
               </label>
-              <select 
-                value={fromStoreId} 
+              <select
+                value={fromStoreId}
                 onChange={(e) => setFromStoreId(e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
               >
@@ -265,14 +304,14 @@ export default function InventoryManagementPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 To Store
               </label>
-              <select 
-                value={toStoreId} 
+              <select
+                value={toStoreId}
                 onChange={(e) => setToStoreId(e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
               >
                 <option value="">Select destination store</option>
                 {stores
-                  .filter(store => store.id.toString() !== fromStoreId)
+                  .filter((store) => store.id.toString() !== fromStoreId)
                   .map((store) => (
                     <option key={store.id} value={store.id.toString()}>
                       {store.name} - {store.city}
@@ -285,40 +324,49 @@ export default function InventoryManagementPage() {
           {/* Add Items Section */}
           {fromStoreId && (
             <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-4 text-gray-800">Add Items to Transfer</h3>
-              
+              <h3 className="text-lg font-semibold mb-4 text-gray-800">
+                Add Items to Transfer
+              </h3>
+
               {productsLoading ? (
-                <div className="text-center py-4 text-gray-600">Loading inventory...</div>
+                <div className="text-center py-4 text-gray-600">
+                  Loading inventory...
+                </div>
               ) : (
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="flex-1">
-                    <select 
-                      value={selectedProductId} 
+                    <select
+                      value={selectedProductId}
                       onChange={(e) => setSelectedProductId(e.target.value)}
                       className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                     >
                       <option value="">Select product</option>
                       {products
-                        .filter(product => product.stockQty > 0)
+                        .filter((product) => product.stockQty > 0)
                         .map((product) => (
-                          <option key={product.id} value={product.id.toString()}>
+                          <option
+                            key={product.id}
+                            value={product.id.toString()}
+                          >
                             {product.name} (Stock: {product.stockQty})
                           </option>
                         ))}
                     </select>
                   </div>
-                  
+
                   <div className="w-32">
                     <input
                       type="number"
                       min="1"
                       value={transferQty}
-                      onChange={(e) => setTransferQty(parseInt(e.target.value) || 1)}
+                      onChange={(e) =>
+                        setTransferQty(parseInt(e.target.value) || 1)
+                      }
                       placeholder="Qty"
                       className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
-                  
+
                   <button
                     onClick={addTransferItem}
                     className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors whitespace-nowrap"
@@ -333,8 +381,10 @@ export default function InventoryManagementPage() {
           {/* Transfer Items Table */}
           {transferItems.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-4 text-gray-800">Items to Transfer</h3>
-              
+              <h3 className="text-lg font-semibold mb-4 text-gray-800">
+                Items to Transfer
+              </h3>
+
               <div className="overflow-x-auto rounded-lg border border-gray-200">
                 <table className="min-w-full bg-white">
                   <thead className="bg-gray-50">
@@ -371,7 +421,10 @@ export default function InventoryManagementPage() {
                             onChange={(e) => {
                               const newQty = parseInt(e.target.value) || 1;
                               const updatedItems = [...transferItems];
-                              updatedItems[index].qty = Math.min(newQty, item.availableStock);
+                              updatedItems[index].qty = Math.min(
+                                newQty,
+                                item.availableStock
+                              );
                               setTransferItems(updatedItems);
                             }}
                             className="w-20 p-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
@@ -402,14 +455,18 @@ export default function InventoryManagementPage() {
                   />
                   <button
                     onClick={handleTransfer}
-                    disabled={transferMutation.isPending || transferItems.length === 0}
+                    disabled={
+                      transferMutation.isPending || transferItems.length === 0
+                    }
                     className={`px-8 py-3 rounded-md font-medium transition-colors ${
                       transferMutation.isPending || transferItems.length === 0
                         ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                         : "bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                     }`}
                   >
-                    {transferMutation.isPending ? "Transferring..." : "Transfer Inventory"}
+                    {transferMutation.isPending
+                      ? "Transferring..."
+                      : "Transfer Inventory"}
                   </button>
                 </div>
               </div>
@@ -421,16 +478,18 @@ export default function InventoryManagementPage() {
       {/* Manual Adjustment Tab */}
       {activeTab === "adjustment" && (
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-semibold mb-6 text-gray-800">Manual Stock Adjustment</h2>
-          
+          <h2 className="text-xl font-semibold mb-6 text-gray-800">
+            Manual Stock Adjustment
+          </h2>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Store Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Store
               </label>
-              <select 
-                value={adjustmentStoreId} 
+              <select
+                value={adjustmentStoreId}
                 onChange={(e) => setAdjustmentStoreId(e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
               >
@@ -448,8 +507,8 @@ export default function InventoryManagementPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Product
               </label>
-              <select 
-                value={adjustmentProductId} 
+              <select
+                value={adjustmentProductId}
                 onChange={(e) => setAdjustmentProductId(e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                 disabled={!adjustmentStoreId}
@@ -471,7 +530,9 @@ export default function InventoryManagementPage() {
               <input
                 type="number"
                 value={adjustmentQty}
-                onChange={(e) => setAdjustmentQty(parseInt(e.target.value) || 0)}
+                onChange={(e) =>
+                  setAdjustmentQty(parseInt(e.target.value) || 0)
+                }
                 placeholder="Enter quantity (positive to add, negative to reduce)"
                 className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
@@ -485,9 +546,11 @@ export default function InventoryManagementPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Reason
               </label>
-              <select 
-                value={adjustmentReason} 
-                onChange={(e) => setAdjustmentReason(e.target.value as "ADD" | "REMOVE")}
+              <select
+                value={adjustmentReason}
+                onChange={(e) =>
+                  setAdjustmentReason(e.target.value as "ADD" | "REMOVE")
+                }
                 className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
               >
                 <option value="ADD">Stock Addition</option>
@@ -500,7 +563,11 @@ export default function InventoryManagementPage() {
           <div className="flex justify-end">
             <button
               onClick={handleManualAdjustment}
-              disabled={!adjustmentStoreId || !adjustmentProductId || adjustmentQty === 0}
+              disabled={
+                !adjustmentStoreId ||
+                !adjustmentProductId ||
+                adjustmentQty === 0
+              }
               className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               Apply Adjustment
@@ -512,16 +579,18 @@ export default function InventoryManagementPage() {
       {/* Journal Tab */}
       {activeTab === "journal" && (
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-semibold mb-6 text-gray-800">Stock Journal</h2>
-          
+          <h2 className="text-xl font-semibold mb-6 text-gray-800">
+            Stock Journal
+          </h2>
+
           {/* Filters */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Store
               </label>
-              <select 
-                value={selectedStoreForJournal} 
+              <select
+                value={selectedStoreForJournal}
                 onChange={(e) => setSelectedStoreForJournal(e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
               >
@@ -561,7 +630,9 @@ export default function InventoryManagementPage() {
 
           {/* Stock Journal Table */}
           {journalsLoading ? (
-            <div className="text-center py-8 text-gray-600">Loading stock journals...</div>
+            <div className="text-center py-8 text-gray-600">
+              Loading stock journals...
+            </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-gray-200">
               <table className="min-w-full bg-white">
@@ -603,28 +674,66 @@ export default function InventoryManagementPage() {
                         {journal.product.name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <span className={`font-medium ${
-                          journal.qtyChange > 0 ? "text-green-600" : "text-red-600"
-                        }`}>
-                          {journal.qtyChange > 0 ? "+" : ""}{journal.qtyChange}
+                        <span
+                          className={`font-medium ${
+                            journal.qtyChange > 0
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {journal.qtyChange > 0 ? "+" : ""}
+                          {journal.qtyChange}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getReasonBadgeColor(journal.reason)}`}>
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getReasonBadgeColor(
+                            journal.reason
+                          )}`}
+                        >
                           {journal.reason}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {journal.admin.email}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" title={journal.note || ''}>
-                        {journal.note ? (journal.note.length > 80 ? journal.note.slice(0, 80) + '…' : journal.note) : '-'}
+                      <td
+                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                        title={journal.note || ""}
+                      >
+                        {journal.note
+                          ? journal.note.length > 80
+                            ? journal.note.slice(0, 80) + "…"
+                            : journal.note
+                          : "-"}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              
+              <div className="mt-6 flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <button
+                    className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={page * pageSize >= totalData}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
+                <div className="text-sm text-gray-700">
+                  Showing {(page - 1) * pageSize + 1} to{" "}
+                  {Math.min(page * pageSize, totalData)} of {totalData} results
+                </div>
+              </div>
+
               {stockJournals.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   No stock journal entries found

@@ -3,9 +3,7 @@ import {
   getProductBySlug,
   productsService,
   deleteProduct,
-  updateProduct,
 } from "../services/products.service";
-import { ProductResponse } from "@/types/products.type";
 
 export function useProducts(
   page: number,
@@ -31,24 +29,10 @@ export function useProduct(slug: string) {
 export function useCreateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: ProductResponse) =>
+    mutationFn: (data: FormData) =>
       productsService.createProduct(data).then((res) => res),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
-    },
-  });
-}
-
-export function useUpdateProduct() {
-  const queryClient = useQueryClient();
-
-  type UpdatePayload = { slug: string; data: Record<string, unknown> };
-
-  return useMutation({
-    mutationFn: ({ slug, data }: UpdatePayload) => updateProduct(slug, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["product", variables.slug] });
     },
   });
 }
