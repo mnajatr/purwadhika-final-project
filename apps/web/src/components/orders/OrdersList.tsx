@@ -73,9 +73,8 @@ interface Order {
   }[];
 }
 
-// Get current user ID using the same logic as axios client
 function getCurrentUserId(): string {
-  if (typeof window === "undefined") return "4"; // server-side fallback
+  if (typeof window === "undefined") return "4";
 
   try {
     const stored = localStorage.getItem("devUserId");
@@ -84,14 +83,12 @@ function getCurrentUserId(): string {
       return stored;
     }
   } catch {
-    // ignore localStorage errors
+    return "4";
   }
 
-  // Default fallback when none is set
   return "4";
 }
 
-// Fetch orders from backend with server-side filtering for proper pagination
 async function fetchOrders(
   filters: {
     page?: number;
@@ -103,7 +100,7 @@ async function fetchOrders(
   } = {}
 ) {
   const params = new URLSearchParams();
-  // Server-side filters for proper pagination
+  
   if (typeof filters.page === "number")
     params.append("page", String(filters.page));
   if (typeof filters.pageSize === "number")
@@ -132,7 +129,7 @@ async function fetchOrders(
   console.log("API Response:", data);
 
   if (data.success && data.data) {
-    return data.data; // envelope with items, total, page, pageSize
+    return data.data;
   }
 
   return { items: [], total: 0, page: 1, pageSize: filters.pageSize ?? 10 };
@@ -147,7 +144,7 @@ export default function OrdersPage() {
   const [error, setError] = React.useState<string | null>(null);
 
   const [q, setQ] = React.useState<string | null>(null);
-  const [searchInput, setSearchInput] = React.useState<string>(""); // For immediate UI update
+  const [searchInput, setSearchInput] = React.useState<string>("");
   const [dateRange, setDateRange] = React.useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -157,24 +154,20 @@ export default function OrdersPage() {
   const [page, setPage] = React.useState<number>(1);
   const pageSize = 10;
 
-  // Track if this is the first load
   const isFirstLoad = React.useRef(true);
 
-  // Debounce search input for smooth typing experience
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setQ(searchInput || null);
       setPage(1);
-    }, 500); // 500ms debounce
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Load orders from server with filters (smooth transitions with loading states)
   React.useEffect(() => {
     let mounted = true;
     const load = async () => {
-      // Use different loading states for initial load vs filter/pagination changes
       if (isFirstLoad.current) {
         setIsLoading(true);
         isFirstLoad.current = false;
@@ -184,7 +177,6 @@ export default function OrdersPage() {
       setError(null);
 
       try {
-        // Convert date range to ISO strings
         let dateFrom: string | undefined;
         let dateTo: string | undefined;
         
@@ -199,7 +191,6 @@ export default function OrdersPage() {
           endOfDay.setHours(23, 59, 59, 999);
           dateTo = endOfDay.toISOString();
         } else if (dateRange.from && !dateRange.to) {
-          // If only start date selected, use same day as end
           const endOfDay = new Date(dateRange.from);
           endOfDay.setHours(23, 59, 59, 999);
           dateTo = endOfDay.toISOString();
@@ -240,7 +231,7 @@ export default function OrdersPage() {
     return () => {
       mounted = false;
     };
-  }, [page, status, q, dateRange.from, dateRange.to]); // Refetch when page or filters change
+  }, [page, status, q, dateRange.from, dateRange.to]);
 
   const statusConfig: Record<
     string,
@@ -295,7 +286,6 @@ export default function OrdersPage() {
     []
   );
 
-  // Active filters UI removed for debugging
   const noResultsForFilter = false;
 
   const formatCurrency = (amount: number) => {
@@ -345,14 +335,6 @@ export default function OrdersPage() {
 
         {/* Loading content */}
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid gap-6 md:grid-cols-3 mb-8">
-            {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="h-28 bg-gradient-to-br from-card/80 to-card/40 rounded-2xl animate-pulse border border-border/50"
-              />
-            ))}
-          </div>
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
               <div
@@ -416,7 +398,6 @@ export default function OrdersPage() {
           {/* Search and Filters */}
           <div className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              {/* Search - debounced for smooth typing */}
               <div className="relative flex-1">
                 <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
@@ -430,7 +411,6 @@ export default function OrdersPage() {
                 />
               </div>
 
-              {/* Date Range Filter with Calendar Popover */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -443,7 +423,6 @@ export default function OrdersPage() {
                     <span className="truncate">
                       {dateRange.from ? (
                         dateRange.to ? (
-                          // Check if start and end dates are the same
                           dateRange.from.getTime() === dateRange.to.getTime() ? (
                             format(dateRange.from, "PPP")
                           ) : (
@@ -519,11 +498,8 @@ export default function OrdersPage() {
                   </div>
                 </PopoverContent>
               </Popover>
-
-              {/* Clear Filters removed as requested */}
             </div>
 
-            {/* Status Filter with smooth animations (like product page) */}
             <div className="flex flex-wrap justify-center gap-3">
               {statuses.map((s) => {
                 const active = status === s.key;
@@ -551,7 +527,6 @@ export default function OrdersPage() {
                       active ? "shadow-lg shadow-[#98E079]/40" : ""
                     }`}
                   >
-                    {/* Subtle gradient overlay for active state */}
                     {active && (
                       <motion.div
                         layoutId="activeStatus"
@@ -573,7 +548,6 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         {noResultsForFilter ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -585,7 +559,6 @@ export default function OrdersPage() {
               No orders match your current filters. Try adjusting your search
               criteria to find what you&apos;re looking for.
             </p>
-            {/* Clear All Filters button removed as requested */}
           </div>
         ) : orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -600,11 +573,7 @@ export default function OrdersPage() {
           </div>
         ) : (
           <>
-            {/* Active Filters Indicator removed for debugging */}
-
-            {/* Orders Grid with smooth animations */}
             <div className="relative">
-              {/* Simple loading overlay for pagination */}
               {isPaginating && (
                 <div className="absolute inset-0 bg-background/80 z-10 flex items-center justify-center">
                   <div className="flex items-center gap-2">
@@ -632,7 +601,6 @@ export default function OrdersPage() {
                       label: order.status,
                     };
 
-                    // Compute total items purchased (sum quantities, fallback to item count)
                     const totalItems = order.items?.reduce(
                       (sum, it) => sum + (it?.quantity ?? 1),
                       0
@@ -656,19 +624,16 @@ export default function OrdersPage() {
                         onClick={(e) => {
                           const target = e.target as HTMLElement | null;
                           if (!target) return;
-                          // prevent navigation when clicking interactive elements
                           if (target.closest('button, a, input, textarea, select')) return;
                           if (target.closest('.radix-portal')) return;
                           router.push(`/orders/${order.id}`);
                         }}
                       >
-                        {/* Outer Card Header: Order ID & Menu */}
                         <div className="flex items-center justify-between mb-3 pl-3 pr-3">
                           <h3 className="text-base lg:text-md font-semibold text-muted-foreground leading-tight">
                             ID {order.id}
                           </h3>
 
-                          {/* Dropdown Menu */}
                           <div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -709,25 +674,17 @@ export default function OrdersPage() {
                           </div>
                         </div>
 
-                        {/* Inner Card */}
                         <div className="rounded-lg border border-border/40 bg-[#FFFFF5]/60 backdrop-blur-sm p-3 group-hover:border-primary/20 transition-colors duration-300">
-                          {/* Top row: product details (left) and status (right) */}
                           <div className="flex flex-row flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                              {/* Product Image or Fallback Icon */}
                               <div className="flex-shrink-0 rounded-lg overflow-hidden shadow-sm shadow-primary/20 group-hover:scale-105 transition-transform duration-300 relative h-20 w-20">
                                 {(() => {
-                                  // Get the first product image URL if available
                                   const firstItem = order.items?.[0];
                                   const firstProduct = firstItem?.product;
-
-                                  // Get image URL from the images array
                                   let finalImageUrl = '';
                                   
-                                  // Check if images array exists and has at least one item
                                   if (Array.isArray(firstProduct?.images) && firstProduct.images.length > 0) {
                                     const firstImageObj = firstProduct.images[0];
-                                    // images is an array of objects with imageUrl property
                                     if (firstImageObj && typeof firstImageObj.imageUrl === 'string' && firstImageObj.imageUrl.trim()) {
                                       finalImageUrl = firstImageObj.imageUrl.trim();
                                     }
@@ -735,7 +692,6 @@ export default function OrdersPage() {
                                   
                                   const productName = firstProduct?.name || "Product";
 
-                                  // Render image if we have a valid URL
                                   if (finalImageUrl) {
                                     return (
                                       <Image
@@ -744,13 +700,10 @@ export default function OrdersPage() {
                                         fill
                                         className="object-cover"
                                         sizes="96px"
-                                        onError={() => {
-                                          /* optional: silent image error */
-                                        }}
+                                        onError={() => {}}
                                       />
                                     );
                                   } else {
-                                    // Fallback to Package icon
                                     return (
                                       <div className="h-full w-full p-4 bg-primary-gradient flex items-center justify-center">
                                         <Package className="h-12 w-12 text-primary-foreground" />
@@ -760,7 +713,6 @@ export default function OrdersPage() {
                                 })()}
                               </div>
 
-                              {/* Product Details */}
                               <div className="flex-1 min-w-0">
                                 <div className="mb-2">
                                   <h4 className="text-base font-bold mb-1 group-hover:text-primary transition-colors line-clamp-1">
@@ -773,9 +725,7 @@ export default function OrdersPage() {
                               </div>
                             </div>
 
-                            {/* Right Section: Status (vertical layout) */}
                             <div className="flex flex-col items-end gap-3 flex-shrink-0 min-w-[120px] sm:min-w-[140px] lg:min-w-[180px]">
-                              {/* Status Badge */}
                               <Badge
                                 className={`flex items-center gap-1.5 px-3 py-1.5 border font-medium ${orderStatus.color}`}
                               >
@@ -784,7 +734,6 @@ export default function OrdersPage() {
                               </Badge>
                             </div>
                           </div>
-                          {/* Bottom Section: Customer Name & Price (full-width) */}
                           <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/40">
                               <p className="text-sm font-medium text-foreground">
                                 {totalItems > 0 ? `${totalItems} ${totalItems === 1 ? 'item' : 'items'}` : '0 items'}
@@ -801,7 +750,6 @@ export default function OrdersPage() {
               </AnimatePresence>
             </div>
 
-            {/* Enhanced Pagination */}
             {orders.length > 0 && (
               <div className="mt-8 p-6 rounded-2xl border border-border/50 bg-gradient-to-br from-card/90 to-card/60 backdrop-blur-sm">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -822,7 +770,6 @@ export default function OrdersPage() {
                     </Button>
 
                     <div className="hidden sm:flex items-center gap-1">
-                      {/* Show page numbers around current page */}
                       {Array.from(
                         { length: Math.min(5, Math.ceil(total / pageSize)) },
                         (_, i) => {
@@ -849,7 +796,6 @@ export default function OrdersPage() {
                       )}
                     </div>
 
-                    {/* Mobile page indicator */}
                     <div className="sm:hidden px-4 py-2 rounded-xl bg-muted/50 text-sm font-medium">
                       {page} / {Math.ceil(total / pageSize)}
                     </div>
