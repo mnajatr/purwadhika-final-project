@@ -172,4 +172,92 @@
   .bg-primary-gradient:hover {
     opacity: 0.95;
   }
+
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  /* Custom Calendar Date Range Styling - Orange Theme */
+  .rdp-day_button.rdp-day_selected {
+    background: oklch(79.589% 0.14105 71.832) !important; /* Primary orange */
+    color: oklch(0.98 0.02 75) !important; /* Light text */
+    font-weight: 600;
+    border-radius: 0.5rem;
+  }
+
+  .rdp-day_button.rdp-day_selected:hover {
+    background: oklch(78.811% 0.15837 69.501) !important; /* Darker orange on hover */
+    opacity: 0.95;
+  }
+
+  /* Dates in between range - lighter orange background */
+  .rdp-day_button.rdp-range_middle {
+    background: oklch(95.164% 0.0495 83.958) !important; /* Light peachy background */
+    color: oklch(0.2663 0.0482 263.28) !important; /* Dark text */
+    font-weight: 500;
+    border-radius: 0;
+  }
+
+  /* Start date styling */
+  .rdp-day_button.rdp-range_start {
+    background: oklch(79.589% 0.14105 71.832) !important; /* Primary orange */
+    color: oklch(0.98 0.02 75) !important;
+    font-weight: 600;
+    border-top-left-radius: 0.5rem;
+    border-bottom-left-radius: 0.5rem;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  /* End date styling */
+  .rdp-day_button.rdp-range_end {
+    background: oklch(79.589% 0.14105 71.832) !important; /* Primary orange */
+    color: oklch(0.98 0.02 75) !important;
+    font-weight: 600;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-top-right-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+  }
+
+  /* Hover state for range middle dates */
+  .rdp-day_button.rdp-range_middle:hover {
+    background: oklch(91.944% 0.05343 78.986) !important; /* Slightly darker peachy */
+  }
+
+  /* Today date - remove all default background styling */
+  .rdp-day.rdp-today {
+    background: transparent !important;
+  }
+
+  /* Today button - only text color, no background */
+  .rdp-day_button.rdp-today {
+    font-weight: 600;
+    color: oklch(79.589% 0.14105 71.832) !important; /* Orange text for today */
+    background: transparent !important;
+  }
+
+  /* Override today styling when not selected */
+  .rdp-day_button.rdp-today:not(.rdp-day_selected):not(.rdp-range_start):not(.rdp-range_end):not(.rdp-range_middle) {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
+  /* Hover state for today when not selected */
+  .rdp-day_button.rdp-today:not(.rdp-day_selected):not(.rdp-range_start):not(.rdp-range_end):not(.rdp-range_middle):hover {
+    background: oklch(0 0 0 / 0.05) !important; /* Very subtle hover */
+  }
+
+  /* Focus ring for accessibility */
+  .rdp-day_button:focus-visible {
+    outline: 2px solid oklch(79.589% 0.14105 71.832);
+    outline-offset: 2px;
+  }
 }
