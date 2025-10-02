@@ -26,6 +26,7 @@ import {
   CheckCircle,
   Eye,
 } from "lucide-react";
+import { FaTruckFast } from "react-icons/fa6";
 import { toast } from "sonner";
 import { PayNowButton } from "@/components/payment";
 import {
@@ -703,7 +704,7 @@ export default function OrderOverview({
                 <div className="flex flex-col sm:flex-row items-center gap-3 mb-4">
                   <div className="px-3 py-2 bg-card rounded-2xl flex items-center justify-center border border-border/60 shadow-sm gap-2 w-full sm:w-auto sm:justify-start">
                     <div className="p-1 bg-primary/10 rounded-full">
-                      <Package className="w-3.5 h-3.5 text-primary" />
+                        <FaTruckFast className="w-3.5 h-3.5 text-primary" />
                     </div>
                     <span className="text-xs sm:text-sm font-medium text-foreground">
                       {order.store?.name || "Store"},{" "}
@@ -826,7 +827,7 @@ export default function OrderOverview({
               <div className="bg-muted/30 rounded-2xl p-3 sm:p-4 lg:p-6 min-w-[120px] lg:min-w-[140px] border border-border/30 flex-1 lg:flex-none">
                 <div className="flex items-start justify-start mb-20">
                   <div className="w-10 h-10 bg-card rounded-2xl flex items-center justify-center border border-border/60 shadow-sm">
-                    <Package className="w-5 h-5 text-primary" />
+                    <FaTruckFast className="w-5 h-5 text-primary" />
                   </div>
                 </div>
                 <div className="text-center">
@@ -1154,8 +1155,12 @@ export default function OrderOverview({
                   "COMPLETED",
                 ].includes(order.status)
                   ? "bg-emerald-100/80 text-emerald-700 border-emerald-200"
+                  : order.payment?.status === "REJECTED"
+                  ? "bg-red-100/80 text-red-700 border-red-200"
                   : order.status === "PENDING_PAYMENT"
                   ? "bg-amber-100/80 text-amber-700 border-amber-200"
+                  : order.status === "CANCELLED" || order.status === "EXPIRED"
+                  ? "bg-rose-100/80 text-rose-700 border-rose-200"
                   : "bg-muted text-muted-foreground border-border/60"
               }`}
             >
@@ -1168,8 +1173,12 @@ export default function OrderOverview({
                 "COMPLETED",
               ].includes(order.status)
                 ? "Payment Success"
+                : order.payment?.status === "REJECTED"
+                ? "Payment Rejected"
                 : order.status === "PENDING_PAYMENT"
                 ? "Payment Pending"
+                : order.status === "CANCELLED" || order.status === "EXPIRED"
+                ? "Cancelled"
                 : "Payment Review"}
             </Badge>
           </div>
@@ -1226,10 +1235,20 @@ export default function OrderOverview({
           {order.status === "PENDING_PAYMENT" &&
             order.paymentMethod === "MANUAL_TRANSFER" && (
               <div className="space-y-3 mt-4">
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2 text-destructive">
-                  <AlertCircle className="w-4 h-4" />
-                  <p className="text-sm">Upload payment proof to proceed</p>
-                </div>
+                {order.payment?.status === "REJECTED" ? (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+                    <AlertCircle className="w-4 h-4" />
+                    <p className="text-sm font-medium">
+                      Your payment proof was rejected. Please upload a new
+                      payment proof.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2 text-destructive">
+                    <AlertCircle className="w-4 h-4" />
+                    <p className="text-sm">Upload payment proof to proceed</p>
+                  </div>
+                )}
                 <PaymentUpload
                   orderId={order.id}
                   apiBase={apiBase}

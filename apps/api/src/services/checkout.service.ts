@@ -133,14 +133,68 @@ export class CheckoutService {
         },
       });
 
-      // Log shipping information for tracking (could be stored in separate shipping table later)
+      // Create shipment record for the order
+      let shippingCost = 0;
+      let resolvedMethodId: number;
+
       if (shippingMethod) {
-        console.log(
-          `Order ${createdOrder.id} - Shipping Method: ${shippingMethod}${
-            shippingOption ? ` - ${shippingOption}` : ""
-          }`
-        );
+        // Try to find shipping method by carrier or serviceCode
+        const existingMethod = await tx.shippingMethod.findFirst({
+          where: {
+            OR: [{ carrier: shippingMethod }, { serviceCode: shippingMethod }],
+          },
+        });
+
+        if (existingMethod) {
+          resolvedMethodId = existingMethod.id;
+        } else {
+          // Create new shipping method if doesn't exist
+          const newMethod = await tx.shippingMethod.create({
+            data: {
+              carrier: shippingMethod,
+              serviceCode: shippingOption || shippingMethod,
+              isActive: true,
+            },
+          });
+          resolvedMethodId = newMethod.id;
+        }
+
+        // TODO: Calculate shipping cost based on method, distance, weight, etc.
+        shippingCost = 0; // For now, using 0 as placeholder
+      } else {
+        // No shipping method provided, use or create default
+        const defaultMethod = await tx.shippingMethod.findFirst({
+          where: { isActive: true },
+          orderBy: { id: "asc" },
+        });
+
+        if (defaultMethod) {
+          resolvedMethodId = defaultMethod.id;
+        } else {
+          // Create a default shipping method if none exists
+          const newDefault = await tx.shippingMethod.create({
+            data: {
+              carrier: "Standard",
+              serviceCode: "STANDARD",
+              isActive: true,
+            },
+          });
+          resolvedMethodId = newDefault.id;
+        }
       }
+
+      // Create shipment record
+      await tx.shipment.create({
+        data: {
+          orderId: createdOrder.id,
+          methodId: resolvedMethodId,
+          trackingNumber: null,
+          cost: shippingCost,
+          status: "PENDING",
+          shippedAt: null,
+          deliveredAt: null,
+        },
+      });
 
       // Create order items and reserve inventory
       for (const item of items) {

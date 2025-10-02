@@ -42,7 +42,6 @@ export class OrderService {
     page?: number;
     pageSize?: number;
   }): Promise<ApiResponse<unknown>> {
-    console.log("OrderService.list called with params:", params);
     return apiClient.get<ApiResponse<unknown>>(this.base, { params });
   }
 

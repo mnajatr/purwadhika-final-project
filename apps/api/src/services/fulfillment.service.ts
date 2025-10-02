@@ -5,20 +5,68 @@ import { rollbackService } from "./rollback.service.js";
 export class FulfillmentService {
   async shipOrder(orderId: number, actorUserId?: number) {
     const logger = (await import("../utils/logger.js")).default;
-  const allowedPrev = ["PROCESSING"];
+    const allowedPrev = ["PROCESSING"];
 
     const result = await prisma.$transaction(async (tx) => {
-      const order = await tx.order.findUnique({ where: { id: orderId } });
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { shipment: true },
+      });
       if (!order) throw new Error("Order not found");
 
       if (!allowedPrev.includes(order.status)) {
         throw new Error(`Cannot ship order: current status is ${order.status}`);
       }
 
-      return tx.order.update({
+      const now = new Date();
+
+      // Update order status to SHIPPED
+      const updatedOrder = await tx.order.update({
         where: { id: orderId },
         data: { status: "SHIPPED" },
       });
+
+      // Update shipment record with shippedAt timestamp
+      if (order.shipment) {
+        logger.info(`Updating shipment for order ${orderId} with shippedAt`);
+        await tx.shipment.update({
+          where: { orderId },
+          data: {
+            status: "SHIPPED",
+            shippedAt: now,
+          },
+        });
+      } else {
+        // This should not happen if checkout properly creates shipment
+        logger.error(
+          `CRITICAL: No shipment record found for order ${orderId}. Creating emergency shipment.`
+        );
+
+        // Emergency fallback: create shipment with default method
+        const defaultMethod = await tx.shippingMethod.findFirst({
+          where: { isActive: true },
+          orderBy: { id: "asc" },
+        });
+
+        if (defaultMethod) {
+          await tx.shipment.create({
+            data: {
+              orderId,
+              methodId: defaultMethod.id,
+              cost: 0,
+              status: "SHIPPED",
+              shippedAt: now,
+            },
+          });
+          logger.info(`Created emergency shipment for order ${orderId}`);
+        } else {
+          throw new Error(
+            `Cannot ship order ${orderId}: no shipping method available and cannot create shipment`
+          );
+        }
+      }
+
+      return updatedOrder;
     });
 
     try {
@@ -47,7 +95,10 @@ export class FulfillmentService {
       try {
         await cancelAutoConfirmation(orderId);
       } catch (innerErr) {
-        logger.warn(`Failed to cancel existing auto-confirm for order=${orderId}: %o`, innerErr);
+        logger.warn(
+          `Failed to cancel existing auto-confirm for order=${orderId}: %o`,
+          innerErr
+        );
       }
       await scheduleAutoConfirmation(orderId, AUTO_CONFIRM_DELAY_MS);
       logger.info(`Scheduled auto-confirmation for order ${orderId} in 7 days`);
@@ -61,11 +112,18 @@ export class FulfillmentService {
     return result;
   }
 
-  async confirmOrder(orderId: number, requesterUserId?: number, actorId?: number) {
+  async confirmOrder(
+    orderId: number,
+    requesterUserId?: number,
+    actorId?: number
+  ) {
     const logger = (await import("../utils/logger.js")).default;
 
     const result = await prisma.$transaction(async (tx) => {
-      const order = await tx.order.findUnique({ where: { id: orderId }, include: { payment: true } });
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { payment: true },
+      });
       if (!order) throw new Error("Order not found");
 
       if (requesterUserId && order.userId !== requesterUserId) {
@@ -78,7 +136,7 @@ export class FulfillmentService {
 
       if (!requesterUserId) {
         // Admin action
-  if (order.status === "PAYMENT_REVIEW") {
+        if (order.status === "PAYMENT_REVIEW") {
           // Mark payment as PAID and advance order to PROCESSING
           if (order.payment) {
             await tx.payment.update({
@@ -86,13 +144,16 @@ export class FulfillmentService {
               data: {
                 status: "PAID",
                 reviewedAt: new Date(),
-    paidAt: new Date(),
-    reviewedByAdminId: actorId ?? undefined,
+                paidAt: new Date(),
+                reviewedByAdminId: actorId ?? undefined,
               },
             });
           }
 
-          return tx.order.update({ where: { id: orderId }, data: { status: "PROCESSING" } });
+          return tx.order.update({
+            where: { id: orderId },
+            data: { status: "PROCESSING" },
+          });
         }
         // Otherwise fall through to check user confirmation rules below
       }
@@ -104,10 +165,32 @@ export class FulfillmentService {
         );
       }
 
-      return tx.order.update({
+      const now = new Date();
+
+      // Update order status to CONFIRMED
+      const confirmedOrder = await tx.order.update({
         where: { id: orderId },
         data: { status: "CONFIRMED" },
       });
+
+      // Update shipment with deliveredAt timestamp
+      const shipment = await tx.shipment.findUnique({ where: { orderId } });
+      if (shipment) {
+        await tx.shipment.update({
+          where: { orderId },
+          data: {
+            status: "DELIVERED",
+            deliveredAt: now,
+          },
+        });
+        logger.info(`Updated shipment deliveredAt for order ${orderId}`);
+      } else {
+        logger.warn(
+          `No shipment record found for order ${orderId} during confirmation`
+        );
+      }
+
+      return confirmedOrder;
     });
 
     // Remove any scheduled auto-confirm or cancel jobs that are no longer relevant.
@@ -126,11 +209,12 @@ export class FulfillmentService {
         "../queues/autoConfirmQueue.js"
       );
       await cancelAutoConfirmation(orderId);
-      logger.info(
-        `Cancelled auto-confirmation for order ${orderId}`
-      );
+      logger.info(`Cancelled auto-confirmation for order ${orderId}`);
     } catch (e) {
-      logger.error(`Failed to cancel auto-confirmation for order=${orderId}: %o`, e);
+      logger.error(
+        `Failed to cancel auto-confirmation for order=${orderId}: %o`,
+        e
+      );
     }
 
     // Also remove any scheduled cancellation (payment deadline) since payment may now be accepted
@@ -152,7 +236,11 @@ export class FulfillmentService {
    * - User → hanya boleh cancel jika status = PENDING_PAYMENT
    * - Admin → boleh cancel jika status belum SHIPPED/CONFIRMED
    */
-  async cancelOrder(orderId: number, requesterUserId?: number, actorId?: number) {
+  async cancelOrder(
+    orderId: number,
+    requesterUserId?: number,
+    actorId?: number
+  ) {
     const logger = (await import("../utils/logger.js")).default;
 
     const result = await prisma.$transaction(async (tx) => {
@@ -179,6 +267,14 @@ export class FulfillmentService {
         // Rollback stock/voucher/coupon etc and mark CANCELLED
         await rollbackService.rollbackOrderInTransaction(order, tx);
 
+        // Update payment status to FAILED if payment exists
+        if (order.payment) {
+          await tx.payment.update({
+            where: { id: order.payment.id },
+            data: { status: "FAILED" },
+          });
+        }
+
         return tx.order.update({
           where: { id: orderId },
           data: { status: "CANCELLED" },
@@ -191,7 +287,11 @@ export class FulfillmentService {
       if (order.status === "PAYMENT_REVIEW" && order.payment) {
         await tx.payment.update({
           where: { id: order.payment.id },
-          data: { status: "REJECTED", reviewedAt: new Date(), reviewedByAdminId: actorId ?? undefined },
+          data: {
+            status: "REJECTED",
+            reviewedAt: new Date(),
+            reviewedByAdminId: actorId ?? undefined,
+          },
         });
 
         // revert order status to PENDING_PAYMENT
@@ -215,6 +315,14 @@ export class FulfillmentService {
       // Rollback stock/voucher/coupon etc and cancel
       await rollbackService.rollbackOrderInTransaction(order, tx);
 
+      // Update payment status to FAILED if payment exists
+      if (order.payment) {
+        await tx.payment.update({
+          where: { id: order.payment.id },
+          data: { status: "FAILED" },
+        });
+      }
+
       return tx.order.update({
         where: { id: orderId },
         data: { status: "CANCELLED" },
@@ -232,14 +340,19 @@ export class FulfillmentService {
     // schedule a new cancel job so payment deadline is enforced again.
     try {
       if (result && (result as any).status === "PENDING_PAYMENT") {
-        const ORDER_CANCEL_DELAY_MS = Number(process.env.ORDER_CANCEL_DELAY_MS) || 60 * 60 * 1000;
-        const { orderCancelQueue } = await import("../queues/orderCancelQueue.js");
+        const ORDER_CANCEL_DELAY_MS =
+          Number(process.env.ORDER_CANCEL_DELAY_MS) || 60 * 60 * 1000;
+        const { orderCancelQueue } = await import(
+          "../queues/orderCancelQueue.js"
+        );
         await orderCancelQueue.add(
           "cancel-order",
           { orderId },
           { jobId: String(orderId), delay: ORDER_CANCEL_DELAY_MS }
         );
-        logger.info(`Scheduled cancel job for order=${orderId} (delay=${ORDER_CANCEL_DELAY_MS}ms)`);
+        logger.info(
+          `Scheduled cancel job for order=${orderId} (delay=${ORDER_CANCEL_DELAY_MS}ms)`
+        );
       }
     } catch (e) {
       logger.error(`Failed to schedule cancel job for order=${orderId}: %o`, e);
