@@ -8,7 +8,7 @@ import useLocationStore from "@/stores/locationStore";
 import NearestStoreIndicator from "@/components/products/NearestStoreIndicator";
 import dynamic from "next/dynamic";
 
-const AddressPicker = dynamic(() => import("@/components/AddressPicker"), {
+const LocationManager = dynamic(() => import("@/components/LocationManager"), {
   ssr: false,
 });
 
@@ -83,7 +83,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Address picker and Nearest Store Section */}
+          {/* Location Manager and Nearest Store Section */}
           <div className="mb-16 max-w-4xl mx-auto">
             <div className="bg-card rounded-3xl p-8 shadow-lg border border-border">
               <NearestStoreIndicator
@@ -91,7 +91,10 @@ export default function Home() {
                 message={storeMessage}
               />
               <div className="mt-6">
-                <AddressPicker />
+                <h3 className="text-lg font-semibold mb-4">
+                  Choose Your Location
+                </h3>
+                <LocationManager />
               </div>
             </div>
           </div>
