@@ -105,7 +105,9 @@ export class OrderReadService {
       if (dateFrom) {
         try {
           where.createdAt.gte = new Date(dateFrom);
-        } catch (e) {}
+        } catch (e) {
+          (await import("../utils/logger.js")).default.error("order.read.service: invalid dateFrom", { dateFrom, error: e });
+        }
       }
       if (dateTo) {
         try {
