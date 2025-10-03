@@ -4,6 +4,10 @@ import { CreateProduct } from "../types/product.js";
 
 export class ProductService {
   async getAll(page: number = 0, limit: number = 10) {
+    if (page < 0) {
+      throw new Error("Page must be >= 0");
+    }
+
     const skip = page === 0 ? 0 : (page - 1) * limit;
     const products = await prisma.product.findMany({
       skip,
@@ -43,7 +47,10 @@ export class ProductService {
   }
 
   async getAllWithStock(page: number = 1, limit: number = 10) {
-    const skip = (page - 1) * limit;
+    if (page < 0) {
+      throw new Error("Page must be >= 0");
+    }
+    const skip = Math.max(0, (page - 1) * limit);
     // Hanya produk yang punya stock > 0
     const products = await prisma.product.findMany({
       where: { inventories: { some: { stockQty: { gt: 0 } } } },
@@ -141,6 +148,10 @@ export class ProductService {
 
   // ================= GET BY STORE ID =================
   async getByStoreId(storeId: number, page: number = 0, limit: number = 10) {
+    if (page < 0) {
+      throw new Error("Page must be >= 0");
+    }
+
     try {
       const store = await prisma.store.findUnique({
         where: { id: storeId },
@@ -375,5 +386,8 @@ export class ProductService {
       },
     });
     return { ...product, price: Number(product.price) };
+  }
+  async getByName(name: string) {
+    return prisma.product.findUnique({ where: { name } });
   }
 }
