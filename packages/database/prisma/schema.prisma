@@ -186,7 +186,7 @@ model Product {
   id          Int             @id @default(autoincrement())
   category    ProductCategory @relation(fields: [categoryId], references: [id])
   categoryId  Int
-  name        String
+  name        String          @unique
   slug        String          @unique
   description String?
   price       Decimal
