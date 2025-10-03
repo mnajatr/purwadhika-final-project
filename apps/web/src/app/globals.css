@@ -60,6 +60,8 @@
   --text-ink: oklch(0.2663 0.0482 263.28);
   --foreground: var(--text-ink);
   --card: oklch(98.282% 0.00441 77.982 / 0.628);
+  /* Opaque card color (use for modals/dialogs where transparency is undesirable) */
+  --card-opaque: oklch(98.282% 0.00441 77.982);
   --card-foreground: var(--text-ink);
   --popover: oklch(0.98 0.02 75);
   --popover-foreground: var(--text-ink);
@@ -116,6 +118,7 @@
   );
   --foreground: oklch(0.95 0.01 70);
   --card: oklch(0.25 0.02 55);
+  --card-opaque: oklch(0.25 0.02 55);
   --card-foreground: oklch(0.95 0.01 70);
   --popover: oklch(0.25 0.02 55);
   --popover-foreground: oklch(0.95 0.01 70);

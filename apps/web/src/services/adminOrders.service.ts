@@ -16,6 +16,8 @@ class AdminOrdersService {
     status?: string;
     q?: string;
     storeId?: number;
+    from?: Date;
+    to?: Date;
   }) {
     const params: Record<string, unknown> = {};
     // Always include page and pageSize, don't check for truthy values since page 1 is falsy
@@ -24,6 +26,8 @@ class AdminOrdersService {
     if (opts?.status) params.status = opts.status;
     if (opts?.q) params.q = opts.q;
     if (typeof opts?.storeId === "number") params.storeId = opts.storeId;
+    if (opts?.from) params.from = opts.from.toISOString();
+    if (opts?.to) params.to = opts.to.toISOString();
 
     const envelope = await apiClient.get<{ success: boolean; data: ListResp }>(
       this.basePath,
@@ -60,4 +64,6 @@ export const getAdminOrders = (opts?: {
   status?: string;
   q?: string;
   storeId?: number;
+  from?: Date;
+  to?: Date;
 }) => adminOrdersService.getOrders(opts);
