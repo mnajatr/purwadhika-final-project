@@ -1,8 +1,9 @@
 import { prisma } from "@repo/database";
-import { ERROR_MESSAGES } from "../utils/helpers.js";
 import { locationService } from "./location.service.js";
 import { inventoryService } from "./inventory.service.js";
 import { addressService } from "./address.service.js";
+import { shippingService } from "./shipping.service.js";
+import { AppError } from "../errors/app.error.js";
 
 type OrderItemInput = { productId: number; qty: number };
 
@@ -16,6 +17,11 @@ const ORDER_CANCEL_DELAY_MS =
   Number(process.env.ORDER_CANCEL_DELAY_MS) || 60 * 60 * 1000;
 
 export class CheckoutService {
+  private locationService = locationService;
+  private inventoryService = inventoryService;
+  private addressService = addressService;
+  private shippingService = shippingService;
+
   async createCheckout(
     userId: number,
     storeId: number | undefined,
@@ -53,12 +59,10 @@ export class CheckoutService {
       shippingOption
     );
 
-    // Store work in idempotency cache if key provided
     if (idempotencyKey) {
       idempotencyStore.set(idempotencyKey, { type: "pending", promise: work });
       work
         .then((res) => {
-          // Store resolved result for short TTL
           idempotencyStore.set(idempotencyKey!, {
             type: "done",
             result: res,
@@ -66,7 +70,6 @@ export class CheckoutService {
           });
         })
         .catch(() => {
-          // On failure remove entry so future retries can attempt again
           idempotencyStore.delete(idempotencyKey!);
         });
     }
@@ -86,11 +89,10 @@ export class CheckoutService {
     shippingOption?: string
   ) {
     if (!items || items.length === 0) {
-      throw new Error("No items provided");
+      throw new AppError("No items provided", 400);
     }
 
-    // Resolve store ID based on location
-    const resolvedStoreId = await locationService.resolveStoreId(
+    const resolvedStoreId = await this.locationService.resolveStoreId(
       storeId,
       userId,
       userLat,
@@ -98,21 +100,16 @@ export class CheckoutService {
       addressId
     );
 
-    // Create order in transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Validate inventory availability
-      await inventoryService.validateInventoryAvailability(
+      await this.inventoryService.validateInventoryAvailability(
         resolvedStoreId,
         items
       );
 
-      // Resolve address for the order
-      const chosenAddressId = await addressService.resolveAddressId(
+      const chosenAddressId = await this.addressService.resolveAddressId(
         userId,
         addressId
       );
-
-      // Compute totals and create order
       let subtotal = 0;
       let totalItems = 0;
 
@@ -129,76 +126,27 @@ export class CheckoutService {
           discountTotal: 0,
           grandTotal: 0,
           totalItems: 0,
-          paymentDeadlineAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+          paymentDeadlineAt: new Date(Date.now() + 60 * 60 * 1000),
         },
       });
 
-      // Create shipment record for the order
-      let shippingCost = 0;
-      let resolvedMethodId: number;
+      // Resolve shipping method and cost using shipping service
+      const resolvedMethodId = await this.shippingService.resolveShippingMethod(
+        { shippingMethod, shippingOption },
+        tx
+      );
 
-      if (shippingMethod) {
-        // Try to find shipping method by carrier or serviceCode
-        const existingMethod = await tx.shippingMethod.findFirst({
-          where: {
-            OR: [{ carrier: shippingMethod }, { serviceCode: shippingMethod }],
-          },
-        });
-
-        if (existingMethod) {
-          resolvedMethodId = existingMethod.id;
-        } else {
-          // Create new shipping method if doesn't exist
-          const newMethod = await tx.shippingMethod.create({
-            data: {
-              carrier: shippingMethod,
-              serviceCode: shippingOption || shippingMethod,
-              isActive: true,
-            },
-          });
-          resolvedMethodId = newMethod.id;
-        }
-
-        // TODO: Calculate shipping cost based on method, distance, weight, etc.
-        shippingCost = 0; // For now, using 0 as placeholder
-      } else {
-        // No shipping method provided, use or create default
-        const defaultMethod = await tx.shippingMethod.findFirst({
-          where: { isActive: true },
-          orderBy: { id: "asc" },
-        });
-
-        if (defaultMethod) {
-          resolvedMethodId = defaultMethod.id;
-        } else {
-          // Create a default shipping method if none exists
-          const newDefault = await tx.shippingMethod.create({
-            data: {
-              carrier: "Standard",
-              serviceCode: "STANDARD",
-              isActive: true,
-            },
-          });
-          resolvedMethodId = newDefault.id;
-        }
-      }
+      const shippingCost = 0; // Default cost (can be enhanced with calculation logic)
 
       // Create shipment record
-      await tx.shipment.create({
-        data: {
-          orderId: createdOrder.id,
-          methodId: resolvedMethodId,
-          trackingNumber: null,
-          cost: shippingCost,
-          status: "PENDING",
-          shippedAt: null,
-          deliveredAt: null,
-        },
-      });
+      await this.shippingService.createShipment(
+        tx,
+        createdOrder.id,
+        resolvedMethodId,
+        shippingCost
+      );
 
-      // Create order items and reserve inventory
       for (const item of items) {
-        // Fetch product price within transaction to capture current product.price
         const product = await tx.product.findUnique({
           where: { id: item.productId },
         });
@@ -221,8 +169,7 @@ export class CheckoutService {
         });
       }
 
-      // Reserve inventory for all items
-      await inventoryService.reserveInventory(
+      await this.inventoryService.reserveInventory(
         resolvedStoreId,
         createdOrder.id,
         items,
@@ -230,15 +177,13 @@ export class CheckoutService {
         tx
       );
 
-      const grandTotal = subtotal; // shipping/discount omitted in MVP
+      const grandTotal = subtotal;
 
-      // Update order with calculated totals
       await tx.order.update({
         where: { id: createdOrder.id },
         data: { subtotalAmount: subtotal, grandTotal, totalItems },
       });
 
-      // Return the created order including its items
       const fullOrder = await tx.order.findUnique({
         where: { id: createdOrder.id },
         include: { items: true },
@@ -247,12 +192,10 @@ export class CheckoutService {
       return fullOrder;
     });
 
-    // Schedule auto-cancellation outside the transaction
     if (result?.id) {
       await this._scheduleAutoCancellation(result.id, ORDER_CANCEL_DELAY_MS);
     }
 
-    // After successful order creation, remove the ordered products from the user's cart
     try {
       const productIds = items.map((it: any) => it.productId).filter(Boolean);
       if (productIds.length > 0 && resolvedStoreId) {
@@ -264,7 +207,6 @@ export class CheckoutService {
         });
       }
     } catch (err) {
-      // Don't fail the order if cart cleanup fails; log and continue
       try {
         const logger = (await import("../utils/logger.js")).default;
         logger.error(
@@ -274,8 +216,6 @@ export class CheckoutService {
           err
         );
       } catch (e) {
-        // fallback
-        // eslint-disable-next-line no-console
         console.error(
           "Cart cleanup failed for user=%d order=%d",
           userId,
@@ -303,7 +243,6 @@ export class CheckoutService {
         { jobId: String(orderId), delay: delayMs }
       );
     } catch (err) {
-      // Don't fail order creation due to queue issues; log error
       try {
         const logger = (await import("../utils/logger.js")).default;
         logger.error(
@@ -311,7 +250,7 @@ export class CheckoutService {
           err
         );
       } catch (e) {
-        // swallow logging errors
+        // Ignore logging errors
       }
     }
   }

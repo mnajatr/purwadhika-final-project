@@ -3,16 +3,14 @@ import { inventoryService } from "./inventory.service.js";
 import { CartValidation, CartUtils, CartRepo } from "../lib/cart.helpers.js";
 
 export class CartService {
-  // Public service API with consistent return pattern
+  private inventoryService = inventoryService;
+
   async getCartByUserIdAndStoreId(userId: number, storeId: number) {
     CartValidation.validateUserId(userId);
     CartValidation.validateStoreId(storeId);
-    
+
     const cart = await CartRepo.getCartWithItems(userId, storeId);
-    return {
-      success: true,
-      data: cart,
-    };
+    return cart;
   }
 
   async addToCart(
@@ -21,7 +19,6 @@ export class CartService {
     qty: number,
     storeId: number
   ) {
-    // Validate input using Zod schema
     const validatedData = AddToCartSchema.parse({
       userId,
       productId,
@@ -29,8 +26,7 @@ export class CartService {
       storeId,
     });
 
-    // Delegate stock validation to InventoryService
-    const inventory = await inventoryService.checkCartStock(
+    const inventory = await this.inventoryService.checkCartStock(
       validatedData.storeId,
       validatedData.productId,
       validatedData.qty
@@ -41,13 +37,17 @@ export class CartService {
       validatedData.storeId
     );
 
-    CartValidation.validateCartItemLimits(cart.items, validatedData.qty, inventory);
+    CartValidation.validateCartItemLimits(
+      cart.items,
+      validatedData.qty,
+      inventory
+    );
 
     const existingItem = CartUtils.findExistingCartItem(
       cart.items,
       validatedData.productId
     );
-    
+
     if (existingItem) {
       const newQty = existingItem.qty + validatedData.qty;
       CartValidation.validateCartItemLimits([], newQty, inventory);
@@ -64,16 +64,13 @@ export class CartService {
       validatedData.productId,
       validatedData.qty
     );
-    
+
     const updatedCart = await CartRepo.getCartWithItems(
       validatedData.userId!,
       validatedData.storeId
     );
-    
-    return {
-      success: true,
-      data: updatedCart,
-    };
+
+    return updatedCart;
   }
 
   async updateCartItem(
@@ -82,7 +79,6 @@ export class CartService {
     qty: number,
     storeId: number
   ) {
-    // Validate input using Zod schema
     const validatedData = UpdateCartItemSchema.parse({
       userId,
       qty,
@@ -93,8 +89,7 @@ export class CartService {
 
     const cartItem = await CartRepo.validateCartItem(userId, itemId, storeId);
 
-    // Delegate stock validation to InventoryService
-    await inventoryService.checkCartStock(
+    await this.inventoryService.checkCartStock(
       storeId,
       cartItem.productId,
       validatedData.qty
@@ -102,11 +97,8 @@ export class CartService {
 
     await CartRepo.updateCartItemRow(itemId, validatedData.qty);
     const updatedCart = await CartRepo.getCartWithItems(userId, storeId);
-    
-    return {
-      success: true,
-      data: updatedCart,
-    };
+
+    return updatedCart;
   }
 
   async deleteCartItem(userId: number, itemId: number, storeId: number) {
@@ -117,11 +109,8 @@ export class CartService {
     await CartRepo.validateCartItem(userId, itemId, storeId);
     await CartRepo.deleteCartItemRow(itemId);
     const updatedCart = await CartRepo.getCartWithItems(userId, storeId);
-    
-    return {
-      success: true,
-      data: updatedCart,
-    };
+
+    return updatedCart;
   }
 
   async clearCart(userId: number, storeId: number) {
@@ -131,11 +120,8 @@ export class CartService {
     const cart = await CartRepo.validateCart(userId, storeId);
     await CartRepo.clearAllCartItems(cart.id);
     const updatedCart = await CartRepo.getCartWithItems(userId, storeId);
-    
-    return {
-      success: true,
-      data: updatedCart,
-    };
+
+    return updatedCart;
   }
 
   async getCartTotals(userId: number, storeId: number) {
@@ -146,13 +132,10 @@ export class CartService {
 
     if (!cart) {
       return {
-        success: true,
-        data: { 
-          totalItems: 0, 
-          totalQuantity: 0, 
-          subtotal: 0, 
-          items: [] 
-        },
+        totalItems: 0,
+        totalQuantity: 0,
+        subtotal: 0,
+        items: [],
       };
     }
 
@@ -160,11 +143,10 @@ export class CartService {
     const items = CartUtils.mapCartItemsForTotals(cart.items);
 
     return {
-      success: true,
-      data: {
-        ...totals,
-        items,
-      },
+      ...totals,
+      items,
     };
   }
 }
+
+export const cartService = new CartService();

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import type { Request as ExpressRequest } from "express";
-import { OrderService } from "../services/order.service.js";
+import { fulfillmentService } from "../services/fulfillment.service.js";
+import { orderReadService } from "../services/order.read.service.js";
 import { successResponse, errorResponse } from "../utils/helpers.js";
 
 type AuthRequest = ExpressRequest & { user?: { id: number } };
@@ -30,9 +31,14 @@ function pickUserId(req: Request): number | undefined {
 }
 
 export class FulfillmentController {
-  private service = new OrderService();
+  private fulfillmentService = fulfillmentService;
+  private orderReadService = orderReadService;
 
-  private _handleOrderStatusError(e: unknown, res: Response, defaultMessage: string) {
+  private _handleOrderStatusError(
+    e: unknown,
+    res: Response,
+    defaultMessage: string
+  ) {
     const msg = e instanceof Error ? e.message : String(e);
 
     if (msg.includes("not found")) {
@@ -40,7 +46,9 @@ export class FulfillmentController {
     }
 
     if (msg.includes("Cannot") || msg.includes("already")) {
-      return res.status(409).json(errorResponse("Cannot change order status", msg));
+      return res
+        .status(409)
+        .json(errorResponse("Cannot change order status", msg));
     }
 
     return res.status(500).json(errorResponse(defaultMessage, msg));
@@ -53,16 +61,23 @@ export class FulfillmentController {
         return res.status(400).json(errorResponse("Invalid order id"));
       }
 
-    const userId = pickUserId(req);
+      const userId = pickUserId(req);
       if (!userId) {
         return res.status(400).json(errorResponse("Missing userId in request"));
       }
-  const authReq = req as any;
-  const isAdmin = authReq.user && (authReq.user.role === "SUPER_ADMIN" || authReq.user.role === "STORE_ADMIN");
-  const requester = isAdmin ? undefined : userId;
-  const actorId = isAdmin ? Number(authReq.user?.id) : undefined;
+      const authReq = req as any;
+      const isAdmin =
+        authReq.user &&
+        (authReq.user.role === "SUPER_ADMIN" ||
+          authReq.user.role === "STORE_ADMIN");
+      const requester = isAdmin ? undefined : userId;
+      const actorId = isAdmin ? Number(authReq.user?.id) : undefined;
 
-  const result = await this.service.cancelOrder(id, requester as any, actorId as any);
+      const result = await this.fulfillmentService.cancelOrder(
+        id,
+        requester as any,
+        actorId as any
+      );
       return res.status(200).json(successResponse(result, "Order cancelled"));
     } catch (e) {
       return this._handleOrderStatusError(e, res, "Failed to cancel order");
@@ -76,16 +91,23 @@ export class FulfillmentController {
         return res.status(400).json(errorResponse("Invalid order id"));
       }
 
-    const userId = pickUserId(req);
+      const userId = pickUserId(req);
       if (!userId) {
         return res.status(400).json(errorResponse("Missing userId in request"));
       }
-  const authReq = req as any;
-  const isAdmin = authReq.user && (authReq.user.role === "SUPER_ADMIN" || authReq.user.role === "STORE_ADMIN");
-  const requester = isAdmin ? undefined : userId;
-  const actorId = isAdmin ? Number(authReq.user?.id) : undefined;
+      const authReq = req as any;
+      const isAdmin =
+        authReq.user &&
+        (authReq.user.role === "SUPER_ADMIN" ||
+          authReq.user.role === "STORE_ADMIN");
+      const requester = isAdmin ? undefined : userId;
+      const actorId = isAdmin ? Number(authReq.user?.id) : undefined;
 
-  const result = await this.service.confirmOrder(id, requester as any, actorId as any);
+      const result = await this.fulfillmentService.confirmOrder(
+        id,
+        requester as any,
+        actorId as any
+      );
       return res.status(200).json(successResponse(result, "Order confirmed"));
     } catch (e) {
       return this._handleOrderStatusError(e, res, "Failed to confirm order");
@@ -100,7 +122,7 @@ export class FulfillmentController {
       }
 
       const userId = pickUserId(req);
-      const result = await this.service.shipOrder(id, userId);
+      const result = await this.fulfillmentService.shipOrder(id, userId);
       return res.status(200).json(successResponse(result, "Order shipped"));
     } catch (e) {
       return this._handleOrderStatusError(e, res, "Failed to ship order");
@@ -114,7 +136,7 @@ export class FulfillmentController {
         return res.status(400).json(errorResponse("Missing userId in request"));
       }
 
-      const counts = await this.service.getOrderCountsByStatus(userId);
+      const counts = await this.orderReadService.getOrderCountsByStatus(userId);
 
       return res
         .status(200)

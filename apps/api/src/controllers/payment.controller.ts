@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import type { Request as ExpressRequest } from "express";
-import { OrderService } from "../services/order.service.js";
+import { paymentService } from "../services/payment.service.js";
 import { midtransService } from "../services/midtrans.service.js";
 import { successResponse, errorResponse } from "../utils/helpers.js";
 
@@ -31,7 +31,7 @@ function pickUserId(req: Request): number | undefined {
 }
 
 export class PaymentController {
-  private service = new OrderService();
+  private paymentService = paymentService;
 
   uploadPaymentProof = async (req: Request, res: Response) => {
     try {
@@ -52,7 +52,7 @@ export class PaymentController {
       // MIME and size validations are enforced by multer in upload.middleware
       const mime = f.mimetype ?? "application/octet-stream";
 
-      const uploadResult = await this.service.uploadPaymentProof(
+      const uploadResult = await this.paymentService.uploadPaymentProof(
         id,
         f.buffer,
         mime
@@ -80,18 +80,16 @@ export class PaymentController {
 
       const clientKey = process.env.MIDTRANS_CLIENT_KEY || null;
 
-      return res
-        .status(200)
-        .json(
-          successResponse(
-            {
-              clientKey,
-              snapToken: result.snapToken,
-              redirectUrl: result.redirectUrl,
-            },
-            "Snap token created"
-          )
-        );
+      return res.status(200).json(
+        successResponse(
+          {
+            clientKey,
+            snapToken: result.snapToken,
+            redirectUrl: result.redirectUrl,
+          },
+          "Snap token created"
+        )
+      );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return res

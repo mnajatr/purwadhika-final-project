@@ -1,26 +1,34 @@
 import { Request, Response, NextFunction } from "express";
-import { CartService } from "../services/cart.service.js";
+import { cartService } from "../services/cart.service.js";
 import { successResponse } from "../utils/helpers.js";
 import { createValidationError } from "../errors/app.error.js";
 
 export class CartController {
-  private cartService: CartService;
-
-  constructor() {
-    this.cartService = new CartService();
-  }
-
-  // helper to read authenticated user id set by auth middleware
   private getUserIdFromReq(req: Request): number {
-    // auth middleware attaches user: { id }
     const anyReq = req as Request & { user?: { id?: number } };
-    const userId = anyReq.user?.id;
 
-    if (!userId) {
-      throw createValidationError("Authentication required");
+    // First try authenticated user
+    if (anyReq.user?.id) {
+      return anyReq.user.id;
     }
 
-    return userId;
+    // In non-production, allow dev headers/query params for testing
+    if (process.env.NODE_ENV !== "production") {
+      const headerUserId = req.headers["x-dev-user-id"];
+      if (headerUserId) {
+        const parsed = Number(headerUserId);
+        if (!isNaN(parsed)) return parsed;
+      }
+
+      const queryUserId = req.query?.userId || req.body?.userId;
+      if (queryUserId) {
+        const parsed = Number(queryUserId);
+        if (!isNaN(parsed)) return parsed;
+      }
+    }
+
+    // If no userId found, throw authentication error
+    throw createValidationError("Authentication required");
   }
 
   private getStoreIdFromReq(req: Request): number {
@@ -39,12 +47,11 @@ export class CartController {
       const userId = this.getUserIdFromReq(req);
       const storeId = this.getStoreIdFromReq(req);
 
-      const result = await this.cartService.getCartByUserIdAndStoreId(
-        userId,
-        storeId
-      );
+      const cart = await cartService.getCartByUserIdAndStoreId(userId, storeId);
 
-      res.json(successResponse(result.data, "Cart retrieved successfully"));
+      res
+        .status(200)
+        .json(successResponse(cart, "Cart retrieved successfully"));
     } catch (error) {
       next(error);
     }
@@ -56,14 +63,11 @@ export class CartController {
       const { productId, qty } = req.body;
       const storeId = this.getStoreIdFromReq(req);
 
-      const result = await this.cartService.addToCart(
-        userId,
-        productId,
-        qty,
-        storeId
-      );
+      const cart = await cartService.addToCart(userId, productId, qty, storeId);
 
-      res.json(successResponse(result.data, "Item added to cart successfully"));
+      res
+        .status(200)
+        .json(successResponse(cart, "Item added to cart successfully"));
     } catch (error) {
       next(error);
     }
@@ -80,14 +84,16 @@ export class CartController {
         throw createValidationError("Invalid item");
       }
 
-      const result = await this.cartService.updateCartItem(
+      const cart = await cartService.updateCartItem(
         userId,
         itemId,
         qty,
         storeId
       );
 
-      res.json(successResponse(result.data, "Cart item updated successfully"));
+      res
+        .status(200)
+        .json(successResponse(cart, "Cart item updated successfully"));
     } catch (error) {
       next(error);
     }
@@ -103,13 +109,11 @@ export class CartController {
         throw createValidationError("Invalid item");
       }
 
-      const result = await this.cartService.deleteCartItem(
-        userId,
-        itemId,
-        storeId
-      );
+      const cart = await cartService.deleteCartItem(userId, itemId, storeId);
 
-      res.json(successResponse(result.data, "Item removed from cart successfully"));
+      res
+        .status(200)
+        .json(successResponse(cart, "Item removed from cart successfully"));
     } catch (error) {
       next(error);
     }
@@ -120,9 +124,9 @@ export class CartController {
       const userId = this.getUserIdFromReq(req);
       const storeId = this.getStoreIdFromReq(req);
 
-      const result = await this.cartService.clearCart(userId, storeId);
+      const cart = await cartService.clearCart(userId, storeId);
 
-      res.json(successResponse(result.data, "Cart cleared successfully"));
+      res.status(200).json(successResponse(cart, "Cart cleared successfully"));
     } catch (error) {
       next(error);
     }
@@ -133,11 +137,15 @@ export class CartController {
       const userId = this.getUserIdFromReq(req);
       const storeId = this.getStoreIdFromReq(req);
 
-      const result = await this.cartService.getCartTotals(userId, storeId);
+      const totals = await cartService.getCartTotals(userId, storeId);
 
-      res.json(successResponse(result.data, "Cart totals retrieved successfully"));
+      res
+        .status(200)
+        .json(successResponse(totals, "Cart totals retrieved successfully"));
     } catch (error) {
       next(error);
     }
   };
 }
+
+export const cartController = new CartController();
