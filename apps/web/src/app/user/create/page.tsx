@@ -31,8 +31,8 @@ export default function CreateUserForm() {
       await createUser(data);
       alert("✅ User created successfully!");
       reset();
-    } catch (err: any) {
-      alert(err.message || "❌ Failed to create user");
+    } catch (err) {
+      alert((err as Error)?.message ?? "❌ Failed to create category");
     }
   };
 
@@ -49,7 +49,7 @@ export default function CreateUserForm() {
         <input
           type="email"
           {...register("email")}
-          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-amber-700"
         />
         {errors.email && (
           <p className="text-red-500 text-sm">{errors.email.message}</p>
@@ -62,7 +62,7 @@ export default function CreateUserForm() {
         <input
           type="password"
           {...register("password")}
-          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-amber-700"
         />
         {errors.password && (
           <p className="text-red-500 text-sm">{errors.password.message}</p>
@@ -74,7 +74,7 @@ export default function CreateUserForm() {
         <label className="block font-medium mb-1">Role</label>
         <select
           {...register("role")}
-          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-amber-700"
         >
           <option value="USER">USER</option>
           <option value="SUPER_ADMIN">SUPER_ADMIN</option>
@@ -91,7 +91,7 @@ export default function CreateUserForm() {
         <input
           type="text"
           {...register("profile.fullName")}
-          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-amber-700"
         />
         {errors.profile?.fullName && (
           <p className="text-red-500 text-sm">
@@ -103,7 +103,7 @@ export default function CreateUserForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
+        className="w-full bg-primary-gradient text-white py-2 rounded hover:bg-amber-700 disabled:opacity-50"
       >
         {isSubmitting ? "Creating..." : "Create User"}
       </button>

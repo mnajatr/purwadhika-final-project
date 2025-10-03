@@ -79,7 +79,7 @@ export default function ProductsList() {
           {role === "SUPER_ADMIN" && (
             <Link
               href="/products/create"
-              className="bg-indigo-500 text-white px-5 py-2 rounded-lg shadow hover:bg-indigo-700 transition text-center"
+              className="bg-primary-gradient text-white px-5 py-2 rounded-lg shadow hover:bg-amber-700 transition text-center"
             >
               + Tambah Produk
             </Link>
@@ -91,7 +91,7 @@ export default function ProductsList() {
           <input
             type="text"
             placeholder="Search products..."
-            className="w-full md:w-2/3 lg:w-1/2 px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full md:w-2/3 lg:w-1/2 px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-700"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -103,7 +103,7 @@ export default function ProductsList() {
             <select
               value={selectedStore}
               onChange={(e) => setSelectedStore(e.target.value)}
-              className="w-full md:w-1/3 lg:w-1/4 px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full md:w-1/3 lg:w-1/4 px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-700"
             >
               <option value="All"> All Store </option>
               {stores?.map((store) => (
@@ -122,7 +122,7 @@ export default function ProductsList() {
               key={category.id}
               className={`px-4 py-2 rounded-full text-sm font-medium transition ${
                 selectedCategory === category.name
-                  ? "bg-indigo-600 text-white shadow-md"
+                  ? "bg-primary-gradient text-white shadow-md"
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
               onClick={() => setSelectedCategory(category.name)}
@@ -189,10 +189,10 @@ export default function ProductsList() {
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {product.store}
                     </td>
-                    <td className="px-4 py-3 text-sm font-semibold text-indigo-600">
+                    <td className="px-4 py-3 text-sm font-semibold text-amber-700">
                       Rp {Number(product.price || 0).toLocaleString("id-ID")}
                     </td>
-                    <td className="px-4 py-3 text-sm font-semibold text-indigo-600">
+                    <td className="px-4 py-3 text-sm font-semibold text-amber-700">
                       {product.stock}
                     </td>
 
@@ -200,7 +200,7 @@ export default function ProductsList() {
                       <td className="px-4 py-3 text-sm flex gap-2">
                         <Link
                           href={`/products/${product.slug}/update?storeId=${product.storeId}`}
-                          className="text-indigo-600 hover:underline"
+                          className="text-indigo-500 hover:underline"
                         >
                           Edit
                         </Link>

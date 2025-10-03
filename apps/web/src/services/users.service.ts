@@ -1,5 +1,9 @@
 import { apiClient } from "@/lib/axios-client";
-import { UserResponse } from "@/types/user.types";
+import {
+  CreateUserInput,
+  UpdateUserInput,
+  UserResponse,
+} from "@/types/user.types";
 import { UserAddressResponse } from "@/types/address.type";
 import { paginationData } from "./category.service";
 
@@ -22,18 +26,18 @@ export async function getUserAddresses(
 }
 
 export async function createUser(
-  data: Omit<UserResponse, "id" | "createdAt" | "updatedAt">
-): Promise<UserResponse> {
-  return apiClient.post<UserResponse>("/users", data);
+  data: Omit<CreateUserInput, "id" | "createdAt" | "updatedAt">
+): Promise<CreateUserInput> {
+  return apiClient.post<CreateUserInput>("/users", data);
 }
 
 export async function updateUser(
   id: number,
-  data: Partial<UserResponse>
+  data: Partial<UpdateUserInput>
 ): Promise<UserResponse> {
-  return apiClient.put<UserResponse>(`/users/${id}`, data);
+  const res = await apiClient.put<UserResponse>(`/users/${id}`, data);
+  return res;
 }
-
 export async function deleteUser(id: number): Promise<{ message: string }> {
   return apiClient.delete<{ message: string }>(`/users/${id}`);
 }

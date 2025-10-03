@@ -16,10 +16,10 @@ cloudinary.config({
 
 export class ProductController {
   static async getAll(req: Request, res: Response) {
-    const { lat, lon, storeId, page = "0", limit = "10" } = req.query;
+    const { lat, lon, storeId, page = "0", limit = "12" } = req.query;
 
     const pageNumber = parseInt(page as string) || 0;
-    const limitNumber = parseInt(limit as string) || 10;
+    const limitNumber = parseInt(limit as string) || 12;
 
     if (storeId) {
       const sid = Number(storeId);
