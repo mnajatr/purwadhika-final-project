@@ -41,10 +41,11 @@ export function useGeolocation(options?: PositionOptions) {
 
     const onError = (error: GeolocationPositionError) => {
       let errorMessage = "Unable to retrieve your location";
-      
+
       switch (error.code) {
         case error.PERMISSION_DENIED:
-          errorMessage = "Location permission denied. Please enable location access in your browser settings.";
+          errorMessage =
+            "Location permission denied. Please enable location access in your browser settings.";
           break;
         case error.POSITION_UNAVAILABLE:
           errorMessage = "Location information is unavailable.";
@@ -76,7 +77,7 @@ export function useGeolocation(options?: PositionOptions) {
 
   const refetch = () => {
     setState((prev) => ({ ...prev, loading: true }));
-    
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setState({
@@ -88,7 +89,7 @@ export function useGeolocation(options?: PositionOptions) {
       },
       (error) => {
         let errorMessage = "Unable to retrieve your location";
-        
+
         switch (error.code) {
           case error.PERMISSION_DENIED:
             errorMessage = "Location permission denied";

@@ -12,9 +12,14 @@ type LocationState = {
   activeAddress: ActiveAddress | null;
   nearestStoreId: number | null;
   nearestStoreName: string | null;
+  // User choice: whether to use geolocation or a saved address
+  useGeo: boolean;
+  selectedAddressId: number | null;
   setActiveAddress: (a: ActiveAddress | null) => void;
   setNearestStoreId: (id: number | null) => void;
   setNearestStoreName: (name: string | null) => void;
+  setUseGeo: (useGeo: boolean) => void;
+  setSelectedAddressId: (id: number | null) => void;
   updateActiveAddressWithStoreInfo: (
     storeId: number,
     storeName: string
@@ -28,12 +33,17 @@ const useLocationStore = create<LocationState>()(
       activeAddress: null,
       nearestStoreId: null,
       nearestStoreName: null,
+      useGeo: true, // default to geolocation on first visit
+      selectedAddressId: null,
       setActiveAddress: (a: ActiveAddress | null) =>
         set(() => ({ activeAddress: a })),
       setNearestStoreId: (id: number | null) =>
         set(() => ({ nearestStoreId: id })),
       setNearestStoreName: (name: string | null) =>
         set(() => ({ nearestStoreName: name })),
+      setUseGeo: (useGeo: boolean) => set(() => ({ useGeo })),
+      setSelectedAddressId: (id: number | null) =>
+        set(() => ({ selectedAddressId: id })),
       updateActiveAddressWithStoreInfo: (storeId: number, storeName: string) =>
         set(() => ({ nearestStoreId: storeId, nearestStoreName: storeName })),
       clearAddress: () =>
@@ -41,6 +51,8 @@ const useLocationStore = create<LocationState>()(
           activeAddress: null,
           nearestStoreId: null,
           nearestStoreName: null,
+          useGeo: true,
+          selectedAddressId: null,
         })),
     }),
     {
@@ -49,6 +61,8 @@ const useLocationStore = create<LocationState>()(
         activeAddress: state.activeAddress,
         nearestStoreId: state.nearestStoreId,
         nearestStoreName: state.nearestStoreName,
+        useGeo: state.useGeo,
+        selectedAddressId: state.selectedAddressId,
       }),
     }
   )

@@ -1,9 +1,15 @@
 import { prisma } from "@repo/database";
-import { calculateDistance, isValidCoordinates, kmToMeters } from "../utils/geo.utils.js";
+import {
+  calculateDistance,
+  isValidCoordinates,
+  kmToMeters,
+} from "../utils/geo.utils.js";
 
 export class LocationService {
-
-  async findNearestStoreId(lat: number, lon: number): Promise<number | undefined> {
+  async findNearestStoreId(
+    lat: number,
+    lon: number
+  ): Promise<number | undefined> {
     // Validate coordinates
     if (!isValidCoordinates(lat, lon)) {
       throw new Error(`Invalid coordinates: lat=${lat}, lon=${lon}`);
@@ -13,11 +19,11 @@ export class LocationService {
     const locations = await prisma.storeLocation.findMany({
       include: { store: true },
     });
-    
+
     if (!locations || locations.length === 0) return undefined;
 
     let best: { storeId: number; distKm: number; loc: any } | null = null;
-    
+
     for (const loc of locations) {
       const distKm = calculateDistance(
         lat,
@@ -44,11 +50,13 @@ export class LocationService {
       throw new Error(`Invalid coordinates: lat=${lat}, lon=${lon}`);
     }
 
-    const locations = await prisma.storeLocation.findMany({ include: { store: true } });
+    const locations = await prisma.storeLocation.findMany({
+      include: { store: true },
+    });
     if (!locations || locations.length === 0) return null;
-    
+
     let best: { storeId: number; distKm: number; loc: any } | null = null;
-    
+
     for (const loc of locations) {
       const distKm = calculateDistance(
         lat,
@@ -56,14 +64,14 @@ export class LocationService {
         Number(loc.latitude),
         Number(loc.longitude)
       );
-      
+
       if (!best || distKm < best.distKm) {
         best = { storeId: loc.storeId, distKm, loc };
       }
     }
-    
+
     if (!best) return null;
-    
+
     const MAX_KM = Number(process.env.MAX_STORE_RADIUS_KM ?? 10);
     return {
       storeId: best.storeId,
@@ -83,9 +91,10 @@ export class LocationService {
     addressId?: number
   ): Promise<number> {
     const { ERROR_MESSAGES } = await import("../utils/helpers.js");
-    
+
     let resolvedStoreId = storeId;
-    const coordsExplicit = typeof userLat === "number" && typeof userLon === "number";
+    const coordsExplicit =
+      typeof userLat === "number" && typeof userLon === "number";
 
     if (!resolvedStoreId) {
       if (coordsExplicit) {

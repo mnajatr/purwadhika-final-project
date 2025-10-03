@@ -35,13 +35,21 @@ interface LocationManagerProps {
 }
 
 export default function LocationManager({ userId }: LocationManagerProps) {
-  const { latitude, longitude, error: geoError, loading: geoLoading } = useGeolocation();
+  const {
+    latitude,
+    longitude,
+    error: geoError,
+    loading: geoLoading,
+  } = useGeolocation();
   const [addrs, setAddrs] = React.useState<Addr[] | null>(null);
   const [loadingAddrs, setLoadingAddrs] = React.useState(true);
-  const [selectedAddressId, setSelectedAddressId] = React.useState<number | null>(null);
   const [resolving, setResolving] = React.useState(false);
-  const [useGeo, setUseGeo] = React.useState(true); // Start with geolocation by default
-  
+
+  // Use store state instead of local state - this persists across navigation
+  const useGeo = useLocationStore((s) => s.useGeo);
+  const selectedAddressId = useLocationStore((s) => s.selectedAddressId);
+  const setUseGeo = useLocationStore((s) => s.setUseGeo);
+  const setSelectedAddressId = useLocationStore((s) => s.setSelectedAddressId);
   const setActiveAddress = useLocationStore((s) => s.setActiveAddress);
   const setNearestStoreId = useLocationStore((s) => s.setNearestStoreId);
   const setNearestStoreName = useLocationStore((s) => s.setNearestStoreName);
@@ -55,12 +63,16 @@ export default function LocationManager({ userId }: LocationManagerProps) {
         const resp = await apiClient.get<ResolveResp>(
           `/stores/resolve?lat=${lat}&lon=${lon}`
         );
-        
+
         const store = resp.data?.nearestStore ?? null;
         const distanceMeters = resp.data?.distanceMeters;
         const inRange = resp.data?.inRange;
 
-        console.debug("Resolved by coordinates:", { store, distanceMeters, inRange });
+        console.debug("Resolved by coordinates:", {
+          store,
+          distanceMeters,
+          inRange,
+        });
 
         if (store && inRange) {
           setNearestStoreId(store.id);
@@ -96,9 +108,21 @@ export default function LocationManager({ userId }: LocationManagerProps) {
     async (address: Addr) => {
       setResolving(true);
       try {
-        const devUser = typeof window !== "undefined" ? localStorage.getItem("devUserId") : null;
-        const storedUserId = typeof window !== "undefined" ? sessionStorage.getItem("checkout:userId") : null;
-        const uid = userId ?? (devUser && devUser !== "none" ? Number(devUser) : storedUserId ? Number(storedUserId) : 4);
+        const devUser =
+          typeof window !== "undefined"
+            ? localStorage.getItem("devUserId")
+            : null;
+        const storedUserId =
+          typeof window !== "undefined"
+            ? sessionStorage.getItem("checkout:userId")
+            : null;
+        const uid =
+          userId ??
+          (devUser && devUser !== "none"
+            ? Number(devUser)
+            : storedUserId
+            ? Number(storedUserId)
+            : 4);
 
         const resp = await apiClient.get<ResolveResp>(
           `/stores/resolve?userId=${uid}&addressId=${address.id}`
@@ -132,7 +156,13 @@ export default function LocationManager({ userId }: LocationManagerProps) {
         setResolving(false);
       }
     },
-    [userId, setActiveAddress, setNearestStoreId, setNearestStoreName, queryClient]
+    [
+      userId,
+      setActiveAddress,
+      setNearestStoreId,
+      setNearestStoreName,
+      queryClient,
+    ]
   );
 
   // Load user addresses
@@ -140,9 +170,21 @@ export default function LocationManager({ userId }: LocationManagerProps) {
     let mounted = true;
     (async () => {
       try {
-        const devUser = typeof window !== "undefined" ? localStorage.getItem("devUserId") : null;
-        const storedUserId = typeof window !== "undefined" ? sessionStorage.getItem("checkout:userId") : null;
-        const uid = userId ?? (devUser && devUser !== "none" ? Number(devUser) : storedUserId ? Number(storedUserId) : 4);
+        const devUser =
+          typeof window !== "undefined"
+            ? localStorage.getItem("devUserId")
+            : null;
+        const storedUserId =
+          typeof window !== "undefined"
+            ? sessionStorage.getItem("checkout:userId")
+            : null;
+        const uid =
+          userId ??
+          (devUser && devUser !== "none"
+            ? Number(devUser)
+            : storedUserId
+            ? Number(storedUserId)
+            : 4);
 
         const res = await apiClient.get<Addr[]>(`/users/${uid}/addresses`);
         if (!mounted) return;
@@ -163,19 +205,26 @@ export default function LocationManager({ userId }: LocationManagerProps) {
     if (useGeo && !geoLoading && latitude && longitude && !selectedAddressId) {
       resolveByCoordinates(latitude, longitude);
     }
-  }, [useGeo, geoLoading, latitude, longitude, selectedAddressId, resolveByCoordinates]);
+  }, [
+    useGeo,
+    geoLoading,
+    latitude,
+    longitude,
+    selectedAddressId,
+    resolveByCoordinates,
+  ]);
 
   // Handle address selection
   const handleAddressSelect = (address: Addr) => {
     setSelectedAddressId(address.id);
-    setUseGeo(false); // Switch to address mode
+    setUseGeo(false); // Switch to address mode - this will persist in localStorage
     resolveByAddress(address);
   };
 
   // Switch back to geolocation
   const handleUseCurrentLocation = () => {
     setSelectedAddressId(null);
-    setUseGeo(true);
+    setUseGeo(true); // Switch to geo mode - this will persist in localStorage
     if (latitude && longitude) {
       resolveByCoordinates(latitude, longitude);
     }
@@ -195,7 +244,11 @@ export default function LocationManager({ userId }: LocationManagerProps) {
           }`}
         >
           <div className="flex items-center gap-3">
-            <MapPin className={`h-5 w-5 ${useGeo && !selectedAddressId ? "text-primary" : "text-gray-600"}`} />
+            <MapPin
+              className={`h-5 w-5 ${
+                useGeo && !selectedAddressId ? "text-primary" : "text-gray-600"
+              }`}
+            />
             <div className="text-left">
               <p className="font-medium">Use Current Location</p>
               {geoLoading ? (
