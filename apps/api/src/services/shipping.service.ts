@@ -15,20 +15,7 @@ export interface ShippingCalculationResult {
   serviceCode: string;
 }
 
-/**
- * ShippingService handles all shipping-related calculations and operations.
- * Pure calculation functions do not modify database state.
- * Transaction-aware functions accept Prisma tx client for atomic operations.
- */
 export class ShippingService {
-  /**
-   * Calculate shipping cost and resolve shipping method.
-   * This is a pure calculation that can be called before checkout.
-   *
-   * @param input - Shipping calculation parameters
-   * @param tx - Optional Prisma transaction client for database queries
-   * @returns Shipping details including method, cost, and carrier info
-   */
   async calculateShipping(
     input: ShippingCalculationInput,
     tx?: Prisma.TransactionClient
@@ -37,7 +24,7 @@ export class ShippingService {
     const { shippingMethod, shippingOption } = input;
 
     let methodId: number;
-    let cost = 0; // Default cost (can be enhanced with actual calculation logic)
+    let cost = 0;
     let carrier: string;
     let serviceCode: string;
 
@@ -73,18 +60,11 @@ export class ShippingService {
         carrier = defaultMethod.carrier;
         serviceCode = defaultMethod.serviceCode;
       } else {
-        // Fallback to standard
         carrier = "Standard";
         serviceCode = "STANDARD";
-        methodId = -1; // Needs creation
+        methodId = -1;
       }
     }
-
-    // TODO: Add actual cost calculation logic based on:
-    // - Distance between store and delivery address
-    // - Package weight/dimensions
-    // - Shipping method rates
-    // - Any active shipping promotions
 
     return {
       methodId,
@@ -94,14 +74,6 @@ export class ShippingService {
     };
   }
 
-  /**
-   * Resolve or create shipping method within a transaction.
-   * This ensures the shipping method exists and returns its ID.
-   *
-   * @param shippingData - Shipping method details
-   * @param tx - Prisma transaction client
-   * @returns Shipping method ID
-   */
   async resolveShippingMethod(
     shippingData: {
       shippingMethod?: string;
@@ -112,7 +84,6 @@ export class ShippingService {
     const { shippingMethod, shippingOption } = shippingData;
 
     if (shippingMethod) {
-      // Try to find existing method
       const existingMethod = await tx.shippingMethod.findFirst({
         where: {
           OR: [{ carrier: shippingMethod }, { serviceCode: shippingMethod }],
@@ -123,7 +94,6 @@ export class ShippingService {
         return existingMethod.id;
       }
 
-      // Create new method if it doesn't exist
       const newMethod = await tx.shippingMethod.create({
         data: {
           carrier: shippingMethod,
@@ -134,7 +104,6 @@ export class ShippingService {
       return newMethod.id;
     }
 
-    // Use default method
     const defaultMethod = await tx.shippingMethod.findFirst({
       where: { isActive: true },
       orderBy: { id: "asc" },
@@ -144,7 +113,6 @@ export class ShippingService {
       return defaultMethod.id;
     }
 
-    // Create default if none exists
     const newDefault = await tx.shippingMethod.create({
       data: {
         carrier: "Standard",
@@ -154,17 +122,6 @@ export class ShippingService {
     });
     return newDefault.id;
   }
-
-  /**
-   * Create shipment record within a transaction.
-   * This should only be called as part of order creation transaction.
-   *
-   * @param tx - Prisma transaction client
-   * @param orderId - Order ID
-   * @param methodId - Shipping method ID
-   * @param cost - Shipping cost
-   * @returns Created shipment record
-   */
   async createShipment(
     tx: Prisma.TransactionClient,
     orderId: number,

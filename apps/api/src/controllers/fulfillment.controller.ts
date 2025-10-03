@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import type { Request as ExpressRequest } from "express";
 import { fulfillmentService } from "../services/fulfillment.service.js";
 import { orderReadService } from "../services/order.read.service.js";
-import { successResponse, errorResponse } from "../utils/helpers.js";
+import { createValidationError } from "../errors/app.error.js";
 
 type AuthRequest = ExpressRequest & { user?: { id: number } };
 
@@ -34,119 +34,95 @@ export class FulfillmentController {
   private fulfillmentService = fulfillmentService;
   private orderReadService = orderReadService;
 
-  private _handleOrderStatusError(
-    e: unknown,
-    res: Response,
-    defaultMessage: string
-  ) {
-    const msg = e instanceof Error ? e.message : String(e);
-
-    if (msg.includes("not found")) {
-      return res.status(404).json(errorResponse("Order not found", msg));
-    }
-
-    if (msg.includes("Cannot") || msg.includes("already")) {
-      return res
-        .status(409)
-        .json(errorResponse("Cannot change order status", msg));
-    }
-
-    return res.status(500).json(errorResponse(defaultMessage, msg));
-  }
-
   cancelOrder = async (req: Request, res: Response) => {
-    try {
-      const id = Number(req.params.id);
-      if (!id) {
-        return res.status(400).json(errorResponse("Invalid order id"));
-      }
-
-      const userId = pickUserId(req);
-      if (!userId) {
-        return res.status(400).json(errorResponse("Missing userId in request"));
-      }
-      const authReq = req as any;
-      const isAdmin =
-        authReq.user &&
-        (authReq.user.role === "SUPER_ADMIN" ||
-          authReq.user.role === "STORE_ADMIN");
-      const requester = isAdmin ? undefined : userId;
-      const actorId = isAdmin ? Number(authReq.user?.id) : undefined;
-
-      const result = await this.fulfillmentService.cancelOrder(
-        id,
-        requester as any,
-        actorId as any
-      );
-      return res.status(200).json(successResponse(result, "Order cancelled"));
-    } catch (e) {
-      return this._handleOrderStatusError(e, res, "Failed to cancel order");
+    const id = Number(req.params.id);
+    if (!id) {
+      throw createValidationError("Invalid order id");
     }
+
+    const userId = pickUserId(req);
+    if (!userId) {
+      throw createValidationError("Missing userId in request");
+    }
+
+    const authReq = req as any;
+    const isAdmin =
+      authReq.user &&
+      (authReq.user.role === "SUPER_ADMIN" ||
+        authReq.user.role === "STORE_ADMIN");
+    const requester = isAdmin ? undefined : userId;
+    const actorId = isAdmin ? Number(authReq.user?.id) : undefined;
+
+    const result = await this.fulfillmentService.cancelOrder(
+      id,
+      requester as any,
+      actorId as any
+    );
+
+    return res.status(200).json({
+      message: "Order cancelled",
+      data: result,
+    });
   };
 
   confirmOrder = async (req: Request, res: Response) => {
-    try {
-      const id = Number(req.params.id);
-      if (!id) {
-        return res.status(400).json(errorResponse("Invalid order id"));
-      }
-
-      const userId = pickUserId(req);
-      if (!userId) {
-        return res.status(400).json(errorResponse("Missing userId in request"));
-      }
-      const authReq = req as any;
-      const isAdmin =
-        authReq.user &&
-        (authReq.user.role === "SUPER_ADMIN" ||
-          authReq.user.role === "STORE_ADMIN");
-      const requester = isAdmin ? undefined : userId;
-      const actorId = isAdmin ? Number(authReq.user?.id) : undefined;
-
-      const result = await this.fulfillmentService.confirmOrder(
-        id,
-        requester as any,
-        actorId as any
-      );
-      return res.status(200).json(successResponse(result, "Order confirmed"));
-    } catch (e) {
-      return this._handleOrderStatusError(e, res, "Failed to confirm order");
+    const id = Number(req.params.id);
+    if (!id) {
+      throw createValidationError("Invalid order id");
     }
+
+    const userId = pickUserId(req);
+    if (!userId) {
+      throw createValidationError("Missing userId in request");
+    }
+
+    const authReq = req as any;
+    const isAdmin =
+      authReq.user &&
+      (authReq.user.role === "SUPER_ADMIN" ||
+        authReq.user.role === "STORE_ADMIN");
+    const requester = isAdmin ? undefined : userId;
+    const actorId = isAdmin ? Number(authReq.user?.id) : undefined;
+
+    const result = await this.fulfillmentService.confirmOrder(
+      id,
+      requester as any,
+      actorId as any
+    );
+
+    return res.status(200).json({
+      message: "Order confirmed",
+      data: result,
+    });
   };
 
   shipOrder = async (req: Request, res: Response) => {
-    try {
-      const id = Number(req.params.id);
-      if (!id) {
-        return res.status(400).json(errorResponse("Invalid order id"));
-      }
-
-      const userId = pickUserId(req);
-      const result = await this.fulfillmentService.shipOrder(id, userId);
-      return res.status(200).json(successResponse(result, "Order shipped"));
-    } catch (e) {
-      return this._handleOrderStatusError(e, res, "Failed to ship order");
+    const id = Number(req.params.id);
+    if (!id) {
+      throw createValidationError("Invalid order id");
     }
+
+    const userId = pickUserId(req);
+    const result = await this.fulfillmentService.shipOrder(id, userId);
+
+    return res.status(200).json({
+      message: "Order shipped",
+      data: result,
+    });
   };
 
   getOrderCounts = async (req: Request, res: Response) => {
-    try {
-      const userId = pickUserId(req);
-      if (!userId) {
-        return res.status(400).json(errorResponse("Missing userId in request"));
-      }
-
-      const counts = await this.orderReadService.getOrderCountsByStatus(userId);
-
-      return res
-        .status(200)
-        .json(successResponse(counts, "Order counts retrieved"));
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      return res
-        .status(500)
-        .json(errorResponse("Failed to get order counts", msg));
+    const userId = pickUserId(req);
+    if (!userId) {
+      throw createValidationError("Missing userId in request");
     }
+
+    const counts = await this.orderReadService.getOrderCountsByStatus(userId);
+
+    return res.status(200).json({
+      message: "Order counts retrieved",
+      data: counts,
+    });
   };
 }
 

@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from "express";
 import { checkoutService } from "../services/checkout.service.js";
 import { orderReadService } from "../services/order.read.service.js";
 import { CheckoutSchema } from "@repo/schemas";
-import { successResponse } from "../utils/helpers.js";
 import {
   createValidationError,
   createUnauthorizedError,
@@ -21,12 +20,10 @@ export class CheckoutController {
   private getUserIdFromReq(req: Request): number {
     const authReq = req as AuthRequest;
 
-    // First try authenticated user
     if (authReq.user?.id) {
       return authReq.user.id;
     }
 
-    // In non-production, allow dev headers/query params for testing
     if (process.env.NODE_ENV !== "production") {
       const headerUserId = req.headers["x-dev-user-id"];
       if (headerUserId) {
@@ -41,7 +38,6 @@ export class CheckoutController {
       }
     }
 
-    // If no userId found, throw authentication error
     throw createUnauthorizedError("Authentication required");
   }
 
@@ -81,9 +77,10 @@ export class CheckoutController {
         pageSize,
       });
 
-      res
-        .status(200)
-        .json(successResponse(result, "Orders retrieved successfully"));
+      res.status(200).json({
+        message: "Orders retrieved successfully",
+        data: result,
+      });
     } catch (error) {
       next(error);
     }
@@ -138,9 +135,10 @@ export class CheckoutController {
         shippingOption
       );
 
-      res
-        .status(201)
-        .json(successResponse(result, "Order created successfully"));
+      res.status(201).json({
+        message: "Order created successfully",
+        data: result,
+      });
     } catch (error) {
       next(error);
     }
@@ -169,9 +167,10 @@ export class CheckoutController {
         throw createUnauthorizedError("Access denied");
       }
 
-      res
-        .status(200)
-        .json(successResponse(order, "Order retrieved successfully"));
+      res.status(200).json({
+        message: "Order retrieved successfully",
+        data: order,
+      });
     } catch (error) {
       next(error);
     }

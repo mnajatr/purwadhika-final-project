@@ -197,7 +197,7 @@ export class CheckoutService {
     }
 
     try {
-      const productIds = items.map((it: any) => it.productId).filter(Boolean);
+      const productIds = items.map((it) => it.productId).filter(Boolean);
       if (productIds.length > 0 && resolvedStoreId) {
         await prisma.cartItem.deleteMany({
           where: {
@@ -207,22 +207,11 @@ export class CheckoutService {
         });
       }
     } catch (err) {
-      try {
-        const logger = (await import("../utils/logger.js")).default;
-        logger.error(
-          "Failed to clean up cart for user=%d order=%d: %o",
-          userId,
-          result?.id,
-          err
-        );
-      } catch (e) {
-        console.error(
-          "Cart cleanup failed for user=%d order=%d",
-          userId,
-          result?.id,
-          err
-        );
-      }
+      const logger = (await import("../utils/logger.js")).default;
+      logger.error(
+        `Failed to clean up cart for user=${userId} order=${result?.id}`,
+        err
+      );
     }
 
     return result;
@@ -243,15 +232,8 @@ export class CheckoutService {
         { jobId: String(orderId), delay: delayMs }
       );
     } catch (err) {
-      try {
-        const logger = (await import("../utils/logger.js")).default;
-        logger.error(
-          `Failed to enqueue cancel job for order=${orderId}: %o`,
-          err
-        );
-      } catch (e) {
-        // Ignore logging errors
-      }
+      const logger = (await import("../utils/logger.js")).default;
+      logger.error(`Failed to enqueue cancel job for order=${orderId}`, err);
     }
   }
 }

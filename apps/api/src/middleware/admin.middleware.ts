@@ -100,3 +100,13 @@ export function restrictToAssignedStoreIfNeeded(
     return res.status(403).json({ success: false, message: "Forbidden: Not an admin" });
   };
 }
+export function scopeListToAssignedStore(req: Request, _res: Response, next: NextFunction) {
+  const authReq = req as AuthRequest;
+  const user = authReq.user;
+
+  if (user && user.role === "STORE_ADMIN" && user.storeId) {
+    (req as any).storeScopedId = user.storeId;
+  }
+
+  return next();
+}
