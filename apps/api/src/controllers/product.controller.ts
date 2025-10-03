@@ -64,6 +64,13 @@ export class ProductController {
     upload.array("images"),
     async (req: Request, res: Response) => {
       try {
+        const { name } = req.body;
+        const existing = await service.getByName(name);
+        if (existing) {
+          return res
+            .status(400)
+            .json({ message: "Product name already exists" });
+        }
         const files = req.files as Express.Multer.File[];
         let uploadedImages: { imageUrl: string }[] = [];
 

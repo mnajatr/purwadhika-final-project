@@ -116,12 +116,12 @@ export default function ProductsList() {
             No products found.
           </p>
         ) : (
-          sorted.map((product) => {
+          sorted.map((product, index) => {
             const outOfStock = product.stock === 0;
 
             return (
               <div
-                key={product.id}
+                key={index + 1}
                 className={`bg-white rounded-2xl shadow-md overflow-hidden flex flex-col transition ${
                   outOfStock
                     ? "opacity-50 grayscale pointer-events-none"
