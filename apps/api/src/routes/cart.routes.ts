@@ -1,22 +1,20 @@
 import { Router } from "express";
-import { CartController } from "../controllers/cart.controller.js";
+import { cartController } from "../controllers/cart.controller.js";
 import {
   validateBody,
   validateParams,
+  validateQuery,
 } from "../middleware/validation.middleware.js";
 import {
   AddToCartSchema,
   UpdateCartItemSchema,
   CartItemParamsSchema,
+  UserQuerySchema,
 } from "@repo/schemas";
 import { authMiddleware } from "../middleware/auth.middleware.js";
-import { validateQuery } from "../middleware/validation.middleware.js";
-import { UserQuerySchema } from "@repo/schemas";
 
 const router = Router();
-const cartController = new CartController();
 
-// GET /cart
 router.get(
   "/",
   authMiddleware,
@@ -24,7 +22,6 @@ router.get(
   cartController.getCart
 );
 
-// GET /cart/totals - Get cart totals
 router.get(
   "/totals",
   authMiddleware,
@@ -32,7 +29,6 @@ router.get(
   cartController.getCartTotals
 );
 
-// POST /cart - Add item to cart
 router.post(
   "/",
   authMiddleware,
@@ -40,10 +36,8 @@ router.post(
   cartController.addToCart
 );
 
-// DELETE /cart - Clear entire cart
 router.delete("/", authMiddleware, cartController.clearCart);
 
-// PATCH /cart/:itemId - Update cart item quantity
 router.patch(
   "/:itemId",
   authMiddleware,
@@ -52,7 +46,6 @@ router.patch(
   cartController.updateCartItem
 );
 
-// DELETE /cart/:itemId - Remove item from cart
 router.delete(
   "/:itemId",
   authMiddleware,

@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import { prisma } from "@repo/database";
 import { locationService } from "../services/location.service.js";
+import { AppError, createValidationError } from "../errors/app.error.js";
 
 export class StoresController {
-  // GET /api/stores - Get all active stores with location info
   static async getStores(_request: Request, response: Response) {
     try {
       const stores = await prisma.store.findMany({
@@ -27,7 +27,6 @@ export class StoresController {
         },
       });
 
-      // Flatten the response for easier frontend consumption
       const formattedStores = stores.map((store) => ({
         id: store.id,
         name: store.name,
@@ -36,25 +35,25 @@ export class StoresController {
         province: store.locations[0]?.province || "",
       }));
 
-      response.status(200).json({
-        success: true,
-        data: formattedStores,
-      });
+      return response
+        .status(200)
+        .json({ message: "Stores retrieved", data: formattedStores });
     } catch (error) {
-      response.status(500).json({
-        success: false,
-        message:
-          error instanceof Error ? error.message : "Internal server error",
-      });
+      if (error instanceof AppError) {
+        return response
+          .status(error.statusCode)
+          .json({ message: error.message });
+      }
+      const msg =
+        error instanceof Error ? error.message : "Internal server error";
+      return response
+        .status(500)
+        .json({ message: "Failed to get stores", error: msg });
     }
   }
 
-  // GET /api/stores/resolve - Resolve nearest store.
-  // Preferred flow: provide userId and addressId (query or body) so backend resolves nearest store using saved address.
-  // Backward-compat: lat & lon query params are still supported but will be deprecated.
   static async resolveNearest(request: Request, response: Response) {
     try {
-      // Accept userId and addressId from either query or body
       const userIdRaw = (request.query.userId ?? request.body?.userId) as any;
       const addressIdRaw = (request.query.addressId ??
         request.body?.addressId) as any;
@@ -64,49 +63,91 @@ export class StoresController {
       const userId = userIdRaw ? Number(userIdRaw) : undefined;
       const addressId = addressIdRaw ? Number(addressIdRaw) : undefined;
 
-      // If addressId provided, prefer it
-      if (addressId && userId) {
-        // Resolve using address coordinates and compute distance
-        const addr = await prisma.userAddress.findUnique({ where: { id: addressId } });
-        if (!addr || !addr.latitude || !addr.longitude) {
-          return response.status(200).json({ success: true, data: { nearestStore: null, message: "Address has no coordinates" } });
+      function buildNearestData(store: any | null, computed: any | null) {
+        if (!computed || !store) {
+          return {
+            nearestStore: null,
+            message: store ? `Nearest store: ${store.name}` : "No nearby store",
+          };
         }
-        const computed = await locationService.computeNearestWithDistance(Number(addr.latitude), Number(addr.longitude));
-        if (!computed) {
-          return response.status(200).json({ success: true, data: { nearestStore: null, message: "No nearby store" } });
-        }
-        const store = await prisma.store.findUnique({ where: { id: computed.storeId }, select: { id: true, name: true, locations: true } });
-        return response.status(200).json({ success: true, data: { nearestStore: store, distanceMeters: computed.distanceMeters, maxRadiusKm: computed.maxRadiusKm, inRange: computed.inRange, message: `Nearest store: ${store?.name ?? "unknown"}` } });
+        return {
+          nearestStore: store,
+          distanceMeters: computed.distanceMeters,
+          maxRadiusKm: computed.maxRadiusKm,
+          inRange: computed.inRange,
+          message: `Nearest store: ${store?.name ?? "unknown"}`,
+        };
       }
 
-      // If lat/lon provided (legacy), still resolve using coords
+      if (addressId && userId) {
+        const addr = await prisma.userAddress.findUnique({
+          where: { id: addressId },
+        });
+        if (!addr || !addr.latitude || !addr.longitude) {
+          return response
+            .status(200)
+            .json({
+              message: "Address has no coordinates",
+              data: { nearestStore: null },
+            });
+        }
+        const computed = await locationService.computeNearestWithDistance(
+          Number(addr.latitude),
+          Number(addr.longitude)
+        );
+        if (!computed) {
+          return response
+            .status(200)
+            .json({ message: "No nearby store", data: { nearestStore: null } });
+        }
+        const store = await prisma.store.findUnique({
+          where: { id: computed.storeId },
+          select: { id: true, name: true, locations: true },
+        });
+        return response
+          .status(200)
+          .json({
+            message: "Nearest store found",
+            data: buildNearestData(store, computed),
+          });
+      }
+
       if (latRaw && lonRaw) {
         const userLat = Number(latRaw);
         const userLon = Number(lonRaw);
         if (Number.isNaN(userLat) || Number.isNaN(userLon)) {
-          return response
-            .status(400)
-            .json({ success: false, message: "invalid coordinates" });
+          throw createValidationError("Invalid coordinates");
         }
-        const computed = await locationService.computeNearestWithDistance(userLat, userLon);
+        const computed = await locationService.computeNearestWithDistance(
+          userLat,
+          userLon
+        );
         if (!computed) {
-          return response.status(200).json({ success: true, data: { nearestStore: null, message: "No nearby store" } });
+          return response
+            .status(200)
+            .json({ message: "No nearby store", data: { nearestStore: null } });
         }
-        const store = await prisma.store.findUnique({ where: { id: computed.storeId }, select: { id: true, name: true, locations: true } });
-        return response.status(200).json({ success: true, data: { nearestStore: store, distanceMeters: computed.distanceMeters, maxRadiusKm: computed.maxRadiusKm, inRange: computed.inRange, message: `Nearest store: ${store?.name ?? "unknown"}` } });
+        const store = await prisma.store.findUnique({
+          where: { id: computed.storeId },
+          select: { id: true, name: true, locations: true },
+        });
+        return response
+          .status(200)
+          .json({
+            message: "Nearest store found",
+            data: buildNearestData(store, computed),
+          });
       }
 
-      return response
-        .status(400)
-        .json({
-          success: false,
-          message: "Provide userId+addressId or lat+lon",
-        });
+      throw createValidationError("Provide userId+addressId or lat+lon");
     } catch (err) {
-      console.error(err);
+      if (err instanceof AppError) {
+        return response.status(err.statusCode).json({ message: err.message });
+      }
+      const msg = err instanceof Error ? err.message : String(err);
       return response
         .status(500)
-        .json({ success: false, message: "Failed to resolve nearest store" });
+        .json({ message: "Failed to resolve nearest store", error: msg });
     }
   }
 }

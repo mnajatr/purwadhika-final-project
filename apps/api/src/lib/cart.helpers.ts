@@ -5,7 +5,6 @@ import {
   createNotFoundError,
 } from "../errors/app.error.js";
 
-// Data helpers constant
 export const CART_INCLUDE = {
   items: {
     orderBy: { createdAt: "asc" as const },
@@ -42,7 +41,6 @@ export const CART_INCLUDE = {
   },
 };
 
-// Validation methods
 export const CartValidation = {
   validateUserId(userId: number) {
     if (!userId || userId <= 0) {
@@ -68,11 +66,7 @@ export const CartValidation = {
     }
   },
 
-  validateCartItemLimits(
-    cartItems: any[],
-    newQty: number,
-    inventory: any
-  ) {
+  validateCartItemLimits(cartItems: any[], newQty: number, inventory: any) {
     if (cartItems.length >= CART_CONSTANTS.MAX_CART_ITEMS) {
       throw createValidationError(ERROR_MESSAGES.CART.MAX_ITEMS_EXCEEDED);
     }
@@ -89,7 +83,6 @@ export const CartValidation = {
   },
 };
 
-// Utility methods
 export const CartUtils = {
   findExistingCartItem(cartItems: any[], productId: number) {
     return cartItems.find((item: any) => item.productId === productId);
@@ -122,19 +115,20 @@ export const CartUtils = {
   },
 };
 
-// Data access methods
 export const CartRepo = {
   async getOrCreateCart(userId: number, storeId: number) {
     let cart = await prisma.cart.findFirst({
       where: { userId, storeId },
       include: { items: true },
     });
+
     if (!cart) {
       cart = await prisma.cart.create({
         data: { userId, storeId },
         include: { items: true },
       });
     }
+
     return cart;
   },
 
@@ -143,8 +137,9 @@ export const CartRepo = {
       where: { userId, storeId },
       include: CART_INCLUDE,
     });
+
     if (!cart) return null;
-    
+
     const itemsWithStock = await Promise.all(
       cart.items.map(async (item: any) => {
         const inventory = await prisma.storeInventory.findFirst({
@@ -157,6 +152,7 @@ export const CartRepo = {
         };
       })
     );
+
     return { ...cart, items: itemsWithStock };
   },
 
@@ -166,45 +162,58 @@ export const CartRepo = {
       include: {
         items: {
           include: {
-            product: { select: { id: true, name: true } },
+            product: { select: { id: true, name: true, price: true } },
           },
         },
       },
     });
   },
 
-  async validateCartItem(
-    userId: number,
-    itemId: number,
-    storeId: number
-  ) {
+  async validateCartItem(userId: number, itemId: number, storeId: number) {
     const cartItem = await prisma.cartItem.findFirst({
       where: { id: itemId, cart: { userId, storeId } },
       include: { product: true },
     });
-    if (!cartItem) throw createNotFoundError("Cart item");
+
+    if (!cartItem) {
+      throw createNotFoundError("Cart item");
+    }
+
     return cartItem;
   },
 
   async validateCart(userId: number, storeId: number) {
     const cart = await prisma.cart.findFirst({ where: { userId, storeId } });
-    if (!cart) throw createNotFoundError("Cart");
+
+    if (!cart) {
+      throw createNotFoundError("Cart");
+    }
+
     return cart;
   },
 
   async createCartItem(cartId: number, productId: number, qty: number) {
-    return prisma.cartItem.create({ data: { cartId, productId, qty } });
+    return prisma.cartItem.create({
+      data: { cartId, productId, qty },
+    });
   },
 
   async updateCartItemRow(itemId: number, qty: number) {
-    return prisma.cartItem.update({ where: { id: itemId }, data: { qty } });
+    return prisma.cartItem.update({
+      where: { id: itemId },
+      data: { qty },
+    });
   },
 
   async deleteCartItemRow(itemId: number) {
-    return prisma.cartItem.delete({ where: { id: itemId } });
+    return prisma.cartItem.delete({
+      where: { id: itemId },
+    });
   },
 
   async clearAllCartItems(cartId: number) {
-    return prisma.cartItem.deleteMany({ where: { cartId } });
+    return prisma.cartItem.deleteMany({
+      where: { cartId },
+    });
   },
 };

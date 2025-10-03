@@ -50,7 +50,7 @@ export class OrderReadService {
     let searchFilteredIds: number[] | null = null;
     if (q) {
       const qTrimmed = String(q).trim();
-      
+
       if (qTrimmed !== "") {
         // For numeric search, find all order IDs that contain the search term
         const qn = Number(qTrimmed);
@@ -61,11 +61,11 @@ export class OrderReadService {
             where: { ...where }, // Apply other filters
             select: { id: true },
           });
-          
+
           searchFilteredIds = allOrders
             .filter((order) => String(order.id).includes(qTrimmed))
             .map((order) => order.id);
-          
+
           // If no IDs match, also check product names
           if (searchFilteredIds.length === 0) {
             // Fall back to product name search only
@@ -81,7 +81,9 @@ export class OrderReadService {
               {
                 items: {
                   some: {
-                    product: { name: { contains: qTrimmed, mode: "insensitive" } },
+                    product: {
+                      name: { contains: qTrimmed, mode: "insensitive" },
+                    },
                   },
                 },
               },
@@ -103,20 +105,15 @@ export class OrderReadService {
       if (dateFrom) {
         try {
           where.createdAt.gte = new Date(dateFrom);
-          console.log("📅 Date filter - dateFrom:", dateFrom, "→", where.createdAt.gte);
         } catch (e) {
-          console.error("❌ Invalid dateFrom:", dateFrom, e);
+          (await import("../utils/logger.js")).default.error("order.read.service: invalid dateFrom", { dateFrom, error: e });
         }
       }
       if (dateTo) {
         try {
           where.createdAt.lte = new Date(dateTo);
-          console.log("📅 Date filter - dateTo:", dateTo, "→", where.createdAt.lte);
-        } catch (e) {
-          console.error("❌ Invalid dateTo:", dateTo, e);
-        }
+        } catch (e) {}
       }
-      console.log("📅 Final date filter:", where.createdAt);
     }
 
     const [items, total] = await Promise.all([
@@ -240,6 +237,14 @@ export class OrderReadService {
 
     logger.info(`Order counts calculated:`, counts);
     return counts;
+  }
+
+  async getOrderStoreId(orderId: number): Promise<number | null> {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { storeId: true },
+    });
+    return order?.storeId ?? null;
   }
 }
 
