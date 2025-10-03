@@ -125,6 +125,9 @@ class ProductsService {
       height: product.height,
       length: product.length,
       imageUrl: product.images?.[0]?.imageUrl || "/placeholder.png",
+      images: product.images?.map((img) => img.imageUrl) || [
+        "/placeholder.png",
+      ],
       stock: inventory?.stockQty ?? 0,
     };
   }

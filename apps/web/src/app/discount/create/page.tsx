@@ -95,7 +95,7 @@ export default function CreateDiscountForm() {
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="max-w-2xl mx-auto p-6 bg-white shadow rounded-lg space-y-4"
+      className="max-w-2xl mx-auto p-6 bg-white shadow rounded-lg space-y-4 m-10"
     >
       <h2 className="text-2xl font-bold mb-4">Tambah Discount</h2>
 
@@ -227,7 +227,7 @@ export default function CreateDiscountForm() {
       <button
         type="submit"
         disabled={createDiscount.isPending}
-        className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
+        className="w-full bg-primary-gradient text-white py-2 rounded hover:bg-amber-700 disabled:opacity-50"
       >
         {createDiscount.isPending ? "Menyimpan..." : "Simpan Discount"}
       </button>

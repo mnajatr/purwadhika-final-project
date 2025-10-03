@@ -39,8 +39,8 @@ export default function UpdateUserForm({
       await updateUser(userId, data);
       alert("✅ User updated successfully!");
       onSuccess?.();
-    } catch (err: any) {
-      alert(err.message || "❌ Failed to update user");
+    } catch (err) {
+      alert((err as Error)?.message ?? "❌ Failed to create category");
     }
   };
 
@@ -57,7 +57,7 @@ export default function UpdateUserForm({
         <input
           type="email"
           {...register("email")}
-          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-amber-700"
         />
         {errors.email && (
           <p className="text-red-500 text-sm">{errors.email.message}</p>
@@ -71,7 +71,7 @@ export default function UpdateUserForm({
           type="password"
           {...register("password")}
           placeholder="Leave blank if no change"
-          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-amber-700"
         />
         {errors.password && (
           <p className="text-red-500 text-sm">{errors.password.message}</p>
@@ -83,7 +83,7 @@ export default function UpdateUserForm({
         <label className="block font-medium mb-1">Role</label>
         <select
           {...register("role")}
-          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-amber-700"
         >
           <option value="USER">USER</option>
           <option value="SUPER_ADMIN">SUPER_ADMIN</option>
@@ -100,7 +100,7 @@ export default function UpdateUserForm({
         <input
           type="text"
           {...register("profile.fullName")}
-          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-amber-700"
         />
         {errors.profile?.fullName && (
           <p className="text-red-500 text-sm">
@@ -112,7 +112,7 @@ export default function UpdateUserForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
+        className="w-full bg-primary-gradient text-white py-2 rounded hover:bg-amber-700 disabled:opacity-50"
       >
         {isSubmitting ? "Updating..." : "Update User"}
       </button>

@@ -40,7 +40,7 @@ export default function AddProductForm() {
         images: [],
         inventories: [
           {
-            storeId: Number("storeId") ?? 0,
+            storeId: 0,
           },
         ],
       },

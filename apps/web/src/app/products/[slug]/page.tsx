@@ -18,6 +18,11 @@ export default function ProductDetailPage() {
   const addToCartMutation = useAddToCart(userId, nearestStoreId);
 
   const nearestStoreName = useLocationStore((s) => s.nearestStoreName);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const images: string[] = product?.images?.length
+    ? product.images
+    : [product?.imageUrl || "/placeholder.png"];
 
   // Get development user ID from localStorage
   useEffect(() => {
@@ -32,11 +37,11 @@ export default function ProductDetailPage() {
   const handleAddToCart = () => {
     if (!product || !userId) return;
 
-        addToCartMutation.mutate(
+    addToCartMutation.mutate(
       {
         productId: parseInt(product.id),
         qty: quantity,
-            storeId: nearestStoreId,
+        storeId: nearestStoreId,
         userId: userId,
       },
       {
@@ -44,7 +49,6 @@ export default function ProductDetailPage() {
           toast.success(`${quantity} ${product.name} added to cart!`);
           setQuantity(1); // Reset quantity after adding
         },
-        // Error handling is already done by the useAddToCart hook
       }
     );
   };
@@ -61,11 +65,49 @@ export default function ProductDetailPage() {
         {/* Gambar Produk */}
         <div className="relative w-full h-80 md:h-[500px]">
           <Image
-            src={product.imageUrl}
-            alt={product.name}
+            src={images[currentIndex]}
+            alt={`${product.name} ${currentIndex + 1}`}
             fill
             className="object-cover rounded-2xl shadow-md"
           />
+
+          {/* Tombol prev/next */}
+          {images.length > 1 && (
+            <>
+              <button
+                onClick={() =>
+                  setCurrentIndex((prev) =>
+                    prev === 0 ? images.length - 1 : prev - 1
+                  )
+                }
+                className="absolute left-3 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full"
+              >
+                ‹
+              </button>
+              <button
+                onClick={() =>
+                  setCurrentIndex((prev) =>
+                    prev === images.length - 1 ? 0 : prev + 1
+                  )
+                }
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full"
+              >
+                ›
+              </button>
+            </>
+          )}
+
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
+            {images.map((img, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentIndex(idx)}
+                className={`w-3 h-3 rounded-full ${
+                  idx === currentIndex ? "bg-white" : "bg-gray-400"
+                }`}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Detail Produk */}
@@ -73,7 +115,7 @@ export default function ProductDetailPage() {
           <div>
             <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
             <p className="text-gray-600 mb-6">{product.description}</p>
-            <p className="text-indigo-600 font-bold text-2xl mb-6">
+            <p className="text-element font-bold text-2xl mb-6">
               Rp {product.price.toLocaleString("id-ID")}
             </p>
 
@@ -130,13 +172,10 @@ export default function ProductDetailPage() {
 
           {/* Tombol Aksi */}
           <div className="mt-8 flex gap-4">
-            <button className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition">
-              Buy Now
-            </button>
             <button
               onClick={handleAddToCart}
               disabled={addToCartMutation.isPending}
-              className="flex-1 border border-indigo-600 text-indigo-600 py-3 rounded-lg hover:bg-indigo-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 border bg-primary-gradient text-white py-3 rounded-lg hover:bg-amber-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {addToCartMutation.isPending ? "Adding..." : "Add to cart"}
             </button>

@@ -12,3 +12,22 @@ export type UserResponse = {
     updatedAt: string;
   } | null;
 };
+
+export type CreateUserInput = {
+  email: string;
+  password: string;
+  role?: "USER" | "SUPER_ADMIN" | "STORE_ADMIN";
+  profile?: {
+    fullName: string;
+  };
+};
+
+export type UpdateUserInput = {
+  id: number;
+  email?: string;
+  password?: string;
+  role?: "USER" | "SUPER_ADMIN" | "STORE_ADMIN";
+  profile?: {
+    fullName?: string;
+  };
+};

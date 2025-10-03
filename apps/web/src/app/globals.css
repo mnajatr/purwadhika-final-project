@@ -100,6 +100,7 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --text-col: #f59e0b;
 }
 
 .dark {
@@ -193,13 +194,17 @@
   }
 
   .rdp-day_button.rdp-day_selected:hover {
-    background: oklch(78.811% 0.15837 69.501) !important; /* Darker orange on hover */
+    background: oklch(
+      78.811% 0.15837 69.501
+    ) !important; /* Darker orange on hover */
     opacity: 0.95;
   }
 
   /* Dates in between range - lighter orange background */
   .rdp-day_button.rdp-range_middle {
-    background: oklch(95.164% 0.0495 83.958) !important; /* Light peachy background */
+    background: oklch(
+      95.164% 0.0495 83.958
+    ) !important; /* Light peachy background */
     color: oklch(0.2663 0.0482 263.28) !important; /* Dark text */
     font-weight: 500;
     border-radius: 0;
@@ -229,7 +234,9 @@
 
   /* Hover state for range middle dates */
   .rdp-day_button.rdp-range_middle:hover {
-    background: oklch(91.944% 0.05343 78.986) !important; /* Slightly darker peachy */
+    background: oklch(
+      91.944% 0.05343 78.986
+    ) !important; /* Slightly darker peachy */
   }
 
   /* Today date - remove all default background styling */
@@ -245,13 +252,17 @@
   }
 
   /* Override today styling when not selected */
-  .rdp-day_button.rdp-today:not(.rdp-day_selected):not(.rdp-range_start):not(.rdp-range_end):not(.rdp-range_middle) {
+  .rdp-day_button.rdp-today:not(.rdp-day_selected):not(.rdp-range_start):not(
+      .rdp-range_end
+    ):not(.rdp-range_middle) {
     background: transparent !important;
     background-color: transparent !important;
   }
 
   /* Hover state for today when not selected */
-  .rdp-day_button.rdp-today:not(.rdp-day_selected):not(.rdp-range_start):not(.rdp-range_end):not(.rdp-range_middle):hover {
+  .rdp-day_button.rdp-today:not(.rdp-day_selected):not(.rdp-range_start):not(
+      .rdp-range_end
+    ):not(.rdp-range_middle):hover {
     background: oklch(0 0 0 / 0.05) !important; /* Very subtle hover */
   }
 
@@ -259,5 +270,8 @@
   .rdp-day_button:focus-visible {
     outline: 2px solid oklch(79.589% 0.14105 71.832);
     outline-offset: 2px;
+  }
+  .text-element {
+    color: var(--text-col);
   }
 }

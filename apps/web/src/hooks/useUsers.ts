@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import usersService from "@/services/users.service";
-import { UserResponse } from "@/types/user.types";
+import { UpdateUserInput, UserResponse } from "@/types/user.types";
 import { UserAddressResponse } from "@/types/address.type";
 import { paginationData } from "@/services/category.service";
 
@@ -42,8 +42,13 @@ export function useUpdateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<UserResponse> }) =>
-      usersService.updateUser(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: Partial<UpdateUserInput>;
+    }) => usersService.updateUser(id, data),
     onSuccess: (updatedUser) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       queryClient.invalidateQueries({ queryKey: ["users", updatedUser.id] });

@@ -33,7 +33,7 @@ export default function ManageCategories() {
           {role === "SUPER_ADMIN" && (
             <Link
               href={`/category/create`}
-              className="text-indigo-600 hover:underline"
+              className="bg-primary-gradient text-white px-5 py-2 rounded-lg shadow hover:bg-amber-700 transition text-center"
             >
               Create Category
             </Link>
@@ -73,7 +73,7 @@ export default function ManageCategories() {
                     <td className="px-4 py-3 text-sm flex gap-3">
                       <Link
                         href={`/category/${c.id}/edit`}
-                        className="text-indigo-600 hover:underline"
+                        className="text-indigo-500 hover:underline"
                       >
                         Edit
                       </Link>

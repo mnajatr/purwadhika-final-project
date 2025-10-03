@@ -43,7 +43,7 @@ export default function ManageDiscounts() {
           {role === "STORE_ADMIN" && (
             <Link
               href={`/discount/create`}
-              className="text-indigo-600 hover:underline"
+              className="bg-primary-gradient text-white px-5 py-2 rounded-lg shadow hover:bg-amber-700 transition text-center"
             >
               Create Discount
             </Link>
@@ -103,7 +103,7 @@ export default function ManageDiscounts() {
                       <>
                         <Link
                           href={`/discount/${d.id}/update`}
-                          className="text-indigo-600 hover:underline"
+                          className="text-indigo-500 hover:underline"
                         >
                           Edit
                         </Link>

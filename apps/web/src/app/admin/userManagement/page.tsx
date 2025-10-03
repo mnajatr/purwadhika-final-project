@@ -39,7 +39,7 @@ export default function UserTable() {
               </h2>
               <Link
                 href="/user/create"
-                className="bg-indigo-500 text-white px-5 py-2 rounded-lg shadow hover:bg-indigo-700 transition text-center"
+                className="bg-primary-gradient text-white px-5 py-2 rounded-lg shadow hover:bg-amber-700 transition text-center"
               >
                 + Tambah User
               </Link>
@@ -92,7 +92,7 @@ export default function UserTable() {
                         <td className="px-4 py-3 text-sm text-center space-x-2">
                           <Link
                             href={`/user/${u.id}/edit`}
-                            className="text-indigo-600 hover:underline"
+                            className="text-indigo-500 hover:underline"
                           >
                             Edit
                           </Link>
