@@ -3,14 +3,16 @@
 import Sidebar from "@/components/admin/sidebar";
 import SalesByCategoryChart from "@/components/reportChart/SalesByCategoryChart";
 import SalesByProductChart from "@/components/reportChart/SalesByProductChart";
+import StockManagementDetail from "@/components/reportChart/StockManagementDetail";
+import StockManagementSummary from "@/components/reportChart/StockManagementSummary";
 import { Button } from "@/components/ui/button";
 import { useStores } from "@/hooks/useStores";
 import { useEffect, useState } from "react";
 
 export default function ReportChart() {
-  const [activeTab, setActiveTab] = useState<"bycategory" | "byproduct">(
-    "bycategory"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "bycategory" | "byproduct" | "smsummary" | "smdetail"
+  >("bycategory");
   const [role, setRole] = useState("");
   const [storeId, setStoreId] = useState<number | undefined>(undefined);
   useEffect(() => {
@@ -59,22 +61,36 @@ export default function ReportChart() {
               <Button
                 variant={activeTab === "bycategory" ? "default" : "ghost"}
                 onClick={() => setActiveTab("bycategory")}
-                className="py-2 px-1 border-b-2 font-medium text-sm"
+                className="py-2 px-1 border-b-2  bg-amber-500 font-medium text-sm  text-white"
               >
                 By Category
               </Button>
               <Button
                 variant={activeTab === "byproduct" ? "default" : "ghost"}
                 onClick={() => setActiveTab("byproduct")}
-                className="py-2 px-1 border-b-2 font-medium text-sm"
+                className="py-2 px-1 border-b-2  bg-amber-500 font-medium text-sm text-white"
               >
                 By Product
+              </Button>
+              <Button
+                variant={activeTab === "smsummary" ? "default" : "ghost"}
+                onClick={() => setActiveTab("smsummary")}
+                className="py-2 px-1 border-b-2  bg-amber-500 font-medium text-sm text-white"
+              >
+                Stock Management Summary
+              </Button>
+              <Button
+                variant={activeTab === "smdetail" ? "default" : "ghost"}
+                onClick={() => setActiveTab("smdetail")}
+                className="py-2 px-1 border-b-2  bg-amber-500 font-medium text-sm  text-white"
+              >
+                Stock Management Detail
               </Button>
             </nav>
           </div>
         </div>
         <h2 className="text-3xl font-bold mb-10 text-gray-800">
-          📊 Report Sales
+          📊 Report Sales and Stock
         </h2>
 
         {/* Filter Section */}
@@ -153,6 +169,24 @@ export default function ReportChart() {
         {activeTab === "byproduct" && (
           <div className="bg-white rounded-xl shadow-md border p-8">
             <SalesByProductChart month={month} year={year} storeId={storeId} />
+          </div>
+        )}
+        {activeTab === "smsummary" && (
+          <div className="bg-white rounded-xl shadow-md border p-8">
+            <StockManagementSummary
+              month={month}
+              year={year}
+              storeId={storeId}
+            />
+          </div>
+        )}
+        {activeTab === "smdetail" && (
+          <div className="bg-white rounded-xl shadow-md border p-8">
+            <StockManagementDetail
+              month={month}
+              year={year}
+              storeId={storeId}
+            />
           </div>
         )}
       </main>
