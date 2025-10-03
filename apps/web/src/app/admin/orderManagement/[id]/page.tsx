@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
+import { format } from "date-fns";
 import Sidebar from "@/components/admin/sidebar";
 import { adminOrdersService as ordersService } from "@/services/adminOrders.service";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
@@ -112,14 +113,14 @@ export default function OrderDetailPage() {
   // Close modal on ESC key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         setIsImageZoomed(false);
       }
     };
-    
+
     if (isImageZoomed) {
-      window.addEventListener('keydown', handleEscape);
-      return () => window.removeEventListener('keydown', handleEscape);
+      window.addEventListener("keydown", handleEscape);
+      return () => window.removeEventListener("keydown", handleEscape);
     }
   }, [isImageZoomed]);
 
@@ -163,7 +164,13 @@ export default function OrderDetailPage() {
       cancel: "cancel",
     };
 
-    setConfirmDialog({ open: false, action: null, title: "", description: "", variant: "default" });
+    setConfirmDialog({
+      open: false,
+      action: null,
+      title: "",
+      description: "",
+      variant: "default",
+    });
     setActionLoading((prev) => ({ ...prev, [action]: true }));
 
     try {
@@ -299,11 +306,13 @@ export default function OrderDetailPage() {
               <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
               Back to Orders
             </button>
-            
+
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <div className="flex items-center space-x-3 mb-2">
-                  <h1 className="text-3xl font-bold text-foreground">Order #{order.id}</h1>
+                  <h1 className="text-3xl font-bold text-foreground">
+                    Order #{order.id}
+                  </h1>
                   <span
                     className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-medium rounded-full ${getStatusBadgeColor(
                       order.status
@@ -314,7 +323,8 @@ export default function OrderDetailPage() {
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Created {new Date(order.createdAt).toLocaleDateString("en-US", {
+                  Created{" "}
+                  {new Date(order.createdAt).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
@@ -332,7 +342,9 @@ export default function OrderDetailPage() {
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-2"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    {actionLoading.confirm ? "Processing..." : "Confirm Payment"}
+                    {actionLoading.confirm
+                      ? "Processing..."
+                      : "Confirm Payment"}
                   </button>
                 )}
                 {canShip(order) && (
@@ -366,16 +378,20 @@ export default function OrderDetailPage() {
               <div className="bg-card border border-border rounded-xl shadow-sm p-6">
                 <div className="flex items-center gap-2 mb-6">
                   <Receipt className="w-5 h-5 text-primary" />
-                  <h2 className="text-lg font-semibold text-foreground">Order Summary</h2>
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Order Summary
+                  </h2>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-muted-foreground text-sm">
                       <User className="w-4 h-4" />
                       <span>Customer</span>
                     </div>
-                    <p className="font-medium text-foreground">User #{order.userId}</p>
+                    <p className="font-medium text-foreground">
+                      User #{order.userId}
+                    </p>
                   </div>
 
                   <div className="space-y-1">
@@ -383,7 +399,9 @@ export default function OrderDetailPage() {
                       <Store className="w-4 h-4" />
                       <span>Store</span>
                     </div>
-                    <p className="font-medium text-foreground">Store #{order.storeId}</p>
+                    <p className="font-medium text-foreground">
+                      Store #{order.storeId}
+                    </p>
                   </div>
 
                   <div className="space-y-1">
@@ -391,7 +409,9 @@ export default function OrderDetailPage() {
                       <CreditCard className="w-4 h-4" />
                       <span>Payment Method</span>
                     </div>
-                    <p className="font-medium text-foreground uppercase">{order.paymentMethod}</p>
+                    <p className="font-medium text-foreground uppercase">
+                      {order.paymentMethod}
+                    </p>
                   </div>
 
                   <div className="space-y-1">
@@ -400,11 +420,10 @@ export default function OrderDetailPage() {
                       <span>Order Date</span>
                     </div>
                     <p className="font-medium text-foreground">
-                      {new Date(order.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
+                      {format(
+                        new Date(order.createdAt),
+                        "MMM dd, yyyy 'at' HH:mm"
+                      )}
                     </p>
                   </div>
 
@@ -414,13 +433,10 @@ export default function OrderDetailPage() {
                       <span>Last Updated</span>
                     </div>
                     <p className="font-medium text-foreground">
-                      {new Date(order.updatedAt).toLocaleString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {format(
+                        new Date(order.updatedAt),
+                        "MMM dd, yyyy 'at' HH:mm"
+                      )}
                     </p>
                   </div>
                 </div>
@@ -431,37 +447,53 @@ export default function OrderDetailPage() {
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-2">
                     <ShoppingCart className="w-5 h-5 text-primary" />
-                    <h2 className="text-lg font-semibold text-foreground">Order Items</h2>
+                    <h2 className="text-lg font-semibold text-foreground">
+                      Order Items
+                    </h2>
                   </div>
                   <span className="text-sm text-muted-foreground">
-                    {order.totalItems} {order.totalItems === 1 ? "item" : "items"}
+                    {order.totalItems}{" "}
+                    {order.totalItems === 1 ? "item" : "items"}
                   </span>
                 </div>
-                
+
                 <div className="space-y-4">
                   {order.items.map((item, index) => (
                     <div
                       key={item.id}
                       className={`flex items-start justify-between py-4 ${
-                        index !== order.items.length - 1 ? "border-b border-border" : ""
+                        index !== order.items.length - 1
+                          ? "border-b border-border"
+                          : ""
                       }`}
                     >
                       <div className="flex-1">
-                        <h3 className="font-semibold text-foreground mb-1">{item.product.name}</h3>
+                        <h3 className="font-semibold text-foreground mb-1">
+                          {item.product.name}
+                        </h3>
                         <p className="text-sm text-muted-foreground mb-2">
                           Product ID: #{item.productId}
                         </p>
                         <div className="flex items-center gap-4 text-sm">
                           <span className="text-muted-foreground">
-                            Unit Price: <span className="text-foreground font-medium">Rp {Number(item.unitPriceSnapshot).toLocaleString()}</span>
+                            Unit Price:{" "}
+                            <span className="text-foreground font-medium">
+                              Rp{" "}
+                              {Number(item.unitPriceSnapshot).toLocaleString()}
+                            </span>
                           </span>
                           <span className="text-muted-foreground">
-                            Quantity: <span className="text-foreground font-medium">{item.qty}</span>
+                            Quantity:{" "}
+                            <span className="text-foreground font-medium">
+                              {item.qty}
+                            </span>
                           </span>
                         </div>
                       </div>
                       <div className="text-right ml-4">
-                        <p className="text-sm text-muted-foreground mb-1">Subtotal</p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Subtotal
+                        </p>
                         <p className="font-semibold text-foreground">
                           Rp {item.totalAmount.toLocaleString()}
                         </p>
@@ -479,42 +511,60 @@ export default function OrderDetailPage() {
                 <div className="bg-card border border-border rounded-xl shadow-sm p-6">
                   <div className="flex items-center gap-2 mb-6">
                     <CreditCard className="w-5 h-5 text-primary" />
-                    <h2 className="text-lg font-semibold text-foreground">Payment Details</h2>
+                    <h2 className="text-lg font-semibold text-foreground">
+                      Payment Details
+                    </h2>
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-muted-foreground">Payment ID</span>
-                      <span className="font-medium text-foreground">#{order.payment.id}</span>
+                      <span className="text-sm text-muted-foreground">
+                        Payment ID
+                      </span>
+                      <span className="font-medium text-foreground">
+                        #{order.payment.id}
+                      </span>
                     </div>
-                    
+
                     <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-muted-foreground">Status</span>
+                      <span className="text-sm text-muted-foreground">
+                        Status
+                      </span>
                       <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded">
                         {order.payment.status}
                       </span>
                     </div>
-                    
+
                     <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-muted-foreground">Amount</span>
+                      <span className="text-sm text-muted-foreground">
+                        Amount
+                      </span>
                       <span className="font-semibold text-foreground">
                         Rp {order.payment.amount.toLocaleString()}
                       </span>
                     </div>
-                    
+
                     <div className="border-t border-border pt-4">
                       <div className="space-y-2 text-xs">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Created</span>
                           <span className="text-foreground">
-                            {new Date(order.payment.createdAt).toLocaleDateString()}
+                            {format(
+                              new Date(order.payment.createdAt),
+                              "MMM dd, yyyy 'at' HH:mm"
+                            )}
                           </span>
                         </div>
                         {order.payment.reviewedAt && (
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Reviewed</span>
+                            <span className="text-muted-foreground">
+                              Reviewed
+                            </span>
                             <span className="text-foreground">
-                              {new Date(order.payment.reviewedAt).toLocaleDateString()}
+                              {format(
+                                new Date(order.payment.reviewedAt),
+                                "MMM dd, yyyy 'at' HH:mm"
+                              )}
                             </span>
                           </div>
                         )}
@@ -522,7 +572,10 @@ export default function OrderDetailPage() {
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Paid</span>
                             <span className="text-foreground">
-                              {new Date(order.payment.paidAt).toLocaleDateString()}
+                              {format(
+                                new Date(order.payment.paidAt),
+                                "MMM dd, yyyy 'at' HH:mm"
+                              )}
                             </span>
                           </div>
                         )}
@@ -537,7 +590,7 @@ export default function OrderDetailPage() {
                         <FileText className="w-4 h-4" />
                         Payment Proof
                       </h3>
-                      <div 
+                      <div
                         className="border border-border rounded-lg overflow-hidden bg-muted/20 cursor-pointer hover:border-primary transition-colors group relative"
                         onClick={() => setIsImageZoomed(true)}
                       >
@@ -561,38 +614,52 @@ export default function OrderDetailPage() {
               <div className="bg-card border border-border rounded-xl shadow-sm p-6">
                 <div className="flex items-center gap-2 mb-6">
                   <DollarSign className="w-5 h-5 text-primary" />
-                  <h2 className="text-lg font-semibold text-foreground">Order Total</h2>
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Order Total
+                  </h2>
                 </div>
-                
+
                 <div className="space-y-3">
                   <div className="flex justify-between items-center py-2">
-                    <span className="text-sm text-muted-foreground">Subtotal</span>
-                    <span className="text-foreground">Rp {order.subtotalAmount.toLocaleString()}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Subtotal
+                    </span>
+                    <span className="text-foreground">
+                      Rp {order.subtotalAmount.toLocaleString()}
+                    </span>
                   </div>
-                  
+
                   <div className="flex justify-between items-center py-2">
                     <div className="flex items-center gap-1.5">
                       <Truck className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Shipping</span>
+                      <span className="text-sm text-muted-foreground">
+                        Shipping
+                      </span>
                     </div>
-                    <span className="text-foreground">Rp {order.shippingCost.toLocaleString()}</span>
+                    <span className="text-foreground">
+                      Rp {order.shippingCost.toLocaleString()}
+                    </span>
                   </div>
-                  
+
                   {order.discountTotal > 0 && (
                     <div className="flex justify-between items-center py-2">
                       <div className="flex items-center gap-1.5">
                         <Tag className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Discount</span>
+                        <span className="text-sm text-muted-foreground">
+                          Discount
+                        </span>
                       </div>
                       <span className="text-red-600">
                         -Rp {order.discountTotal.toLocaleString()}
                       </span>
                     </div>
                   )}
-                  
+
                   <div className="border-t border-border pt-3 mt-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-base font-semibold text-foreground">Grand Total</span>
+                      <span className="text-base font-semibold text-foreground">
+                        Grand Total
+                      </span>
                       <span className="text-xl font-bold text-primary">
                         Rp {order.grandTotal.toLocaleString()}
                       </span>
@@ -607,7 +674,7 @@ export default function OrderDetailPage() {
 
       {/* Image Zoom Modal */}
       {isImageZoomed && order?.payment?.proofImageUrl && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
           onClick={() => setIsImageZoomed(false)}
         >
@@ -617,7 +684,10 @@ export default function OrderDetailPage() {
           >
             <X className="w-8 h-8" />
           </button>
-          <div className="max-w-7xl max-h-full" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="max-w-7xl max-h-full"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Image
               src={order.payment.proofImageUrl}
               alt="Payment Proof - Full Size"
@@ -636,7 +706,13 @@ export default function OrderDetailPage() {
         description={confirmDialog.description}
         onConfirm={executeOrderAction}
         onCancel={() =>
-          setConfirmDialog({ open: false, action: null, title: "", description: "", variant: "default" })
+          setConfirmDialog({
+            open: false,
+            action: null,
+            title: "",
+            description: "",
+            variant: "default",
+          })
         }
         confirmLabel="Confirm"
         cancelLabel="Cancel"

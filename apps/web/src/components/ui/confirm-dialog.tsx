@@ -66,9 +66,7 @@ export default function ConfirmDialog({
       <AlertDialogContent className="sm:max-w-[480px]">
         <AlertDialogHeader className="gap-4">
           <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 mt-1">
-              {getIcon()}
-            </div>
+            <div className="flex-shrink-0 mt-1">{getIcon()}</div>
             <div className="flex-1 space-y-2">
               <AlertDialogTitle className="text-xl font-semibold text-foreground">
                 {title}
@@ -86,7 +84,7 @@ export default function ConfirmDialog({
           <AlertDialogCancel className="sm:flex-1">
             {cancelLabel}
           </AlertDialogCancel>
-          <AlertDialogAction 
+          <AlertDialogAction
             onClick={() => void onConfirm()}
             className={`sm:flex-1 ${getConfirmButtonClass()}`}
           >
