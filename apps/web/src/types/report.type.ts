@@ -45,17 +45,25 @@ export interface SalesByProductItem {
 
 export interface StockSummaryItem {
   productId: number;
-  _sum: {
-    qtyChange: number;
-  };
+  productName: string;
+  totalIn: number;
+  totalOut: number;
+  endingStock: number;
 }
 
 export interface StockDetailItem {
+  id: number;
+  storeId: number;
   productId: number;
-  productName: string;
-  stockChanges: Array<{
-    qtyChange: number;
-    reason: StockChangeReasonEnum;
-    date: string;
-  }>;
+  qtyChange: number;
+  reason: StockChangeReasonEnum;
+  note: string;
+  adminId: number;
+  createdAt: string;
+  product: {
+    name: string;
+  };
+  admin: {
+    email: string;
+  };
 }
