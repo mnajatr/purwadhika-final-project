@@ -16,6 +16,8 @@ export function useOrders(opts?: {
   status?: string;
   q?: string;
   storeId?: number;
+  from?: Date;
+  to?: Date;
 }) {
   const queryKey = [
     "admin",
@@ -25,6 +27,8 @@ export function useOrders(opts?: {
     opts?.status ?? null,
     opts?.q ?? null,
     opts?.storeId ?? null,
+    opts?.from ?? null,
+    opts?.to ?? null,
   ];
 
   const result = useQuery<ListResp, Error>({
@@ -36,6 +40,8 @@ export function useOrders(opts?: {
         status: opts?.status,
         q: opts?.q,
         storeId: opts?.storeId,
+        from: opts?.from,
+        to: opts?.to,
       });
       return data;
     },

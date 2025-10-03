@@ -11,7 +11,7 @@ export default function Sidebar() {
     { name: "Inventory", path: "/admin/inventoryManagement" },
     { name: "Discounts", path: "/admin/discountManagement" },
     { name: "Category", path: "/admin/categoryManagement" },
-    { name: "Orders", path: "/admin/orders" },
+    { name: "Orders", path: "/admin/orderManagement" },
     { name: "Reports", path: "/admin/report" },
   ];
 

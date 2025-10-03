@@ -39,122 +39,19 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import DevUserSwitcher from "../../components/DevUserSwitcher";
-
-interface Order {
-  id: number;
-  status: string;
-  invoiceId: string;
-  createdAt: string;
-  total: number;
-  grandTotal?: number;
-  address?: {
-    recipientName?: string;
-  };
-  items?: {
-    id: number;
-    quantity: number;
-    product?: {
-      id: number;
-      name: string;
-      price: number;
-      images?: Array<{
-        imageUrl: string;
-      }>;
-    };
-  }[];
-  orderDetails?: {
-    quantity: number;
-    product: {
-      name: string;
-      images?: Array<{
-        imageUrl: string;
-      }>;
-    };
-  }[];
-}
-
-function getCurrentUserId(): string {
-  if (typeof window === "undefined") return "4";
-
-  try {
-    const stored = localStorage.getItem("devUserId");
-    console.log("fetchOrders: devUserId from localStorage:", stored);
-    if (stored && stored !== "none") {
-      return stored;
-    }
-  } catch {
-    return "4";
-  }
-
-  return "4";
-}
-
-async function fetchOrders(
-  filters: {
-    page?: number;
-    pageSize?: number;
-    status?: string | null;
-    q?: string | null;
-    dateFrom?: string;
-    dateTo?: string;
-  } = {}
-) {
-  const params = new URLSearchParams();
-  
-  if (typeof filters.page === "number")
-    params.append("page", String(filters.page));
-  if (typeof filters.pageSize === "number")
-    params.append("pageSize", String(filters.pageSize));
-  if (filters.status) params.append("status", filters.status);
-  if (filters.q) params.append("q", filters.q);
-  if (filters.dateFrom) params.append("dateFrom", filters.dateFrom);
-  if (filters.dateTo) params.append("dateTo", filters.dateTo);
-
-  const currentUserId = getCurrentUserId();
-  const url = `http://localhost:8000/api/orders?${params.toString()}`;
-  console.log("Fetching orders from:", url, "for user:", currentUserId);
-
-  const response = await fetch(url, {
-    headers: {
-      "x-dev-user-id": currentUserId,
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-
-  const data = await response.json();
-  console.log("API Response:", data);
-
-  if (data.success && data.data) {
-    return data.data;
-  }
-
-  return { items: [], total: 0, page: 1, pageSize: filters.pageSize ?? 10 };
-}
+import { useCustomerOrders, type Order } from "@/hooks/useCustomerOrders";
 
 export default function OrdersPage() {
   const router = useRouter();
-  const [orders, setOrders] = React.useState<Order[]>([]);
-  const [total, setTotal] = React.useState<number>(0);
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [isPaginating, setIsPaginating] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-
-  const [q, setQ] = React.useState<string | null>(null);
   const [searchInput, setSearchInput] = React.useState<string>("");
+  const [q, setQ] = React.useState<string | null>(null);
   const [dateRange, setDateRange] = React.useState<{
     from: Date | undefined;
     to: Date | undefined;
   }>({ from: undefined, to: undefined });
   const [status, setStatus] = React.useState<string | null>(null);
-
   const [page, setPage] = React.useState<number>(1);
   const pageSize = 10;
-
-  const isFirstLoad = React.useRef(true);
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -165,73 +62,17 @@ export default function OrdersPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  React.useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      if (isFirstLoad.current) {
-        setIsLoading(true);
-        isFirstLoad.current = false;
-      } else {
-        setIsPaginating(true);
-      }
-      setError(null);
+  const { data, isLoading, isFetching, error } = useCustomerOrders({
+    page,
+    pageSize,
+    status,
+    q,
+    dateRange,
+  });
 
-      try {
-        let dateFrom: string | undefined;
-        let dateTo: string | undefined;
-        
-        if (dateRange.from) {
-          const startOfDay = new Date(dateRange.from);
-          startOfDay.setHours(0, 0, 0, 0);
-          dateFrom = startOfDay.toISOString();
-        }
-        
-        if (dateRange.to) {
-          const endOfDay = new Date(dateRange.to);
-          endOfDay.setHours(23, 59, 59, 999);
-          dateTo = endOfDay.toISOString();
-        } else if (dateRange.from && !dateRange.to) {
-          const endOfDay = new Date(dateRange.from);
-          endOfDay.setHours(23, 59, 59, 999);
-          dateTo = endOfDay.toISOString();
-        }
-        
-        if (dateFrom || dateTo) {
-          console.log("📅 Date range filter:", {
-            from: dateRange.from ? format(dateRange.from, "PPP") : "Not set",
-            to: dateRange.to ? format(dateRange.to, "PPP") : "Not set",
-            dateFrom,
-            dateTo,
-          });
-        }
-        
-        const resp = await fetchOrders({
-          page,
-          pageSize,
-          status,
-          q,
-          dateFrom,
-          dateTo,
-        });
-        if (!mounted) return;
-        setOrders(resp.items || []);
-        setTotal(resp.total ?? 0);
-      } catch (err) {
-        console.error("❌ Error loading orders:", err);
-        setError(err instanceof Error ? err.message : "Unknown error");
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-          setIsPaginating(false);
-        }
-      }
-    };
-
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, [page, status, q, dateRange.from, dateRange.to]);
+  const orders: Order[] = data?.items || [];
+  const total = data?.total ?? 0;
+  const isPaginating = isFetching && !isLoading;
 
   const statusConfig: Record<
     string,
@@ -348,7 +189,7 @@ export default function OrdersPage() {
     );
   }
 
-  if (error) {
+  if (error && !data) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-md w-full text-center">
@@ -357,7 +198,7 @@ export default function OrdersPage() {
           </div>
           <h2 className="text-2xl font-bold mb-2">Something went wrong</h2>
           <p className="text-muted-foreground mb-6">
-            {error || "Failed to load your orders. Please try again."}
+            {error instanceof Error ? error.message : "Failed to load your orders. Please try again."}
           </p>
           <Button
             onClick={() => window.location.reload()}
