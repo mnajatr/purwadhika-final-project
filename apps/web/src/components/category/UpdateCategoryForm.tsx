@@ -38,8 +38,8 @@ export default function UpdateCategoryForm({
       await updateCategoryMutation.mutateAsync({ id, data });
       alert("✅ Category updated successfully!");
       onSuccess?.();
-    } catch (err: any) {
-      alert(err.message || "❌ Failed to update category");
+    } catch (err) {
+      alert((err as Error)?.message ?? "❌ Failed to create category");
     }
   };
 
@@ -56,7 +56,7 @@ export default function UpdateCategoryForm({
         <input
           type="text"
           {...register("name")}
-          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-amber-700"
         />
         {errors.name && (
           <p className="text-red-500 text-sm">{errors.name.message}</p>
@@ -68,7 +68,7 @@ export default function UpdateCategoryForm({
         <label className="block font-medium mb-1">Description</label>
         <textarea
           {...register("description")}
-          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-amber-700"
           rows={3}
         />
         {errors.description && (
@@ -79,7 +79,7 @@ export default function UpdateCategoryForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
+        className="w-full bg-primary-gradient text-white py-2 rounded hover:bg-amber-700 disabled:opacity-50"
       >
         {isSubmitting ? "Updating..." : "Update Category"}
       </button>

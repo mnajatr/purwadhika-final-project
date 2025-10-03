@@ -24,8 +24,8 @@ export default function CreateCategoryForm() {
       await createCategory(data);
       alert("✅ Category created successfully!");
       reset();
-    } catch (err: any) {
-      alert(err.message || "❌ Failed to create category");
+    } catch (err) {
+      alert((err as Error)?.message ?? "❌ Failed to create category");
     }
   };
 
@@ -41,7 +41,7 @@ export default function CreateCategoryForm() {
         <input
           type="text"
           {...register("name")}
-          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-amber-700"
         />
         {errors.name && (
           <p className="text-red-500 text-sm">{errors.name.message}</p>
@@ -52,7 +52,7 @@ export default function CreateCategoryForm() {
         <label className="block font-medium mb-1">Description</label>
         <textarea
           {...register("description")}
-          className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500"
+          className="w-full p-2 border rounded focus:ring-2 focus:ring-amber-700"
           rows={3}
         />
         {errors.description && (
@@ -63,7 +63,7 @@ export default function CreateCategoryForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
+        className="w-full bg-primary-gradient text-white py-2 rounded hover:bg-amber-700 disabled:opacity-50"
       >
         {isSubmitting ? "Creating..." : "Create Category"}
       </button>

@@ -86,7 +86,7 @@ export default function ProductsList() {
         <input
           type="text"
           placeholder="Search products..."
-          className="w-full md:w-2/3 lg:w-1/2 px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full md:w-2/3 lg:w-1/2 px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-700"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -99,7 +99,7 @@ export default function ProductsList() {
             key={category.id}
             className={`px-4 py-2 rounded-full text-sm font-medium transition ${
               selectedCategory === category.name
-                ? "bg-indigo-600 text-white shadow-md"
+                ? "bg-primary-gradient text-white shadow-md"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300"
             }`}
             onClick={() => setSelectedCategory(category.name)}
@@ -146,7 +146,7 @@ export default function ProductsList() {
                   <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-grow">
                     {product.description}
                   </p>
-                  <p className="text-indigo-600 font-bold mb-3">
+                  <p className="text-amber-700 font-bold mb-3">
                     Rp {Number(product.price || 0).toLocaleString("id-ID")}
                   </p>
                   <div className="flex items-center justify-between mb-4">
@@ -165,7 +165,7 @@ export default function ProductsList() {
                     className={`block text-center py-2 px-4 rounded-lg transition mt-auto ${
                       outOfStock
                         ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                        : "bg-indigo-600 text-white hover:bg-indigo-700"
+                        : "bg-primary-gradient text-white hover:bg-amber-700"
                     }`}
                     onClick={(e) => outOfStock && e.preventDefault()}
                   >
