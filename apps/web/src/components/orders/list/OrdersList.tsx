@@ -30,8 +30,6 @@ import { useCustomerOrders, type Order } from "@/hooks/useCustomerOrders";
 import OrderCard from "./OrderCard";
 
 export default function OrdersList() {
-  
-  
   const [searchInput, setSearchInput] = React.useState<string>("");
   const [q, setQ] = React.useState<string | null>(null);
   const [dateRange, setDateRange] = React.useState<{
@@ -62,8 +60,6 @@ export default function OrdersList() {
   const orders: Order[] = data?.items || [];
   const total = data?.total ?? 0;
   const isPaginating = isFetching && !isLoading;
-
-  
 
   const statusConfig: Record<
     string,
