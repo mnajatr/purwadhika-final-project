@@ -24,7 +24,7 @@ export const PaymentStatusEnum = z.enum([
   "PENDING",
   "PAID",
   "FAILED",
-  "EXPIRED",
+  "REJECTED",
 ]);
 
 export const ProductImageSchema = z.object({
