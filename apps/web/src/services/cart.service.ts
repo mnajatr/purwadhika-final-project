@@ -12,8 +12,10 @@ import {
 export class CartService {
   private readonly basePath = "/cart";
 
-  async getCart(userId: number, storeId?: number): Promise<ApiResponse<Cart | null>> {
-    // Validate inputs
+  async getCart(
+    userId: number,
+    storeId?: number
+  ): Promise<ApiResponse<Cart | null>> {
     if (!userId || userId <= 0) {
       throw new Error("Invalid user");
     }
@@ -23,19 +25,23 @@ export class CartService {
     return apiClient.get<ApiResponse<Cart | null>>(this.basePath, params);
   }
 
-  async getCartTotals(userId: number, storeId?: number): Promise<ApiResponse<CartTotals>> {
-    // Validate inputs
+  async getCartTotals(
+    userId: number,
+    storeId?: number
+  ): Promise<ApiResponse<CartTotals>> {
     if (!userId || userId <= 0) {
       throw new Error("Invalid user");
     }
 
     const params: Record<string, string> = { userId: userId.toString() };
     if (storeId && storeId > 0) params.storeId = storeId.toString();
-    return apiClient.get<ApiResponse<CartTotals>>(`${this.basePath}/totals`, params);
+    return apiClient.get<ApiResponse<CartTotals>>(
+      `${this.basePath}/totals`,
+      params
+    );
   }
 
   async addToCart(data: AddToCartInput): Promise<ApiResponse<Cart>> {
-    // Validate data using Zod schema
     const validatedData = AddToCartSchema.parse(data);
     return apiClient.post<ApiResponse<Cart>>(this.basePath, validatedData);
   }
@@ -45,12 +51,10 @@ export class CartService {
     data: UpdateCartItemInput,
     storeId?: number
   ): Promise<ApiResponse<Cart>> {
-    // Validate inputs
     if (!itemId || itemId <= 0) {
       throw new Error("Invalid item");
     }
 
-    // Validate data using Zod schema
     const validatedData = UpdateCartItemSchema.parse(data);
     const url =
       storeId && storeId > 0
@@ -59,8 +63,11 @@ export class CartService {
     return apiClient.patch<ApiResponse<Cart>>(url, validatedData);
   }
 
-  async removeCartItem(itemId: number, userId: number, storeId?: number): Promise<ApiResponse<Cart>> {
-    // Validate inputs
+  async removeCartItem(
+    itemId: number,
+    userId: number,
+    storeId?: number
+  ): Promise<ApiResponse<Cart>> {
     if (!itemId || itemId <= 0) {
       throw new Error("Invalid item");
     }
@@ -77,8 +84,10 @@ export class CartService {
     });
   }
 
-  async clearCart(userId: number, storeId?: number): Promise<ApiResponse<Cart>> {
-    // Validate inputs
+  async clearCart(
+    userId: number,
+    storeId?: number
+  ): Promise<ApiResponse<Cart>> {
     if (!userId || userId <= 0) {
       throw new Error("Invalid user");
     }

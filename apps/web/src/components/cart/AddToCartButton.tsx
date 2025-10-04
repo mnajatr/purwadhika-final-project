@@ -13,7 +13,7 @@ interface AddToCartButtonProps {
   qty?: number;
   disabled?: boolean;
   className?: string;
-  productName?: string; // Optional product name for better toast message
+  productName?: string;
 }
 
 export function AddToCartButton({
@@ -25,10 +25,9 @@ export function AddToCartButton({
   className,
   productName,
 }: AddToCartButtonProps) {
-  // derive storeId from prop or global nearest store
   const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? 1;
   const effectiveStoreId = storeId ?? nearestStoreId;
-  const addToCartMutation = useAddToCart(userId, effectiveStoreId);
+  const addToCartMutation = useAddToCart(userId);
 
   const handleClick = () => {
     const data: AddToCartRequest = {
@@ -40,7 +39,6 @@ export function AddToCartButton({
 
     addToCartMutation.mutate(data, {
       onSuccess: () => {
-        // Show detailed toast if product name is available, otherwise generic
         const message = productName
           ? `${qty} ${productName} added to cart!`
           : "Added to cart";

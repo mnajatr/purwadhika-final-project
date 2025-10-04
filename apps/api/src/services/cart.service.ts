@@ -86,14 +86,22 @@ export class CartService {
 
     CartValidation.validateItemId(itemId);
     CartValidation.validateStoreId(storeId);
+    CartValidation.validateQuantity(validatedData.qty);
 
     const cartItem = await CartRepo.validateCartItem(userId, itemId, storeId);
 
-    await this.inventoryService.checkCartStock(
+    const inventory = await this.inventoryService.getInventoryForProduct(
       storeId,
-      cartItem.productId,
-      validatedData.qty
+      cartItem.productId
     );
+
+    if (!inventory) {
+      throw new Error("Product not available in this store");
+    }
+
+    if (validatedData.qty > inventory.stockQty) {
+      throw new Error(`Insufficient stock. Available: ${inventory.stockQty}`);
+    }
 
     await CartRepo.updateCartItemRow(itemId, validatedData.qty);
     const updatedCart = await CartRepo.getCartWithItems(userId, storeId);
