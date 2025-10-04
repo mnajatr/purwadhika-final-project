@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -14,10 +12,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Order } from "@/hooks/useCustomerOrders";
+import { toast } from "sonner";
+import type { OrderListItem } from "@repo/schemas";
 
 interface OrderCardProps {
-  order: Order;
+  order: OrderListItem;
   index: number;
   statusConfig: Record<
     string,
@@ -43,7 +42,7 @@ export default function OrderCard({
   };
 
   const totalItems =
-    order.items?.reduce((sum, it) => sum + (it?.quantity ?? 1), 0) ?? 0;
+    order.items?.reduce((sum: number, it) => sum + (it?.qty ?? 1), 0) ?? 0;
 
   return (
     <motion.div
@@ -92,8 +91,10 @@ export default function OrderCard({
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   navigator.clipboard.writeText(String(order.id));
+                  toast.success("Order ID copied to clipboard");
                 }}
                 className="cursor-pointer"
               >
@@ -157,7 +158,13 @@ export default function OrderCard({
                   {order.items?.[0]?.product?.name || "Product Name"}
                 </h4>
                 <p className="text-sm text-muted-foreground">
-                  {formatDate(order.createdAt)}
+                  {formatDate(
+                    order.createdAt
+                      ? typeof order.createdAt === "string"
+                        ? order.createdAt
+                        : order.createdAt.toISOString()
+                      : new Date().toISOString()
+                  )}
                 </p>
               </div>
             </div>

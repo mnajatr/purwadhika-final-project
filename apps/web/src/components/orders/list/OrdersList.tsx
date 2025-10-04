@@ -2,31 +2,21 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { format } from "date-fns";
-import { Button } from "@/components/ui/button";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Search,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  ShoppingBag,
   Clock,
-  Filter,
   CheckCircle2,
   XCircle,
   Loader2,
   Truck,
   CreditCard,
 } from "lucide-react";
-import DevUserSwitcher from "@/components/DevUserSwitcher";
-import { useCustomerOrders, type Order } from "@/hooks/useCustomerOrders";
+import { useOrdersList } from "@/hooks/useOrdersList";
+import OrdersListHeader from "./OrdersListHeader";
+import OrdersListFilters from "./OrdersListFilters";
+import OrdersListLoading from "./OrdersListLoading";
+import OrdersListError from "./OrdersListError";
+import OrdersListEmpty from "./OrdersListEmpty";
+import OrdersListPagination from "./OrdersListPagination";
 import OrderCard from "./OrderCard";
 
 export default function OrdersList() {
@@ -49,7 +39,7 @@ export default function OrdersList() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const { data, isLoading, isFetching, error } = useCustomerOrders({
+  const { data, isLoading, isFetching, error } = useOrdersList({
     page,
     pageSize,
     status,
@@ -57,74 +47,55 @@ export default function OrdersList() {
     dateRange,
   });
 
-  const orders: Order[] = data?.items || [];
+  const orders = data?.items || [];
   const total = data?.total ?? 0;
   const isPaginating = isFetching && !isLoading;
 
-  const statusConfig: Record<
-    string,
-    {
-      color: string;
-      icon: React.ReactNode;
-      label: string;
-    }
-  > = {
-    PENDING_PAYMENT: {
-      color: "bg-amber-100/80 text-amber-700 border-amber-200",
-      icon: <Clock className="h-3.5 w-3.5" />,
-      label: "Pending Payment",
-    },
-    PAYMENT_REVIEW: {
-      color: "bg-orange-100/80 text-orange-700 border-orange-200",
-      icon: <CreditCard className="h-3.5 w-3.5" />,
-      label: "Payment Review",
-    },
-    PROCESSING: {
-      color: "bg-blue-100/80 text-blue-700 border-blue-200",
-      icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
-      label: "Processing",
-    },
-    SHIPPED: {
-      color: "bg-indigo-100/80 text-indigo-700 border-indigo-200",
-      icon: <Truck className="h-3.5 w-3.5" />,
-      label: "Shipped",
-    },
-    CONFIRMED: {
-      color: "bg-emerald-100/80 text-emerald-700 border-emerald-200",
-      icon: <CheckCircle2 className="h-3.5 w-3.5" />,
-      label: "Confirmed",
-    },
-    CANCELLED: {
-      color: "bg-rose-100/80 text-rose-700 border-rose-200",
-      icon: <XCircle className="h-3.5 w-3.5" />,
-      label: "Cancelled",
-    },
-  };
-
-  const statuses = React.useMemo(
-    () => [
-      { key: null, label: "All Orders" },
-      { key: "PENDING_PAYMENT", label: "Pending Payment" },
-      { key: "PAYMENT_REVIEW", label: "Payment Review" },
-      { key: "PROCESSING", label: "Processing" },
-      { key: "SHIPPED", label: "Shipped" },
-      { key: "CONFIRMED", label: "Confirmed" },
-      { key: "CANCELLED", label: "Cancelled" },
-    ],
+  const statusConfig = React.useMemo(
+    () => ({
+      PENDING_PAYMENT: {
+        color: "bg-amber-100/80 text-amber-700 border-amber-200",
+        icon: <Clock className="h-3.5 w-3.5" />,
+        label: "Pending Payment",
+      },
+      PAYMENT_REVIEW: {
+        color: "bg-orange-100/80 text-orange-700 border-orange-200",
+        icon: <CreditCard className="h-3.5 w-3.5" />,
+        label: "Payment Review",
+      },
+      PROCESSING: {
+        color: "bg-blue-100/80 text-blue-700 border-blue-200",
+        icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
+        label: "Processing",
+      },
+      SHIPPED: {
+        color: "bg-indigo-100/80 text-indigo-700 border-indigo-200",
+        icon: <Truck className="h-3.5 w-3.5" />,
+        label: "Shipped",
+      },
+      CONFIRMED: {
+        color: "bg-emerald-100/80 text-emerald-700 border-emerald-200",
+        icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+        label: "Confirmed",
+      },
+      CANCELLED: {
+        color: "bg-rose-100/80 text-rose-700 border-rose-200",
+        icon: <XCircle className="h-3.5 w-3.5" />,
+        label: "Cancelled",
+      },
+    }),
     []
   );
 
-  const noResultsForFilter = false;
-
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = React.useCallback((amount: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       maximumFractionDigits: 0,
     }).format(amount);
-  };
+  }, []);
 
-  const formatDate = (dateString: string) => {
+  const formatDate = React.useCallback((dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -132,281 +103,51 @@ export default function OrdersList() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
+  }, []);
+
+  const handleDateRangeChange = React.useCallback(
+    (range: { from: Date | undefined; to: Date | undefined }) => {
+      setDateRange(range);
+      setPage(1);
+    },
+    []
+  );
+
+  const handleStatusChange = React.useCallback((newStatus: string | null) => {
+    setStatus(newStatus);
+    setPage(1);
+  }, []);
+
+  const hasFilters = !!(q || status || dateRange.from || dateRange.to);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen">
-        {/* Gradient Header */}
-        <div className="relative border-b border-border/40 bg-gradient-to-br from-primary/5 via-accent/5 to-primary/10 backdrop-blur-sm">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-primary-gradient shadow-lg shadow-primary/20">
-                    <ShoppingBag className="h-6 w-6 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                      Your Orders
-                    </h1>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Manage and track your orders
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <DevUserSwitcher />
-            </div>
-          </div>
-        </div>
-
-        {/* Loading content */}
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div
-                key={i}
-                className="h-36 bg-gradient-to-br from-card/80 to-card/40 rounded-2xl animate-pulse border border-border/50"
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    return <OrdersListLoading />;
   }
 
   if (error && !data) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="max-w-md w-full text-center">
-          <div className="p-4 rounded-full bg-rose-100/80 dark:bg-rose-900/20 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-            <XCircle className="h-10 w-10 text-rose-600 dark:text-rose-500" />
-          </div>
-          <h2 className="text-2xl font-bold mb-2">Something went wrong</h2>
-          <p className="text-muted-foreground mb-6">
-            {error instanceof Error
-              ? error.message
-              : "Failed to load your orders. Please try again."}
-          </p>
-          <Button
-            onClick={() => window.location.reload()}
-            className="bg-primary-gradient hover:opacity-90 shadow-lg shadow-primary/25"
-          >
-            Try Again
-          </Button>
-        </div>
-      </div>
-    );
+    return <OrdersListError error={error} />;
   }
 
   return (
     <div className="min-h-screen">
-      {/* Gradient Header with Stats */}
+      <OrdersListHeader total={total} />
+
       <div className="relative border-b border-border/40 bg-gradient-to-br from-primary/5 via-accent/5 to-primary/10 backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-start justify-between mb-8">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-primary-gradient shadow-lg shadow-primary/20">
-                  <ShoppingBag className="h-6 w-6 text-primary-foreground" />
-                </div>
-                <div>
-                  <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                    Your Orders
-                  </h1>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {total > 0
-                      ? `${total} orders found`
-                      : "Manage and track your orders"}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <DevUserSwitcher />
-          </div>
-          {/* Search and Filters */}
-          <div className="space-y-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search by Order ID or Product Name..."
-                  value={searchInput}
-                  onChange={(e) => {
-                    setSearchInput(e.target.value);
-                  }}
-                  className="h-11 w-full rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                />
-              </div>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={`h-11 sm:w-72 rounded-xl border-border/60 bg-card/80 backdrop-blur-sm justify-start text-left font-normal hover:bg-card/90 transition-all ${
-                      !dateRange.from && "text-muted-foreground"
-                    }`}
-                  >
-                    <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">
-                      {dateRange.from ? (
-                        dateRange.to ? (
-                          dateRange.from.getTime() ===
-                          dateRange.to.getTime() ? (
-                            format(dateRange.from, "PPP")
-                          ) : (
-                            <>
-                              {format(dateRange.from, "MMM dd")} -{" "}
-                              {format(dateRange.to, "MMM dd, yyyy")}
-                            </>
-                          )
-                        ) : (
-                          format(dateRange.from, "PPP")
-                        )
-                      ) : (
-                        "Pick date range"
-                      )}
-                    </span>
-                    {(dateRange.from || dateRange.to) && (
-                      <X
-                        className="ml-auto h-4 w-4 flex-shrink-0 opacity-50 hover:opacity-100"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDateRange({ from: undefined, to: undefined });
-                          setPage(1);
-                        }}
-                      />
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="w-auto p-0 rounded-2xl border-border/60 shadow-lg"
-                  align="start"
-                >
-                  <div className="p-4 space-y-3">
-                    <CalendarComponent
-                      mode="range"
-                      selected={{
-                        from: dateRange.from,
-                        to: dateRange.to,
-                      }}
-                      onSelect={(
-                        range: { from?: Date; to?: Date } | undefined
-                      ) => {
-                        setDateRange({
-                          from: range?.from,
-                          to: range?.to,
-                        });
-                        setPage(1);
-                      }}
-                      initialFocus
-                      className="rounded-lg"
-                      numberOfMonths={1}
-                    />
-                    {(dateRange.from || dateRange.to) && (
-                      <div className="flex gap-2 pt-3 border-t border-border/40">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setDateRange({ from: undefined, to: undefined });
-                            setPage(1);
-                          }}
-                          className="flex-1 rounded-lg"
-                        >
-                          Clear
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            const today = new Date();
-                            setDateRange({ from: today, to: today });
-                            setPage(1);
-                          }}
-                          className="flex-1 rounded-lg bg-primary-gradient hover:opacity-90"
-                        >
-                          Today
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="flex flex-wrap justify-center gap-3">
-              {statuses.map((s) => {
-                const active = status === s.key;
-                return (
-                  <motion.button
-                    key={s.key || "all"}
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                    animate={{
-                      backgroundColor: active
-                        ? "rgb(152, 224, 121)"
-                        : "rgb(229, 246, 220)",
-                      color: active ? "rgb(255, 255, 255)" : "rgb(74, 122, 50)",
-                    }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 300,
-                      damping: 25,
-                    }}
-                    onClick={() => {
-                      setStatus(s.key);
-                      setPage(1);
-                    }}
-                    className={`relative overflow-hidden whitespace-nowrap rounded-full px-6 py-2.5 text-sm font-medium shadow-sm ${
-                      active ? "shadow-lg shadow-[#98E079]/40" : ""
-                    }`}
-                  >
-                    {active && (
-                      <motion.div
-                        layoutId="activeStatus"
-                        className="absolute inset-0 bg-gradient-to-r from-[#98E079] to-[#BBEB88]"
-                        initial={false}
-                        transition={{
-                          type: "spring",
-                          stiffness: 300,
-                          damping: 30,
-                        }}
-                      />
-                    )}
-                    <span className="relative z-10">{s.label}</span>
-                  </motion.button>
-                );
-              })}
-            </div>
-          </div>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+          <OrdersListFilters
+            searchInput={searchInput}
+            onSearchChange={setSearchInput}
+            dateRange={dateRange}
+            onDateRangeChange={handleDateRangeChange}
+            status={status}
+            onStatusChange={handleStatusChange}
+          />
         </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        {noResultsForFilter ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="p-6 rounded-2xl bg-muted/30 mb-6">
-              <Filter className="h-12 w-12 text-muted-foreground/40" />
-            </div>
-            <h3 className="text-xl font-bold mb-2">No orders found</h3>
-            <p className="text-muted-foreground mb-6 max-w-md">
-              No orders match your current filters. Try adjusting your search
-              criteria to find what you&apos;re looking for.
-            </p>
-          </div>
-        ) : orders.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="p-6 rounded-2xl bg-muted/30 mb-6">
-              <ShoppingBag className="h-12 w-12 text-muted-foreground/40" />
-            </div>
-            <h3 className="text-xl font-bold mb-2">No orders yet</h3>
-            <p className="text-muted-foreground max-w-md">
-              When you place your first order, it will appear here. Start
-              shopping to see your order history!
-            </p>
-          </div>
+        {orders.length === 0 ? (
+          <OrdersListEmpty hasFilters={hasFilters} />
         ) : (
           <>
             <div className="relative">
@@ -447,76 +188,13 @@ export default function OrdersList() {
             </div>
 
             {orders.length > 0 && (
-              <div className="mt-8 p-6 rounded-2xl border border-border/50 bg-gradient-to-br from-card/90 to-card/60 backdrop-blur-sm">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="text-sm text-muted-foreground order-2 sm:order-1">
-                    Showing{" "}
-                    <span className="font-semibold text-foreground">
-                      {orders.length}
-                    </span>{" "}
-                    of{" "}
-                    <span className="font-semibold text-foreground">
-                      {total}
-                    </span>{" "}
-                    orders
-                  </div>
-
-                  <div className="flex items-center gap-2 order-1 sm:order-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page <= 1}
-                      className="h-10 rounded-xl border-border/60 hover:bg-muted/80 disabled:opacity-50"
-                    >
-                      <ChevronLeft className="mr-1.5 h-4 w-4" />
-                      Previous
-                    </Button>
-
-                    <div className="hidden sm:flex items-center gap-1">
-                      {Array.from(
-                        { length: Math.min(5, Math.ceil(total / pageSize)) },
-                        (_, i) => {
-                          const pageNum = Math.max(1, page - 2) + i;
-                          if (pageNum > Math.ceil(total / pageSize))
-                            return null;
-
-                          return (
-                            <Button
-                              key={pageNum}
-                              variant={pageNum === page ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setPage(pageNum)}
-                              className={`h-10 w-10 p-0 rounded-xl ${
-                                pageNum === page
-                                  ? "bg-primary-gradient shadow-lg shadow-primary/25"
-                                  : "border-border/60 hover:bg-muted/80"
-                              }`}
-                            >
-                              {pageNum}
-                            </Button>
-                          );
-                        }
-                      )}
-                    </div>
-
-                    <div className="sm:hidden px-4 py-2 rounded-xl bg-muted/50 text-sm font-medium">
-                      {page} / {Math.ceil(total / pageSize)}
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage((p) => p + 1)}
-                      disabled={page * pageSize >= total}
-                      className="h-10 rounded-xl border-border/60 hover:bg-muted/80 disabled:opacity-50"
-                    >
-                      Next
-                      <ChevronRight className="ml-1.5 h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              <OrdersListPagination
+                page={page}
+                pageSize={pageSize}
+                total={total}
+                ordersCount={orders.length}
+                onPageChange={setPage}
+              />
             )}
           </>
         )}

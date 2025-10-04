@@ -7,30 +7,27 @@ import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
-const requireAuth = process.env.NODE_ENV === "production";
-const maybeAuth = requireAuth ? [authMiddleware] : [];
+router.post("/", authMiddleware, checkoutController.createOrder);
 
-router.post("/", ...maybeAuth, checkoutController.createOrder);
+router.get("/", authMiddleware, checkoutController.listOrders);
 
-router.get("/", ...maybeAuth, checkoutController.listOrders);
-
-router.get("/counts", ...maybeAuth, fulfillmentController.getOrderCounts);
+router.get("/counts", authMiddleware, fulfillmentController.getOrderCounts);
 
 router.post(
   "/:id/payment-proof",
-  ...maybeAuth,
+  authMiddleware,
   upload.single("proof"),
   paymentController.uploadPaymentProof
 );
 
-router.post("/:id/snap", ...maybeAuth, paymentController.createSnap);
+router.post("/:id/snap", authMiddleware, paymentController.createSnap);
 
-router.patch("/:id/cancel", ...maybeAuth, fulfillmentController.cancelOrder);
+router.patch("/:id/cancel", authMiddleware, fulfillmentController.cancelOrder);
 
-router.patch("/:id/confirm", ...maybeAuth, fulfillmentController.confirmOrder);
+router.patch("/:id/confirm", authMiddleware, fulfillmentController.confirmOrder);
 
-router.patch("/:id/ship", ...maybeAuth, fulfillmentController.shipOrder);
+router.patch("/:id/ship", authMiddleware, fulfillmentController.shipOrder);
 
-router.get("/:id", ...maybeAuth, checkoutController.getOrderById);
+router.get("/:id", authMiddleware, checkoutController.getOrderById);
 
 export default router;
