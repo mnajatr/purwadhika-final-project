@@ -1,5 +1,12 @@
 import { format } from "date-fns";
-import { Receipt, User, Store, CreditCard, Calendar, Clock } from "lucide-react";
+import {
+  Receipt,
+  User,
+  Store,
+  CreditCard,
+  Calendar,
+  Clock,
+} from "lucide-react";
 
 interface OrderDetailSummaryProps {
   userId: number;
@@ -20,9 +27,7 @@ export default function OrderDetailSummary({
     <div className="bg-card border border-border rounded-xl shadow-sm p-6">
       <div className="flex items-center gap-2 mb-6">
         <Receipt className="w-5 h-5 text-primary" />
-        <h2 className="text-lg font-semibold text-foreground">
-          Order Summary
-        </h2>
+        <h2 className="text-lg font-semibold text-foreground">Order Summary</h2>
       </div>
 
       <div className="grid grid-cols-2 gap-6">

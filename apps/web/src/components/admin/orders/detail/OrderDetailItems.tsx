@@ -1,20 +1,8 @@
 import { ShoppingCart } from "lucide-react";
-
-interface OrderItem {
-  id: number;
-  productId: number;
-  qty: number;
-  unitPriceSnapshot: string;
-  totalAmount: number;
-  product: {
-    id: number;
-    name: string;
-    price: string;
-  };
-}
+import type { AdminOrderDetailItem } from "@repo/schemas";
 
 interface OrderDetailItemsProps {
-  items: OrderItem[];
+  items: AdminOrderDetailItem[];
   totalItems: number;
 }
 
@@ -27,9 +15,7 @@ export default function OrderDetailItems({
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <ShoppingCart className="w-5 h-5 text-primary" />
-          <h2 className="text-lg font-semibold text-foreground">
-            Order Items
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground">Order Items</h2>
         </div>
         <span className="text-sm text-muted-foreground">
           {totalItems} {totalItems === 1 ? "item" : "items"}

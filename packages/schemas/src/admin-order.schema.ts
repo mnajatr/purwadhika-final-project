@@ -81,3 +81,46 @@ export type AdminOrdersListResponse = z.infer<
   typeof AdminOrdersListResponseSchema
 >;
 export type AdminOrdersFilter = z.infer<typeof AdminOrdersFilterSchema>;
+
+// Order Detail Schema (for individual order view)
+export const AdminOrderDetailItemSchema = z.object({
+  id: idSchema,
+  productId: idSchema,
+  qty: z.number().int().positive(),
+  unitPriceSnapshot: z.string(),
+  totalAmount: z.number(),
+  product: AdminOrderProductSchema,
+});
+
+export const AdminOrderDetailPaymentSchema = z.object({
+  id: idSchema,
+  status: PaymentStatusEnum,
+  amount: z.number(),
+  proofImageUrl: z.string().nullable(),
+  reviewedAt: z.string().nullable(),
+  paidAt: z.string().nullable(),
+  createdAt: z.string(),
+});
+
+export const AdminOrderDetailSchema = z.object({
+  id: idSchema,
+  userId: idSchema,
+  storeId: idSchema,
+  status: OrderStatusEnum,
+  paymentMethod: PaymentMethodEnum,
+  subtotalAmount: z.number(),
+  shippingCost: z.number(),
+  discountTotal: z.number(),
+  grandTotal: z.number(),
+  totalItems: z.number().int().positive(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  payment: AdminOrderDetailPaymentSchema.nullable(),
+  items: z.array(AdminOrderDetailItemSchema),
+});
+
+export type AdminOrderDetailItem = z.infer<typeof AdminOrderDetailItemSchema>;
+export type AdminOrderDetailPayment = z.infer<
+  typeof AdminOrderDetailPaymentSchema
+>;
+export type AdminOrderDetail = z.infer<typeof AdminOrderDetailSchema>;

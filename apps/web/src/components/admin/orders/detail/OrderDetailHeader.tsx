@@ -1,4 +1,13 @@
-import { ArrowLeft, CheckCircle2, Truck, XCircle, Clock, Package, Eye, FileText } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Truck,
+  XCircle,
+  Clock,
+  Package,
+  Eye,
+  FileText,
+} from "lucide-react";
 
 interface OrderDetailHeaderProps {
   orderId: number;

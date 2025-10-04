@@ -1,19 +1,10 @@
 import { format } from "date-fns";
 import Image from "next/image";
 import { CreditCard, FileText, ZoomIn } from "lucide-react";
-
-interface PaymentDetails {
-  id: number;
-  status: string;
-  amount: number;
-  proofImageUrl?: string;
-  reviewedAt?: string;
-  paidAt?: string;
-  createdAt: string;
-}
+import type { AdminOrderDetailPayment } from "@repo/schemas";
 
 interface OrderDetailPaymentProps {
-  payment: PaymentDetails;
+  payment: AdminOrderDetailPayment;
   onImageClick: () => void;
 }
 

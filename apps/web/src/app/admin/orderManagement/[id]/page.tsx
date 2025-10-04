@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Sidebar from "@/components/admin/sidebar";
-import { adminOrdersService as ordersService } from "@/services/adminOrders.service";
+import { adminOrdersService } from "@/services/adminOrders.service";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import OrderDetailHeader from "@/components/admin/orders/detail/OrderDetailHeader";
 import OrderDetailSummary from "@/components/admin/orders/detail/OrderDetailSummary";
@@ -12,41 +12,14 @@ import OrderDetailItems from "@/components/admin/orders/detail/OrderDetailItems"
 import OrderDetailPayment from "@/components/admin/orders/detail/OrderDetailPayment";
 import OrderDetailTotal from "@/components/admin/orders/detail/OrderDetailTotal";
 import { XCircle, X } from "lucide-react";
+import type { AdminOrderDetail } from "@repo/schemas";
 
-type OrderDetail = {
-  id: number;
-  userId: number;
-  storeId: number;
-  status: string;
-  paymentMethod: string;
-  subtotalAmount: number;
-  shippingCost: number;
-  discountTotal: number;
-  grandTotal: number;
-  totalItems: number;
-  createdAt: string;
-  updatedAt: string;
-  payment?: {
-    id: number;
-    status: string;
-    amount: number;
-    proofImageUrl?: string;
-    reviewedAt?: string;
-    paidAt?: string;
-    createdAt: string;
-  };
-  items: Array<{
-    id: number;
-    productId: number;
-    qty: number;
-    unitPriceSnapshot: string;
-    totalAmount: number;
-    product: {
-      id: number;
-      name: string;
-      price: string;
-    };
-  }>;
+type ConfirmDialogState = {
+  open: boolean;
+  action: "confirm" | "ship" | "cancel" | null;
+  title: string;
+  description: string;
+  variant: "default" | "destructive" | "warning";
 };
 
 export default function OrderDetailPage() {
@@ -54,20 +27,14 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const orderId = params.id as string;
 
-  const [order, setOrder] = useState<OrderDetail | null>(null);
+  const [order, setOrder] = useState<AdminOrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>(
     {}
   );
   const [isImageZoomed, setIsImageZoomed] = useState(false);
-  const [confirmDialog, setConfirmDialog] = useState<{
-    open: boolean;
-    action: "confirm" | "ship" | "cancel" | null;
-    title: string;
-    description: string;
-    variant: "default" | "destructive" | "warning";
-  }>({
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
     open: false,
     action: null,
     title: "",
@@ -78,8 +45,9 @@ export default function OrderDetailPage() {
   const fetchOrderDetail = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await ordersService.getOrderById(Number(orderId));
-      setOrder(data as OrderDetail);
+      setError(null);
+      const data = await adminOrdersService.getOrderById(Number(orderId));
+      setOrder(data);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to fetch order details";
@@ -159,7 +127,7 @@ export default function OrderDetailPage() {
     setActionLoading((prev) => ({ ...prev, [action]: true }));
 
     try {
-      await ordersService.updateOrderStatus(order.id, action);
+      await adminOrdersService.updateOrderStatus(order.id, action);
       alert(`Order #${order.id} ${actionNames[action]}ed successfully!`);
       await fetchOrderDetail(); // Refresh the order details
     } catch (error: unknown) {
@@ -171,17 +139,17 @@ export default function OrderDetailPage() {
     }
   };
 
-  const canConfirmPayment = (order: OrderDetail) => {
+  const canConfirmPayment = (order: AdminOrderDetail) => {
     return (
       order.status === "PAYMENT_REVIEW" && order.payment?.status === "PENDING"
     );
   };
 
-  const canShip = (order: OrderDetail) => {
+  const canShip = (order: AdminOrderDetail) => {
     return order.status === "PROCESSING";
   };
 
-  const canCancel = (order: OrderDetail) => {
+  const canCancel = (order: AdminOrderDetail) => {
     return ["PENDING_PAYMENT", "PAYMENT_REVIEW", "PROCESSING"].includes(
       order.status
     );

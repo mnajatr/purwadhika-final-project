@@ -1,8 +1,10 @@
 import apiClient from "@/lib/axios-client";
 import {
   AdminOrdersListResponseSchema,
+  AdminOrderDetailSchema,
   type AdminOrdersListResponse,
   type AdminOrdersFilter,
+  type AdminOrderDetail,
 } from "@repo/schemas";
 
 class AdminOrdersService {
@@ -45,6 +47,20 @@ class AdminOrdersService {
     return parsed.data;
   }
 
+  async getOrderById(orderId: number): Promise<AdminOrderDetail> {
+    const endpoint = `${this.basePath}/${orderId}`;
+    const response = await apiClient.get<{ 
+      success: boolean; 
+      data: unknown;
+    }>(endpoint);
+    
+    const parsed = AdminOrderDetailSchema.safeParse(response.data);
+    if (!parsed.success) {
+      throw new Error(`Invalid order detail response: ${parsed.error.message}`);
+    }
+    return parsed.data;
+  }
+
   async updateOrderStatus(
     orderId: number,
     action: "confirm" | "ship" | "cancel"
@@ -56,16 +72,10 @@ class AdminOrdersService {
     }>(endpoint);
     return response;
   }
-
-  async getOrderById(orderId: number) {
-    const endpoint = `${this.basePath}/${orderId}`;
-    const response = await apiClient.get<{ success: boolean; data: unknown }>(
-      endpoint
-    );
-    return response.data;
-  }
 }
 
 export const adminOrdersService = new AdminOrdersService();
 export const getAdminOrders = (opts?: AdminOrdersFilter) =>
   adminOrdersService.getOrders(opts);
+export const getAdminOrderById = (orderId: number) =>
+  adminOrdersService.getOrderById(orderId);
