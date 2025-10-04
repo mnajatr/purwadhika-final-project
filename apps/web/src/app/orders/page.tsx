@@ -1,6 +1,6 @@
 "use client";
 
-import OrdersList from "../../components/orders/OrdersList";
+import { OrdersList } from "@/components/orders";
 
 export default function OrdersPage() {
   return <OrdersList />;

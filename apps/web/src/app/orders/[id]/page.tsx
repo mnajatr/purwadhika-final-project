@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, RefreshCw } from "lucide-react";
 
-import OrderOverview from "@/components/orders/OrderOverview";
+import { OrderOverview } from "@/components/orders";
 import { useGetOrder, useCancelOrder } from "@/hooks/useOrder";
 import { AutoPaymentPopup } from "@/components/payment";
 

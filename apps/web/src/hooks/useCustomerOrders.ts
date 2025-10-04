@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
 
 interface Order {
   id: number;
@@ -90,7 +89,7 @@ async function fetchOrders(
 
   const currentUserId = getCurrentUserId();
   const url = `http://localhost:8000/api/orders?${params.toString()}`;
-  console.log("Fetching orders from:", url, "for user:", currentUserId);
+  
 
   const response = await fetch(url, {
     headers: {
@@ -104,9 +103,10 @@ async function fetchOrders(
   }
 
   const data = await response.json();
-  console.log("API Response:", data);
+  
 
-  if (data.success && data.data) {
+  // API returns: { message: "...", data: { items, total, page, pageSize, pagination } }
+  if (data.data) {
     return data.data;
   }
 
@@ -137,12 +137,7 @@ export function useCustomerOrders({ page, pageSize, status, q, dateRange }: UseC
       }
       
       if (dateFrom || dateTo) {
-        console.log("📅 Date range filter:", {
-          from: dateRange.from ? format(dateRange.from, "PPP") : "Not set",
-          to: dateRange.to ? format(dateRange.to, "PPP") : "Not set",
-          dateFrom,
-          dateTo,
-        });
+        // Date range filter is applied; keep behavior but don't log in production
       }
       
       return fetchOrders({
