@@ -2,7 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { getAdminOrders } from "@/services/adminOrders.service";
-import type { AdminOrdersFilter, AdminOrderListItem, AdminOrdersListResponse } from "@repo/schemas";
+import type {
+  AdminOrdersFilter,
+  AdminOrderListItem,
+  AdminOrdersListResponse,
+} from "@repo/schemas";
 
 type UseOrdersResult = {
   items: AdminOrderListItem[];

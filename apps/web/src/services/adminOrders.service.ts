@@ -15,13 +15,13 @@ class AdminOrdersService {
     if (opts?.status) params.status = opts.status;
     if (opts?.q) params.q = opts.q;
     if (typeof opts?.storeId === "number") params.storeId = opts.storeId;
-    
+
     if (opts?.from) {
       const startOfDay = new Date(opts.from);
       startOfDay.setHours(0, 0, 0, 0);
       params.dateFrom = startOfDay.toISOString();
     }
-    
+
     if (opts?.to) {
       const endOfDay = new Date(opts.to);
       endOfDay.setHours(23, 59, 59, 999);
@@ -33,11 +33,11 @@ class AdminOrdersService {
       params.dateTo = endOfDay.toISOString();
     }
 
-    const response = await apiClient.get<{ success: boolean; data: AdminOrdersListResponse }>(
-      this.basePath,
-      params
-    );
-    
+    const response = await apiClient.get<{
+      success: boolean;
+      data: AdminOrdersListResponse;
+    }>(this.basePath, params);
+
     const parsed = AdminOrdersListResponseSchema.safeParse(response.data);
     if (!parsed.success) {
       throw new Error(`Invalid admin orders response: ${parsed.error.message}`);
@@ -67,4 +67,5 @@ class AdminOrdersService {
 }
 
 export const adminOrdersService = new AdminOrdersService();
-export const getAdminOrders = (opts?: AdminOrdersFilter) => adminOrdersService.getOrders(opts);
+export const getAdminOrders = (opts?: AdminOrdersFilter) =>
+  adminOrdersService.getOrders(opts);

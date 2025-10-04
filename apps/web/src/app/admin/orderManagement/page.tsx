@@ -6,11 +6,11 @@ import { useOrders } from "@/hooks/useOrders";
 import { adminOrdersService as ordersService } from "@/services/adminOrders.service";
 import { storesService } from "@/services/stores.service";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
-import OrdersListHeader from "@/components/admin/list/OrdersListHeader";
-import OrdersListStats from "@/components/admin/list/OrdersListStats";
-import OrdersListFilters from "@/components/admin/list/OrdersListFilters";
-import OrdersListTable from "@/components/admin/list/OrdersListTable";
-import OrdersListDevPanel from "@/components/admin/list/OrdersListDevPanel";
+import OrdersListHeader from "@/components/admin/orders/list/OrdersListHeader";
+import OrdersListStats from "@/components/admin/orders/list/OrdersListStats";
+import OrdersListFilters from "@/components/admin/orders/list/OrdersListFilters";
+import OrdersListTable from "@/components/admin/orders/list/OrdersListTable";
+import OrdersListDevPanel from "@/components/admin/orders/list/OrdersListDevPanel";
 
 type OrderStats = {
   totalCustomers: number;
@@ -30,13 +30,7 @@ export default function AdminOrdersPage() {
     undefined
   );
   const pageSize = 10;
-  const {
-    items,
-    loading,
-    error,
-    reload,
-    meta,
-  } = useOrders({
+  const { items, loading, error, reload, meta } = useOrders({
     page,
     pageSize,
     status: status || undefined,
@@ -97,8 +91,9 @@ export default function AdminOrdersPage() {
         });
 
         if (mounted && allData.items) {
-          const uniqueCustomers = new Set(allData.items.map((item) => item.userId))
-            .size;
+          const uniqueCustomers = new Set(
+            allData.items.map((item) => item.userId)
+          ).size;
           const totalRev = allData.items.reduce(
             (sum, item) => sum + item.grandTotal,
             0
@@ -175,8 +170,7 @@ export default function AdminOrdersPage() {
             setStoreIdFilter(profileResp.storeId);
           }
         }
-      } catch {
-      }
+      } catch {}
     })();
     return () => {
       mounted = false;

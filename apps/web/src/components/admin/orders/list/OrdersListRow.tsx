@@ -6,7 +6,10 @@ interface OrdersListRowProps {
   order: AdminOrderListItem;
   isSelected: boolean;
   onSelect: (orderId: number, checked: boolean) => void;
-  onOrderAction: (orderId: number, action: "confirm" | "ship" | "cancel") => void;
+  onOrderAction: (
+    orderId: number,
+    action: "confirm" | "ship" | "cancel"
+  ) => void;
   actionLoading: Record<string, boolean>;
 }
 

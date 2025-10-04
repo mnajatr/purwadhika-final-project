@@ -117,9 +117,7 @@ export default function OrdersListFilters({
                     from: dateRange.from,
                     to: dateRange.to,
                   }}
-                  onSelect={(
-                    range: { from?: Date; to?: Date } | undefined
-                  ) => {
+                  onSelect={(range: { from?: Date; to?: Date } | undefined) => {
                     onDateRangeChange({
                       from: range?.from,
                       to: range?.to,

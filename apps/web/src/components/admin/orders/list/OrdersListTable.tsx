@@ -10,7 +10,10 @@ interface OrdersListTableProps {
   selectedOrders: Set<number>;
   onSelectAll: (checked: boolean) => void;
   onSelectOrder: (orderId: number, checked: boolean) => void;
-  onOrderAction: (orderId: number, action: "confirm" | "ship" | "cancel") => void;
+  onOrderAction: (
+    orderId: number,
+    action: "confirm" | "ship" | "cancel"
+  ) => void;
   actionLoading: Record<string, boolean>;
   page: number;
   pageSize: number;
@@ -32,7 +35,8 @@ export default function OrdersListTable({
   meta,
   onPageChange,
 }: OrdersListTableProps) {
-  const isAllSelected = items.length > 0 && selectedOrders.size === items.length;
+  const isAllSelected =
+    items.length > 0 && selectedOrders.size === items.length;
   const isSomeSelected =
     selectedOrders.size > 0 && selectedOrders.size < items.length;
 

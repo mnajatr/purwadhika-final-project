@@ -1,10 +1,14 @@
 import { z } from "zod";
-import { OrderStatusEnum, PaymentMethodEnum, PaymentStatusEnum } from "./order.schema.js";
+import {
+  OrderStatusEnum,
+  PaymentMethodEnum,
+  PaymentStatusEnum,
+} from "./order.schema.js";
 
 const idSchema = z.number().int().positive();
 
 export const AdminOrderUserSchema = z.object({
-  id: idSchema, 
+  id: idSchema,
   name: z.string(),
   email: z.string(),
 });
@@ -73,5 +77,7 @@ export type AdminOrderProduct = z.infer<typeof AdminOrderProductSchema>;
 export type AdminOrderItem = z.infer<typeof AdminOrderItemSchema>;
 export type AdminOrderPayment = z.infer<typeof AdminOrderPaymentSchema>;
 export type AdminOrderListItem = z.infer<typeof AdminOrderListItemSchema>;
-export type AdminOrdersListResponse = z.infer<typeof AdminOrdersListResponseSchema>;
+export type AdminOrdersListResponse = z.infer<
+  typeof AdminOrdersListResponseSchema
+>;
 export type AdminOrdersFilter = z.infer<typeof AdminOrdersFilterSchema>;
