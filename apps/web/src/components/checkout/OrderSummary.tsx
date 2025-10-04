@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-// Button removed (idempotency UI removed)
 import { RippleButton } from "@/components/ui/ripple-button";
 import {
   Card,
@@ -15,7 +14,6 @@ import { validateCartForCheckout } from "@/utils/cartStockUtils";
 export interface Props {
   cart: Cart;
   items: Array<{ productId: number; qty: number }>;
-  // idempotency removed after testing
   onPlaceOrder: () => void;
   isProcessing: boolean;
   customer?: { fullName?: string; phone?: string; email?: string };
@@ -65,16 +63,12 @@ function calculateDiscount(
           break;
         }
 
-        // support two formats:
-        // - fraction (e.g. 0.02 means 2%)
-        // - whole percent (e.g. 2 means 2%)
         let raw = 0;
         if (amt <= 1) {
-          raw = productPrice * item.qty * amt; // fraction format
+          raw = productPrice * item.qty * amt;
         } else {
-          raw = (productPrice * item.qty * amt) / 100; // whole percent format
+          raw = (productPrice * item.qty * amt) / 100;
         }
-        // round to nearest integer currency unit before capping
         const rounded = Math.round(raw);
         const capped = discount.maxDiscount
           ? Math.min(rounded, discount.maxDiscount)
@@ -133,7 +127,7 @@ export default function OrderSummary({
 
   const discountAmount = calculateDiscount(items, cart, appliedDiscounts);
   const total = Math.max(0, subtotal - discountAmount);
-  // Compute shipping fee based on selected carrier and option
+
   function getShippingRate(method?: string | null, option?: string | null) {
     if (!method) return 0;
     const base: Record<string, number> = {
@@ -143,7 +137,6 @@ export default function OrderSummary({
       Ninja: 18000,
     };
     const baseRate = base[method] ?? 0;
-    // Option adjustments: "Hemat Kargo" gives a discount; "Reguler" uses base
     if (!option) return baseRate;
     if (option === "Hemat Kargo") return Math.round(baseRate * 0.8);
     return baseRate;
@@ -151,8 +144,7 @@ export default function OrderSummary({
 
   const shippingFee = getShippingRate(shippingMethod, shippingOption);
   const totalWithShipping = total + shippingFee;
-  // Check if cart has any out of stock items
-  // Validate stock only for the items currently selected for checkout
+
   const selectedCartItems = (cart.items || []).filter((ci) =>
     items.some((it) => it.productId === ci.productId)
   );

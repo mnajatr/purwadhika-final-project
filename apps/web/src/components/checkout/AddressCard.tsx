@@ -30,8 +30,6 @@ type Addr = {
 
 type AddressCardProps = {
   onSelect?: (addr: { id: number }) => void;
-  // If provided, component will validate each address against this store id
-  // and disable addresses that are out-of-range or served by a different store.
   checkoutStoreId?: number | null;
   userId?: number;
 };
@@ -42,7 +40,7 @@ export default function AddressCard({
   userId,
 }: AddressCardProps) {
   const [addrs, setAddrs] = React.useState<Addr[] | null>(null);
-  // per-address resolve info: map addressId -> { inRange, distanceMeters, maxRadiusKm, nearestStoreId }
+  
   type ResolveInfo = {
     inRange: boolean;
     distanceMeters?: number | null;
@@ -56,8 +54,6 @@ export default function AddressCard({
   const [selectedId, setSelectedId] = React.useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
 
-  // prevent refetching repeatedly; keep a local ref to indicate we've loaded
-  // addresses once during this client session
   const loadedRef = React.useRef(false);
   React.useEffect(() => {
     if (loadedRef.current) return;
@@ -67,7 +63,6 @@ export default function AddressCard({
       typeof window !== "undefined"
         ? sessionStorage.getItem("checkout:userId")
         : null;
-    // Prefer admin dev user selector (localStorage.devUserId) when set, otherwise sessionStorage, then seeded 4
     const userId =
       devUser && devUser !== "none"
         ? Number(devUser)
@@ -85,32 +80,29 @@ export default function AddressCard({
           setSelectedId(primary.id);
           onSelect?.({ id: primary.id });
         }
-        // If checkoutStoreId is provided, resolve each address's coverage status
         if (checkoutStoreId && Array.isArray(res) && res.length > 0) {
           (async () => {
             const map: Record<number, ResolveInfo> = {};
             for (const a of res) {
               try {
                 const uid = userId ?? 4;
-                // apiClient.get returns the response data directly in this project
                 const rr = await apiClient.get(
                   `/stores/resolve?userId=${uid}&addressId=${a.id}`
                 );
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const data: any = rr ?? {};
+                const data = rr as Record<string, unknown> ?? {};
+                const nestedData = (data.data as Record<string, unknown>) ?? data;
                 map[a.id] = {
-                  inRange: Boolean(data.inRange ?? data.data?.inRange),
+                  inRange: Boolean((nestedData.inRange ?? data.inRange)),
                   distanceMeters:
-                    data.distanceMeters ?? data.data?.distanceMeters ?? null,
+                    (data.distanceMeters as number) ?? (nestedData.distanceMeters as number) ?? null,
                   maxRadiusKm:
-                    data.maxRadiusKm ?? data.data?.maxRadiusKm ?? null,
+                    (data.maxRadiusKm as number) ?? (nestedData.maxRadiusKm as number) ?? null,
                   nearestStoreId:
-                    data.nearestStore?.id ??
-                    data.data?.nearestStore?.id ??
+                    ((data.nearestStore as Record<string, unknown>)?.id as number) ??
+                    ((nestedData.nearestStore as Record<string, unknown>)?.id as number) ??
                     null,
                 } as ResolveInfo;
               } catch {
-                // fallback: mark as out-of-range on any error
                 map[a.id] = { inRange: false };
               }
             }
@@ -140,7 +132,6 @@ export default function AddressCard({
     setDrawerOpen(false);
   };
 
-  // helper: whether an address should be treated as disabled based on resolve info
   const isDisabled = (info?: ResolveInfo | null) =>
     Boolean(
       checkoutStoreId &&
@@ -150,7 +141,6 @@ export default function AddressCard({
             info.nearestStoreId !== checkoutStoreId))
     );
 
-  // small subcomponent to render the validation warnings (red/orange boxes)
   const ValidationWarnings = ({ info }: { info?: ResolveInfo | null }) => {
     if (!info) return null;
 
@@ -227,9 +217,7 @@ export default function AddressCard({
     );
   };
 
-  // helper: choose which address to render in the compact card
   const primaryAddress = React.useMemo(() => {
-    // prefer explicit selection made by user in this component
     if (selectedId != null && addrs) {
       const found = addrs.find((x) => x.id === selectedId);
       if (found) return found;
@@ -237,7 +225,6 @@ export default function AddressCard({
     if (!addrs || addrs.length === 0) return null;
     const prim = addrs.find((x) => x.isPrimary);
     if (prim) return prim;
-    // fallback: pick first in-range address if checkoutStoreId provided
     if (checkoutStoreId) {
       const inRange = addrs.find((a) => {
         const info = resolveMap[a.id];
