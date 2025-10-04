@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, RefreshCw } from "lucide-react";
 
-import { OrderOverview } from "@/components/orders";
+import OrderOverview from "@/components/orders/detail/OrderOverview";
 import { useGetOrder, useCancelOrder } from "@/hooks/useOrder";
 import { AutoPaymentPopup } from "@/components/payment";
 
@@ -198,11 +198,10 @@ export default function OrderPage({ params }: OrderPageProps) {
             orderTotal={Number(order.grandTotal ?? 0)}
             onPaymentSuccess={() => refetch()}
             onPaymentPending={() => refetch()}
-            onPaymentError={(error) => console.log("Payment error:", error)}
+            onPaymentError={() => {}}
           />
         )}
 
-      {/* Order Overview - Full Page Design */}
       <OrderOverview
         order={{
           id: order.id,

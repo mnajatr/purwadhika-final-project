@@ -9,14 +9,63 @@ import OrderTimeline from "./OrderTimeline";
 import OrderShipment from "./OrderShipment";
 import OrderItems from "./OrderItems";
 import OrderSummary from "./OrderSummary";
-import {
-  formatCurrency,
-  formatDateShort,
-  getStatusColor,
-  getStatusHeadline,
-} from "./orderUtils";
 
-// Types
+function formatCurrency(amount: string | number): string {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(Number(amount));
+}
+
+function formatDateShort(dateString?: string): string | null {
+  return dateString
+    ? new Intl.DateTimeFormat("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).format(new Date(dateString))
+    : null;
+}
+
+function getStatusColor(status: string): string {
+  switch (status) {
+    case "COMPLETED":
+    case "CONFIRMED":
+      return "bg-emerald-100/80 text-emerald-700 border-emerald-200";
+    case "PAID":
+    case "PROCESSING":
+      return "bg-primary/10 text-primary border-primary/20";
+    case "SHIPPED":
+      return "bg-indigo-100/80 text-indigo-700 border-indigo-200";
+    case "PENDING_PAYMENT":
+      return "bg-amber-100/80 text-amber-700 border-amber-200";
+    case "CANCELLED":
+    case "EXPIRED":
+      return "bg-rose-100/80 text-rose-700 border-rose-200";
+    default:
+      return "bg-muted text-muted-foreground border-border/60";
+  }
+}
+
+function getStatusHeadline(status: string, paymentMethod: string): string {
+  const s = status.toUpperCase();
+  const pm = (paymentMethod || "").toUpperCase();
+
+  if (s === "PENDING_PAYMENT") {
+    return pm === "MANUAL_TRANSFER"
+      ? "Please upload your payment proof to complete the order"
+      : "Please complete your payment to proceed";
+  }
+  if (s === "PAYMENT_REVIEW") return "Your payment is under review";
+  if (s === "PAID" || s === "PROCESSING") return "Your order is being prepared";
+  if (s === "SHIPPED") return "Be patient, package on deliver!";
+  if (s === "COMPLETED" || s === "CONFIRMED")
+    return "Order confirmed — package delivered";
+  if (s === "CANCELLED" || s === "EXPIRED") return "Order cancelled";
+  return "Order status";
+}
+
 type OrderOverviewProps = {
   order: {
     id: number;
@@ -75,7 +124,6 @@ export default function OrderOverview({
   isLoading = false,
   CancelButton,
 }: OrderOverviewProps) {
-  // Payment countdown timer
   const [countdown, setCountdown] = useState<string | null>(null);
   
   useEffect(() => {
@@ -106,7 +154,6 @@ export default function OrderOverview({
     return () => clearInterval(id);
   }, [order.status, order.createdAt]);
 
-  // Handlers
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied!`);
@@ -135,7 +182,6 @@ export default function OrderOverview({
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
       <div className="max-w-6xl mx-auto space-y-4 p-2 sm:p-4">
-        {/* Header */}
         <OrderHeader
           orderId={order.id}
           status={order.status}
@@ -148,7 +194,6 @@ export default function OrderOverview({
           getStatusColor={getStatusColor}
         />
 
-        {/* Progress Section */}
         <div className="bg-card/80 rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm border border-border/60 mb-6">
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 mb-6">
             <OrderProgress
@@ -165,7 +210,6 @@ export default function OrderOverview({
             />
           </div>
 
-          {/* Timeline and Shipment Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
             <OrderTimeline
               status={order.status}
@@ -197,10 +241,8 @@ export default function OrderOverview({
           </div>
         </div>
 
-        {/* Items Section */}
         <OrderItems items={items} formatCurrency={formatCurrency} />
 
-        {/* Order Summary */}
         <OrderSummary
           order={order}
           items={items}

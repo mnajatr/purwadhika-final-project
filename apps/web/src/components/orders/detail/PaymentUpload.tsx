@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import type { OrderDetail } from "@/hooks/useOrder";
+import type { OrderDetail } from "@repo/schemas";
 
 interface PaymentUploadProps {
   orderId: number;
@@ -40,7 +40,7 @@ export default function PaymentUpload({
   >("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const maxFileSize = 5 * 1024 * 1024; // 5MB
+  const maxFileSize = 5 * 1024 * 1024;
   const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
   const validateFile = (file: File): string | null => {
@@ -68,7 +68,6 @@ export default function PaymentUpload({
     setErrorMessage(null);
     setUploadStatus("idle");
 
-    // Create preview URL
     const url = URL.createObjectURL(selectedFile);
     setPreviewUrl(url);
   };
@@ -89,7 +88,6 @@ export default function PaymentUpload({
       const formData = new FormData();
       formData.append("proof", file);
 
-      // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => {
           if (prev >= 90) {
@@ -122,13 +120,12 @@ export default function PaymentUpload({
       setUploadStatus("success");
       toast.success("Payment proof uploaded successfully!");
 
-      // Update cached order data
       try {
         const returnedOrder = payload.order ?? payload;
         if (returnedOrder && typeof returnedOrder === "object") {
           qc.setQueryData<OrderDetail | undefined>(
             ["order", orderId],
-            (prev) =>
+            (prev: OrderDetail | undefined) =>
               ({
                 ...(prev ?? {}),
                 ...returnedOrder,
@@ -145,7 +142,6 @@ export default function PaymentUpload({
         qc.invalidateQueries({ queryKey: ["order", orderId] });
       }
 
-      // Reset form after successful upload
       setTimeout(() => {
         handleClear();
         onUploadSuccess?.();
@@ -356,8 +352,8 @@ export default function PaymentUpload({
             <ul className="space-y-1 ml-4">
               <li>• Ensure the image is clear and readable</li>
               <li>• Include transaction details and amount</li>
-              <li>• File size should be less than 5MB</li>
-              <li>• Supported formats: JPG, PNG, WebP</li>
+              <li>• Maximum file size: 1MB</li>
+              <li>• Supported formats: JPG, JPEG, PNG</li>
             </ul>
           </div>
         </div>

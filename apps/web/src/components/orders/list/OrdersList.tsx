@@ -346,9 +346,9 @@ export default function OrdersList() {
                     whileTap={{ scale: 0.95 }}
                     animate={{
                       backgroundColor: active
-                        ? "rgb(152, 224, 121)" // #98E079
-                        : "rgb(229, 246, 220)", // Light green for inactive
-                      color: active ? "rgb(255, 255, 255)" : "rgb(74, 122, 50)", // Dark green text for inactive
+                        ? "rgb(152, 224, 121)"
+                        : "rgb(229, 246, 220)",
+                      color: active ? "rgb(255, 255, 255)" : "rgb(74, 122, 50)",
                     }}
                     transition={{
                       type: "spring",

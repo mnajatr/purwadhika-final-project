@@ -1,7 +1,13 @@
 import { apiClient } from "@/lib/axios-client";
 import type { ApiResponse } from "@/types/api";
-
-type OrderItem = { productId: number; qty: number };
+import {
+  CreateOrderItemSchema,
+  OrderDetailSchema,
+  OrdersFilterSchema,
+  type CreateOrderItem,
+  type OrderDetail,
+  type OrdersFilter,
+} from "@repo/schemas";
 
 export class OrderService {
   private base = "/orders";
@@ -9,7 +15,7 @@ export class OrderService {
   async createOrder(
     userId: number,
     storeId: number | undefined,
-    items: OrderItem[],
+    items: CreateOrderItem[],
     idempotencyKey?: string,
     userLat?: number,
     userLon?: number,
@@ -17,8 +23,15 @@ export class OrderService {
     paymentMethod?: string,
     shippingMethod?: string,
     shippingOption?: string
-  ): Promise<ApiResponse<unknown>> {
-    const body: Record<string, unknown> = { items, userId };
+  ): Promise<ApiResponse<OrderDetail>> {
+    const validatedItems = items.map((item) =>
+      CreateOrderItemSchema.parse(item)
+    );
+
+    const body: Record<string, unknown> = {
+      items: validatedItems,
+      userId,
+    };
     if (typeof storeId === "number") body.storeId = storeId;
     if (idempotencyKey) body.idempotencyKey = idempotencyKey;
     if (typeof userLat === "number") body.userLat = userLat;
@@ -27,33 +40,48 @@ export class OrderService {
     if (paymentMethod) body.paymentMethod = paymentMethod;
     if (shippingMethod) body.shippingMethod = shippingMethod;
     if (shippingOption) body.shippingOption = shippingOption;
-    return apiClient.post<ApiResponse<unknown>>(this.base, body);
+    
+    const response = await apiClient.post<ApiResponse<OrderDetail>>(
+      this.base,
+      body
+    );
+    
+    return response;
   }
 
-  async getOrder(id: number): Promise<ApiResponse<unknown>> {
-    return apiClient.get<ApiResponse<unknown>>(`${this.base}/${id}`);
+  async getOrder(id: number): Promise<ApiResponse<OrderDetail>> {
+    const response = await apiClient.get<ApiResponse<OrderDetail>>(
+      `${this.base}/${id}`
+    );
+    
+    if (response.data) {
+      const parsed = OrderDetailSchema.safeParse(response.data);
+      if (parsed.success) {
+        return { ...response, data: parsed.data };
+      }
+    }
+    
+    return response;
   }
 
-  async list(params?: {
-    q?: string | number;
-    status?: string;
-    dateFrom?: string;
-    dateTo?: string;
-    page?: number;
-    pageSize?: number;
-  }): Promise<ApiResponse<unknown>> {
-    return apiClient.get<ApiResponse<unknown>>(this.base, { params });
+  async list(params?: OrdersFilter): Promise<ApiResponse<unknown>> {
+    const validatedParams = params
+      ? OrdersFilterSchema.partial().parse(params)
+      : undefined;
+    
+    return apiClient.get<ApiResponse<unknown>>(this.base, {
+      params: validatedParams,
+    });
   }
 
   async cancelOrder(
     id: number,
     requesterUserId?: number
-  ): Promise<ApiResponse<unknown>> {
-    // backend exposes PATCH /orders/:id/cancel for manual cancellation
-    // include requesterUserId in body for local dev fallback (controller will pick it up)
+  ): Promise<ApiResponse<OrderDetail>> {
     const body: Record<string, unknown> = {};
     if (typeof requesterUserId === "number") body.userId = requesterUserId;
-    return apiClient.patch<ApiResponse<unknown>>(
+    
+    return apiClient.patch<ApiResponse<OrderDetail>>(
       `${this.base}/${id}/cancel`,
       body
     );
@@ -62,10 +90,11 @@ export class OrderService {
   async confirmOrder(
     id: number,
     requesterUserId?: number
-  ): Promise<ApiResponse<unknown>> {
+  ): Promise<ApiResponse<OrderDetail>> {
     const body: Record<string, unknown> = {};
     if (typeof requesterUserId === "number") body.userId = requesterUserId;
-    return apiClient.patch<ApiResponse<unknown>>(
+    
+    return apiClient.patch<ApiResponse<OrderDetail>>(
       `${this.base}/${id}/confirm`,
       body
     );
@@ -74,10 +103,11 @@ export class OrderService {
   async shipOrder(
     id: number,
     actorUserId?: number
-  ): Promise<ApiResponse<unknown>> {
+  ): Promise<ApiResponse<OrderDetail>> {
     const body: Record<string, unknown> = {};
     if (typeof actorUserId === "number") body.userId = actorUserId;
-    return apiClient.patch<ApiResponse<unknown>>(
+    
+    return apiClient.patch<ApiResponse<OrderDetail>>(
       `${this.base}/${id}/ship`,
       body
     );
@@ -85,3 +115,4 @@ export class OrderService {
 }
 
 export const orderService = new OrderService();
+
