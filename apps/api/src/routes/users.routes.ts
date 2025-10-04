@@ -1,17 +1,16 @@
 import { Router } from "express";
 import { UsersController } from "../controllers/users.controller.js";
 import { adminAuth } from "../middleware/admin.middleware.js";
+import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
-// CRUD User
-router.post("/", adminAuth, UsersController.createUser); // Create
-router.get("/", UsersController.getUsers); // Read all
-router.get("/:id", UsersController.getUserById); // Read by ID
-router.put("/:id", adminAuth, UsersController.updateUser); // Update
-router.delete("/:id", adminAuth, UsersController.deleteUser); // Delete
+router.post("/", adminAuth, UsersController.createUser);
+router.get("/", UsersController.getUsers);
+router.get("/:id", authMiddleware, UsersController.getUserById);
+router.put("/:id", adminAuth, UsersController.updateUser);
+router.delete("/:id", adminAuth, UsersController.deleteUser);
 
-// Get User Addresses
-router.get("/:id/addresses", UsersController.getUserAddresses);
+router.get("/:id/addresses", authMiddleware, UsersController.getUserAddresses);
 
 export default router;
