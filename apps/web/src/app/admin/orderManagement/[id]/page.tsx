@@ -13,6 +13,7 @@ import OrderDetailPayment from "@/components/admin/orders/detail/OrderDetailPaym
 import OrderDetailTotal from "@/components/admin/orders/detail/OrderDetailTotal";
 import { XCircle, X } from "lucide-react";
 import type { AdminOrderDetail } from "@repo/schemas";
+import { toast } from "sonner";
 
 type ConfirmDialogState = {
   open: boolean;
@@ -128,12 +129,12 @@ export default function OrderDetailPage() {
 
     try {
       await adminOrdersService.updateOrderStatus(order.id, action);
-      alert(`Order #${order.id} ${actionNames[action]}ed successfully!`);
+      toast.success(`Order #${order.id} ${actionNames[action]}ed successfully!`);
       await fetchOrderDetail(); // Refresh the order details
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "An error occurred";
-      alert(`Failed to ${actionNames[action]} order: ${message}`);
+      toast.error(`Failed to ${actionNames[action]} order: ${message}`);
     } finally {
       setActionLoading((prev) => ({ ...prev, [action]: false }));
     }

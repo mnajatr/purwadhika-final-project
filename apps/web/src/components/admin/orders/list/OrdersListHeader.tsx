@@ -32,10 +32,10 @@ export default function OrdersListHeader({
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search..."
-              className="pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground w-64"
+              className="pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground w-64"
             />
           </div>
-          <button className="px-4 py-2 border border-border rounded-lg flex items-center space-x-2 hover:bg-accent hover:text-accent-foreground transition-colors">
+          <button className="px-4 py-2 border border-border rounded-lg flex items-center space-x-2 bg-primary hover:bg-accent text-white hover:text-accent-foreground transition-colors">
             <Filter className="w-4 h-4" />
             <span>Filter</span>
           </button>

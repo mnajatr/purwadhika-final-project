@@ -11,6 +11,7 @@ import OrdersListStats from "@/components/admin/orders/list/OrdersListStats";
 import OrdersListFilters from "@/components/admin/orders/list/OrdersListFilters";
 import OrdersListTable from "@/components/admin/orders/list/OrdersListTable";
 import OrdersListDevPanel from "@/components/admin/orders/list/OrdersListDevPanel";
+import { toast } from "sonner";
 
 type OrderStats = {
   totalCustomers: number;
@@ -237,12 +238,12 @@ export default function AdminOrdersPage() {
 
     try {
       await ordersService.updateOrderStatus(orderId, action);
-      alert(`Order #${orderId} ${actionNames[action]}ed successfully!`);
+      toast.success(`Order #${orderId} ${actionNames[action]}ed successfully!`);
       reload();
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "An error occurred";
-      alert(`Failed to ${actionNames[action]} order: ${message}`);
+      toast.error(`Failed to ${actionNames[action]} order: ${message}`);
     } finally {
       setActionLoading((prev) => ({ ...prev, [actionKey]: false }));
     }
