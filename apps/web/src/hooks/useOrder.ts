@@ -4,45 +4,7 @@ import * as React from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { orderService } from "@/services/order.service";
 import type { ApiResponse } from "@/types/api";
-
-// Lightweight order shape used by client hooks
-export type OrderDetail = {
-  id: number;
-  status: string;
-  grandTotal?: number;
-  createdAt?: string | Date | null;
-  updatedAt?: string | Date | null;
-  items: Array<{
-    id: number;
-    productId: number;
-    qty: number;
-    totalAmount?: number;
-    product?: {
-      id: number;
-      name?: string;
-      price?: number;
-      images?: Array<{ imageUrl: string }>;
-    } | null;
-  }>;
-  payment?: { status?: string; amount?: number } | null;
-  paymentMethod?: string | null;
-  address?: {
-    recipientName: string;
-    addressLine: string;
-    city: string;
-    province: string;
-    postalCode: string;
-  } | null;
-  store?: {
-    id: number;
-    name: string;
-    locations?: Array<{
-      city: string;
-      province: string;
-      addressLine: string;
-    }>;
-  } | null;
-};
+import { type OrderDetail, type CreateOrderItem } from "@repo/schemas";
 import { cartService } from "@/services/cart.service";
 
 // Tiny UUIDv4 generator (no deps) for idempotency keys in the client
@@ -59,7 +21,7 @@ export function useCreateOrder(userId: number, storeId?: number) {
   const qc = useQueryClient();
 
   type Payload = {
-    items: Array<{ productId: number; qty: number }>;
+    items: CreateOrderItem[];
     idempotencyKey?: string;
     userLat?: number;
     userLon?: number;
@@ -347,12 +309,7 @@ export function useGetOrders(filters?: OrdersFilter, extraKey?: number) {
         params.dateTo = dateTo.toISOString();
       }
 
-      // Debug logging
-      console.log("Order filter params:", params);
-      console.log("Query key:", queryKey);
-
       const res = await orderService.list(params);
-      console.log("Order service response:", res);
 
       const maybeBody = (res as ApiResponse<unknown>) || null;
       const payloadCandidate = maybeBody?.data ?? (res as unknown);

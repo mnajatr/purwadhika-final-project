@@ -2,23 +2,25 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { getAdminOrders } from "@/services/adminOrders.service";
+import type {
+  AdminOrdersFilter,
+  AdminOrderListItem,
+  AdminOrdersListResponse,
+} from "@repo/schemas";
 
-type ListResp = {
-  items: unknown[];
-  total: number;
-  page: number;
-  pageSize: number;
+type UseOrdersResult = {
+  items: AdminOrderListItem[];
+  loading: boolean;
+  error: string | null;
+  reload: () => void;
+  meta: {
+    total: number;
+    page: number;
+    pageSize: number;
+  };
 };
 
-export function useOrders(opts?: {
-  page?: number;
-  pageSize?: number;
-  status?: string;
-  q?: string;
-  storeId?: number;
-  from?: Date;
-  to?: Date;
-}) {
+export function useOrders(opts?: AdminOrdersFilter): UseOrdersResult {
   const queryKey = [
     "admin",
     "orders",
@@ -31,7 +33,7 @@ export function useOrders(opts?: {
     opts?.to ?? null,
   ];
 
-  const result = useQuery<ListResp, Error>({
+  const result = useQuery<AdminOrdersListResponse, Error>({
     queryKey,
     queryFn: async () => {
       const data = await getAdminOrders({

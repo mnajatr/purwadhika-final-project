@@ -58,7 +58,7 @@ export class OrderReadService {
           // Fetch all order IDs and filter for partial matches in memory
           // This allows searching "8" to match 8, 18, 28, 80, 81, etc.
           const allOrders = await prisma.order.findMany({
-            where: { ...where }, // Apply other filters
+            where: { ...where }, // Apply other filters first
             select: { id: true },
           });
 
@@ -75,19 +75,30 @@ export class OrderReadService {
               },
             };
           } else {
-            // Use OR: either ID matches OR product name matches
-            where.OR = [
-              { id: { in: searchFilteredIds } },
+            // Use AND with OR: must satisfy base filters AND (ID match OR product name match)
+            const baseFilters = { ...where };
+            where.AND = [
+              baseFilters,
               {
-                items: {
-                  some: {
-                    product: {
-                      name: { contains: qTrimmed, mode: "insensitive" },
+                OR: [
+                  { id: { in: searchFilteredIds } },
+                  {
+                    items: {
+                      some: {
+                        product: {
+                          name: { contains: qTrimmed, mode: "insensitive" },
+                        },
+                      },
                     },
                   },
-                },
+                ],
               },
             ];
+            // Remove the individual filters from the root where object
+            // since they're now in the AND clause
+            if (typeof storeId === "number") delete where.storeId;
+            if (typeof userId === "number") delete where.userId;
+            if (status && status.trim() !== "") delete where.status;
           }
         } else {
           // Non-numeric search: only search product names
@@ -106,7 +117,10 @@ export class OrderReadService {
         try {
           where.createdAt.gte = new Date(dateFrom);
         } catch (e) {
-          (await import("../utils/logger.js")).default.error("order.read.service: invalid dateFrom", { dateFrom, error: e });
+          (await import("../utils/logger.js")).default.error(
+            "order.read.service: invalid dateFrom",
+            { dateFrom, error: e }
+          );
         }
       }
       if (dateTo) {

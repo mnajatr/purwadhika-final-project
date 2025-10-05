@@ -1,0 +1,37 @@
+"use client";
+
+import { ShoppingBag } from "lucide-react";
+import DevUserSwitcher from "@/components/DevUserSwitcher";
+
+interface OrdersListHeaderProps {
+  total: number;
+}
+
+export default function OrdersListHeader({ total }: OrdersListHeaderProps) {
+  return (
+    <div className="relative border-b border-border/40 bg-gradient-to-br from-primary/5 via-accent/5 to-primary/10 backdrop-blur-sm">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-start justify-between mb-8">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary-gradient shadow-lg shadow-primary/20">
+                <ShoppingBag className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  Your Orders
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {total > 0
+                    ? `${total} orders found`
+                    : "Manage and track your orders"}
+                </p>
+              </div>
+            </div>
+          </div>
+          <DevUserSwitcher />
+        </div>
+      </div>
+    </div>
+  );
+}

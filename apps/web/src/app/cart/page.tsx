@@ -11,7 +11,7 @@ export default function Cart() {
     if (devUserId && devUserId !== "none") {
       setUserId(parseInt(devUserId));
     } else {
-      setUserId(4); // Default user for demo
+      setUserId(4);
     }
   }, []);
 

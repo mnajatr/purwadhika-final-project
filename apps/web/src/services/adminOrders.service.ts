@@ -1,39 +1,64 @@
 import apiClient from "@/lib/axios-client";
-
-type ListResp = {
-  items: unknown[];
-  total: number;
-  page: number;
-  pageSize: number;
-};
+import {
+  AdminOrdersListResponseSchema,
+  AdminOrderDetailSchema,
+  type AdminOrdersListResponse,
+  type AdminOrdersFilter,
+  type AdminOrderDetail,
+} from "@repo/schemas";
 
 class AdminOrdersService {
   private readonly basePath = "/admin/orders";
 
-  async getOrders(opts?: {
-    page?: number;
-    pageSize?: number;
-    status?: string;
-    q?: string;
-    storeId?: number;
-    from?: Date;
-    to?: Date;
-  }) {
+  async getOrders(opts?: AdminOrdersFilter): Promise<AdminOrdersListResponse> {
     const params: Record<string, unknown> = {};
-    // Always include page and pageSize, don't check for truthy values since page 1 is falsy
     params.page = opts?.page ?? 1;
     params.pageSize = opts?.pageSize ?? 20;
     if (opts?.status) params.status = opts.status;
     if (opts?.q) params.q = opts.q;
     if (typeof opts?.storeId === "number") params.storeId = opts.storeId;
-    if (opts?.from) params.from = opts.from.toISOString();
-    if (opts?.to) params.to = opts.to.toISOString();
 
-    const envelope = await apiClient.get<{ success: boolean; data: ListResp }>(
-      this.basePath,
-      params
-    );
-    return envelope.data;
+    if (opts?.from) {
+      const startOfDay = new Date(opts.from);
+      startOfDay.setHours(0, 0, 0, 0);
+      params.dateFrom = startOfDay.toISOString();
+    }
+
+    if (opts?.to) {
+      const endOfDay = new Date(opts.to);
+      endOfDay.setHours(23, 59, 59, 999);
+      params.dateTo = endOfDay.toISOString();
+    } else if (opts?.from && !opts?.to) {
+      // If only 'from' is set, include the whole day
+      const endOfDay = new Date(opts.from);
+      endOfDay.setHours(23, 59, 59, 999);
+      params.dateTo = endOfDay.toISOString();
+    }
+
+    const response = await apiClient.get<{
+      success: boolean;
+      data: AdminOrdersListResponse;
+    }>(this.basePath, params);
+
+    const parsed = AdminOrdersListResponseSchema.safeParse(response.data);
+    if (!parsed.success) {
+      throw new Error(`Invalid admin orders response: ${parsed.error.message}`);
+    }
+    return parsed.data;
+  }
+
+  async getOrderById(orderId: number): Promise<AdminOrderDetail> {
+    const endpoint = `${this.basePath}/${orderId}`;
+    const response = await apiClient.get<{ 
+      success: boolean; 
+      data: unknown;
+    }>(endpoint);
+    
+    const parsed = AdminOrderDetailSchema.safeParse(response.data);
+    if (!parsed.success) {
+      throw new Error(`Invalid order detail response: ${parsed.error.message}`);
+    }
+    return parsed.data;
   }
 
   async updateOrderStatus(
@@ -47,23 +72,10 @@ class AdminOrdersService {
     }>(endpoint);
     return response;
   }
-
-  async getOrderById(orderId: number) {
-    const endpoint = `${this.basePath}/${orderId}`;
-    const response = await apiClient.get<{ success: boolean; data: unknown }>(
-      endpoint
-    );
-    return response.data;
-  }
 }
 
 export const adminOrdersService = new AdminOrdersService();
-export const getAdminOrders = (opts?: {
-  page?: number;
-  pageSize?: number;
-  status?: string;
-  q?: string;
-  storeId?: number;
-  from?: Date;
-  to?: Date;
-}) => adminOrdersService.getOrders(opts);
+export const getAdminOrders = (opts?: AdminOrdersFilter) =>
+  adminOrdersService.getOrders(opts);
+export const getAdminOrderById = (orderId: number) =>
+  adminOrdersService.getOrderById(orderId);

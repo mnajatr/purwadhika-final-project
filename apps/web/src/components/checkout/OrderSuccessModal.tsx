@@ -16,10 +16,8 @@ export default function OrderSuccessModal({
 
   React.useEffect(() => {
     if (isVisible) {
-      // Auto-complete after 2 seconds
       const timer = setTimeout(() => {
         setIsRedirecting(true);
-        // Trigger redirect but keep modal visible
         onComplete();
       }, 2000);
 
@@ -27,13 +25,9 @@ export default function OrderSuccessModal({
     }
   }, [isVisible, onComplete]);
 
-  // Keep modal visible during page transition
   React.useEffect(() => {
     if (isVisible) {
-      // Prevent modal from disappearing during navigation
-      const handleBeforeUnload = () => {
-        // Modal will naturally disappear when page unloads
-      };
+      const handleBeforeUnload = () => {};
 
       window.addEventListener("beforeunload", handleBeforeUnload);
       return () => {

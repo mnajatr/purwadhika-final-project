@@ -8,7 +8,6 @@ import { Button } from "../ui/button";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
-import useCreateOrder from "@/hooks/useOrder";
 import { useRouter } from "next/navigation";
 import formatIDR from "@/utils/formatCurrency";
 import { CartPageSkeleton } from "./CartSkeleton";
@@ -25,7 +24,6 @@ interface CartPageProps {
 }
 
 export function CartPage({ userId }: CartPageProps) {
-  // Derive storeId from location store so cart follows nearest store selection
   const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? 1;
   const storeId = nearestStoreId;
   const { data: cart, isInitialLoading, isFetching } = useCart(userId, storeId);
@@ -34,12 +32,11 @@ export function CartPage({ userId }: CartPageProps) {
   const [selectedIds, setSelectedIds] = React.useState<Record<number, boolean>>(
     {}
   );
-  // do not pass storeId so server can resolve the best store for the order
-  const createOrder = useCreateOrder(userId);
-  const creating = createOrder.status === "pending";
   const router = useRouter();
   const [showConfirmAll, setShowConfirmAll] = React.useState(false);
   const [hasAutoAdjusted, setHasAutoAdjusted] = React.useState(false);
+  const [hasShownOutOfStockToast, setHasShownOutOfStockToast] =
+    React.useState(false);
 
   React.useEffect(() => {
     if (!cart) return;
@@ -48,7 +45,22 @@ export function CartPage({ userId }: CartPageProps) {
     setSelectedIds(map);
   }, [cart]);
 
-  // Auto-adjust cart quantities when they exceed stock
+  React.useEffect(() => {
+    if (!cart || hasShownOutOfStockToast) return;
+
+    const validation = validateCartForCheckout(cart.items);
+    if (!validation.isValid && validation.outOfStockItems.length > 0) {
+      toast.error(
+        `${validation.outOfStockItems.length} item(s) are out of stock for the selected store. Please review your cart.`
+      );
+      setHasShownOutOfStockToast(true);
+    }
+  }, [cart, hasShownOutOfStockToast]);
+
+  React.useEffect(() => {
+    setHasShownOutOfStockToast(false);
+  }, [storeId]);
+
   React.useEffect(() => {
     if (!cart || hasAutoAdjusted) return;
 
@@ -59,19 +71,13 @@ export function CartPage({ userId }: CartPageProps) {
 
     setHasAutoAdjusted(true);
 
-    // Process adjustments sequentially
     const processAdjustments = async () => {
       for (const item of itemsNeedingAdjustment) {
         const adjustedQty = getAdjustedQuantity(item);
 
         try {
           if (adjustedQty === 0) {
-            // Item is completely out of stock, show specific message
-            toast.warning(
-              `${item.product.name} is out of stock and was removed from your cart`
-            );
           } else {
-            // Quantity was reduced to match available stock
             await updateCartItemMutation.mutateAsync({
               itemId: item.id,
               qty: adjustedQty,
@@ -80,8 +86,7 @@ export function CartPage({ userId }: CartPageProps) {
               `Quantity adjusted to available stock: ${adjustedQty} for ${item.product.name}`
             );
           }
-        } catch (error) {
-          console.error("Failed to adjust cart item quantity:", error);
+        } catch {
           toast.error(`Failed to adjust quantity for ${item.product.name}`);
         }
       }
@@ -90,7 +95,6 @@ export function CartPage({ userId }: CartPageProps) {
     processAdjustments();
   }, [cart, updateCartItemMutation, hasAutoAdjusted]);
 
-  // Reset auto-adjustment flag when cart data changes (after mutations)
   React.useEffect(() => {
     if (cart && hasAutoAdjusted) {
       const itemsStillNeedingAdjustment = getItemsNeedingQuantityAdjustment(
@@ -102,9 +106,6 @@ export function CartPage({ userId }: CartPageProps) {
     }
   }, [cart, hasAutoAdjusted]);
 
-  // Only show the full-page skeleton while the query is loading for the
-  // first time (initial load). During background fetches (e.g. after a
-  // mutation) we keep the UI stable and show a subtle inline spinner.
   if (isInitialLoading) return <CartPageSkeleton />;
   if (!cart) return <CartPageSkeleton />;
   if (cart.items.length === 0) return <EmptyCartState />;
@@ -127,13 +128,11 @@ export function CartPage({ userId }: CartPageProps) {
     return sum + Number(item.product?.price ?? 0) * item.qty;
   }, 0);
 
-  // Validate selected items for checkout
   const selectedItems = cart.items.filter((item) => selectedIds[item.id]);
   const cartValidation = validateCartForCheckout(selectedItems);
   const hasOutOfStockInSelection = hasOutOfStockItems(selectedItems);
 
   const handleCheckout = () => {
-    // Check for out of stock items in selection
     if (hasOutOfStockInSelection) {
       toast.error(
         "Please remove out of stock items from your selection before checkout."
@@ -153,7 +152,6 @@ export function CartPage({ userId }: CartPageProps) {
       .filter((k) => selectedIds[Number(k)])
       .map((k) => Number(k));
 
-    // store selection + userId in session so Checkout page can read it
     try {
       sessionStorage.setItem(
         "checkout:selectedIds",
@@ -167,7 +165,6 @@ export function CartPage({ userId }: CartPageProps) {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto p-4 sm:p-6">
-        {/* Header - Consistent with skeleton layout */}
         <div className="flex items-center gap-3 mb-6">
           <button
             aria-label="Back to landing"
@@ -196,9 +193,7 @@ export function CartPage({ userId }: CartPageProps) {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
-          {/* Main Cart Content - Matching skeleton padding */}
           <div className="bg-card rounded-xl border border-border p-4 sm:p-6 shadow-sm backdrop-blur-sm">
-            {/* Select All Header - Matching skeleton spacing */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-1 pb-4 border-b border-border mb-4">
               <div className="flex items-center gap-3">
                 <label className="inline-flex items-center cursor-pointer">
@@ -250,7 +245,6 @@ export function CartPage({ userId }: CartPageProps) {
               </div>
             </div>
 
-            {/* Cart Items */}
             <div className="space-y-4">
               {cart.items.map((item) => (
                 <CartItem
@@ -264,7 +258,6 @@ export function CartPage({ userId }: CartPageProps) {
               ))}
             </div>
 
-            {/* Clear Cart Button - Matching skeleton spacing */}
             <div className="mt-6 border-t border-border pt-4">
               <div className="flex w-full items-center justify-end">
                 <div className="w-full sm:w-auto">
@@ -291,10 +284,7 @@ export function CartPage({ userId }: CartPageProps) {
                         setShowConfirmAll(false);
                         try {
                           await clearCartMutation.mutateAsync();
-                          // Success toast handled by hook's onSuccess
-                        } catch {
-                          // Error toast handled by hook's onError
-                        }
+                        } catch {}
                       }}
                     />
                   </>
@@ -303,7 +293,6 @@ export function CartPage({ userId }: CartPageProps) {
             </div>
           </div>
 
-          {/* Checkout Sidebar - Matching skeleton layout */}
           <div className="w-full lg:w-auto">
             <div className="bg-card rounded-2xl border border-border p-6 shadow-lg backdrop-blur-sm lg:sticky lg:top-6">
               <h3 className="text-xl font-bold mb-6 text-foreground">
@@ -332,7 +321,6 @@ export function CartPage({ userId }: CartPageProps) {
               </div>
 
               <div className="space-y-3">
-                {/* Show warning if there are out of stock items in selection */}
                 {hasOutOfStockInSelection && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                     <div className="flex items-center gap-2">
@@ -366,12 +354,11 @@ export function CartPage({ userId }: CartPageProps) {
                   size="lg"
                   onClick={handleCheckout}
                   disabled={
-                    creating ||
                     hasOutOfStockInSelection ||
                     Object.values(selectedIds).filter(Boolean).length === 0
                   }
                 >
-                  {creating ? (
+                  {false ? (
                     "Processing..."
                   ) : (
                     <span className="inline-flex items-center justify-center gap-2">
