@@ -430,17 +430,11 @@ async function seedInventories(stores: any[], products: any[]) {
   for (const store of stores) {
     for (const product of products) {
       const stockQty = faker.number.int({ min: 10, max: 500 });
-      const reservedStock = faker.number.int({
-        min: 0,
-        max: Math.floor(stockQty * 0.1),
-      });
-
       await prisma.storeInventory.create({
         data: {
           storeId: store.id,
           productId: product.id,
           stockQty,
-          reservedStock,
         },
       });
 

@@ -222,14 +222,13 @@ model ProductCategory {
 }
 
 model StoreInventory {
-  id            Int      @id @default(autoincrement())
-  store         Store    @relation(fields: [storeId], references: [id])
-  storeId       Int
-  product       Product  @relation(fields: [productId], references: [id])
-  productId     Int
-  stockQty      Int
-  reservedStock Int      @default(0)
-  updatedAt     DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  store     Store    @relation(fields: [storeId], references: [id])
+  storeId   Int
+  product   Product  @relation(fields: [productId], references: [id])
+  productId Int
+  stockQty  Int
+  updatedAt DateTime @updatedAt
 
   stockJournals StockJournal[]
 

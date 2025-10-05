@@ -40,7 +40,7 @@ export default function AddressCard({
   userId,
 }: AddressCardProps) {
   const [addrs, setAddrs] = React.useState<Addr[] | null>(null);
-  
+
   type ResolveInfo = {
     inRange: boolean;
     distanceMeters?: number | null;
@@ -89,17 +89,24 @@ export default function AddressCard({
                 const rr = await apiClient.get(
                   `/stores/resolve?userId=${uid}&addressId=${a.id}`
                 );
-                const data = rr as Record<string, unknown> ?? {};
-                const nestedData = (data.data as Record<string, unknown>) ?? data;
+                const data = (rr as Record<string, unknown>) ?? {};
+                const nestedData =
+                  (data.data as Record<string, unknown>) ?? data;
                 map[a.id] = {
-                  inRange: Boolean((nestedData.inRange ?? data.inRange)),
+                  inRange: Boolean(nestedData.inRange ?? data.inRange),
                   distanceMeters:
-                    (data.distanceMeters as number) ?? (nestedData.distanceMeters as number) ?? null,
+                    (data.distanceMeters as number) ??
+                    (nestedData.distanceMeters as number) ??
+                    null,
                   maxRadiusKm:
-                    (data.maxRadiusKm as number) ?? (nestedData.maxRadiusKm as number) ?? null,
+                    (data.maxRadiusKm as number) ??
+                    (nestedData.maxRadiusKm as number) ??
+                    null,
                   nearestStoreId:
-                    ((data.nearestStore as Record<string, unknown>)?.id as number) ??
-                    ((nestedData.nearestStore as Record<string, unknown>)?.id as number) ??
+                    ((data.nearestStore as Record<string, unknown>)
+                      ?.id as number) ??
+                    ((nestedData.nearestStore as Record<string, unknown>)
+                      ?.id as number) ??
                     null,
                 } as ResolveInfo;
               } catch {
@@ -206,8 +213,7 @@ export default function AddressCard({
                     Different Store Area
                   </p>
                   <p className="text-xs text-orange-700">
-                    This address is served by a different store than your cart
-                    items
+                    Outside current delivery range
                   </p>
                 </div>
               </div>
