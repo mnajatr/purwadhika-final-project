@@ -109,7 +109,6 @@ type OrderOverviewProps = {
     postalCode: string;
     phoneNumber?: string;
   } | null;
-  apiBase: string;
   onRefresh: () => void;
   isLoading?: boolean;
   CancelButton?: React.ComponentType<{ orderId: number; userId?: number }>;
@@ -119,7 +118,6 @@ export default function OrderOverview({
   order,
   items,
   address,
-  apiBase,
   onRefresh,
   isLoading = false,
   CancelButton,
@@ -246,7 +244,6 @@ export default function OrderOverview({
         <OrderSummary
           order={order}
           items={items}
-          apiBase={apiBase}
           onRefresh={onRefresh}
           formatCurrency={formatCurrency}
           CancelButton={CancelButton}

@@ -73,19 +73,20 @@ export default function OrderPage({ params }: OrderPageProps) {
     refetch,
   } = useGetOrder(Number.isNaN(id) ? undefined : id);
 
-  // derive API base same as original server-side implementation
-  const rawApi =
-    process.env.NEXT_PUBLIC_API_URL ??
-    (process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL.replace(/\/$/, "")}`
-      : undefined);
+  // No longer need apiBase since we're using apiClient in child components
+  // (commented out in case needed for other purposes in the future)
+  // const rawApi =
+  //   process.env.NEXT_PUBLIC_API_URL ??
+  //   (process.env.VERCEL_URL
+  //     ? `https://${process.env.VERCEL_URL.replace(/\/$/, "")}`
+  //     : undefined);
 
-  const apiBase = rawApi
-    ? (() => {
-        const cleaned = rawApi.replace(/\/$/, "");
-        return cleaned.endsWith("/api") ? cleaned : `${cleaned}/api`;
-      })()
-    : "http://localhost:8000/api";
+  // const apiBase = rawApi
+  //   ? (() => {
+  //       const cleaned = rawApi.replace(/\/$/, "");
+  //       return cleaned.endsWith("/api") ? cleaned : `${cleaned}/api`;
+  //     })()
+  //   : "http://localhost:8000/api";
 
   // Loading state with enhanced skeleton
   if (isLoading) {
@@ -248,7 +249,6 @@ export default function OrderPage({ params }: OrderPageProps) {
             : undefined,
         }))}
         address={order.address || null}
-        apiBase={apiBase}
         onRefresh={refetch}
         CancelButton={CancelButton}
       />

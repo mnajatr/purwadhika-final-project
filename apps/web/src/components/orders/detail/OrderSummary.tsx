@@ -29,7 +29,6 @@ type OrderSummaryProps = {
       name: string;
     };
   }>;
-  apiBase: string;
   onRefresh: () => void;
   formatCurrency: (amount: string | number) => string;
   CancelButton?: React.ComponentType<{ orderId: number; userId?: number }>;
@@ -38,7 +37,6 @@ type OrderSummaryProps = {
 export default function OrderSummary({
   order,
   items,
-  apiBase,
   onRefresh,
   formatCurrency,
   CancelButton,
@@ -165,7 +163,6 @@ export default function OrderSummary({
             )}
             <PaymentUpload
               orderId={order.id}
-              apiBase={apiBase}
               onUploadSuccess={onRefresh}
               cancelButton={renderCancelButton()}
             />

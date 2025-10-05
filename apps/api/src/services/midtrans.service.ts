@@ -19,6 +19,10 @@ export class MidtransService {
     });
     if (!order) throw new Error("Order not found");
 
+    if (order.status === "CANCELLED") {
+      throw new Error("Cannot create payment for cancelled order");
+    }
+
     if (order.status !== "PENDING_PAYMENT") {
       throw new Error(
         `Order is not in PENDING_PAYMENT state (current=${order.status})`
@@ -133,6 +137,26 @@ export class MidtransService {
     });
     if (!payment) throw new Error("Payment record not found");
 
+    // Check order status first
+    const order = await prisma.order.findUnique({
+      where: { id: payment.orderId },
+    });
+    if (!order) throw new Error("Order not found");
+
+    // If order is already CANCELLED, reject the payment
+    if (order.status === "CANCELLED") {
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: "FAILED" },
+      });
+      throw new Error("Order has been cancelled, payment cannot be processed");
+    }
+
+    // If payment is already FAILED (cancelled by cron job), reject the payment
+    if (payment.status === "FAILED") {
+      throw new Error("Payment has been cancelled, cannot process payment");
+    }
+
     if (
       payload.transaction_status === "capture" ||
       payload.transaction_status === "settlement"
@@ -144,13 +168,9 @@ export class MidtransService {
       });
       // update order status to PROCESSING if currently PENDING_PAYMENT or PAYMENT_REVIEW
       try {
-        const order = await prisma.order.findUnique({
-          where: { id: payment.orderId },
-        });
         if (
-          order &&
-          (order.status === "PENDING_PAYMENT" ||
-            order.status === "PAYMENT_REVIEW")
+          order.status === "PENDING_PAYMENT" ||
+          order.status === "PAYMENT_REVIEW"
         ) {
           await prisma.order.update({
             where: { id: order.id },
@@ -224,6 +244,26 @@ MidtransService.prototype.handleNotification = async function (
   });
   if (!payment) throw new Error("Payment record not found");
 
+  // Check order status first
+  const order = await prisma.order.findUnique({
+    where: { id: payment.orderId },
+  });
+  if (!order) throw new Error("Order not found");
+
+  // If order is already CANCELLED, reject the payment
+  if (order.status === "CANCELLED") {
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: "FAILED" },
+    });
+    throw new Error("Order has been cancelled, payment cannot be processed");
+  }
+
+  // If payment is already FAILED (cancelled by cron job), reject the payment
+  if (payment.status === "FAILED") {
+    throw new Error("Payment has been cancelled, cannot process payment");
+  }
+
   // Interpret transaction_status
   const txStatus = String(
     payload.transaction_status ?? payload.fraud_status ?? ""
@@ -240,13 +280,9 @@ MidtransService.prototype.handleNotification = async function (
     });
     // update order status to PROCESSING if currently PENDING_PAYMENT or PAYMENT_REVIEW
     try {
-      const order = await prisma.order.findUnique({
-        where: { id: payment.orderId },
-      });
       if (
-        order &&
-        (order.status === "PENDING_PAYMENT" ||
-          order.status === "PAYMENT_REVIEW")
+        order.status === "PENDING_PAYMENT" ||
+        order.status === "PAYMENT_REVIEW"
       ) {
         await prisma.order.update({
           where: { id: order.id },
