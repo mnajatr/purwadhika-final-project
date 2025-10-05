@@ -147,14 +147,7 @@ export function ShippingMethodCard({
                   </div>
                 </div>
 
-                <Button
-                  variant={shippingMethod ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setShippingMenuOpen(true)}
-                  className="min-w-[80px] transition-all duration-200"
-                >
-                  {shippingMethod ? "Change" : "Select"}
-                </Button>
+                {/* removed header button - trigger moved to CardContent to align with shipping option button */}
               </div>
             </CardHeader>
 
@@ -194,7 +187,16 @@ export function ShippingMethodCard({
                 }}
               >
                 <DropdownMenuTrigger asChild>
-                  <span className="absolute left-0 top-0 w-full h-full pointer-events-none" />
+                  <div className="flex items-center gap-4">
+                    {/* visible trigger button aligned to the right of the carrier area */}
+                    <Button
+                      variant={shippingMethod ? "default" : "outline"}
+                      size="sm"
+                      className="min-w-[80px]"
+                    >
+                      {shippingMethod ? "Change" : "Select"}
+                    </Button>
+                  </div>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="start"

@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MapPin, CheckCircle } from "lucide-react";
+import { MapPin, CheckCircle, Settings } from "lucide-react";
 import { FaMapMarkerAlt } from "react-icons/fa";
 
 type Addr = {
@@ -75,46 +75,74 @@ export default function AddressCard({
         const res = await apiClient.get<Addr[]>(`/users/${userId}/addresses`);
         if (!mounted) return;
         setAddrs(res);
-        const primary = res.find((a) => a.isPrimary) ?? res[0];
-        if (primary) {
-          setSelectedId(primary.id);
-          onSelect?.({ id: primary.id });
-        }
+        
+        // Auto-select address logic
         if (checkoutStoreId && Array.isArray(res) && res.length > 0) {
-          (async () => {
-            const map: Record<number, ResolveInfo> = {};
-            for (const a of res) {
-              try {
-                const uid = userId ?? 4;
-                const rr = await apiClient.get(
-                  `/stores/resolve?userId=${uid}&addressId=${a.id}`
-                );
-                const data = (rr as Record<string, unknown>) ?? {};
-                const nestedData =
-                  (data.data as Record<string, unknown>) ?? data;
-                map[a.id] = {
-                  inRange: Boolean(nestedData.inRange ?? data.inRange),
-                  distanceMeters:
-                    (data.distanceMeters as number) ??
-                    (nestedData.distanceMeters as number) ??
-                    null,
-                  maxRadiusKm:
-                    (data.maxRadiusKm as number) ??
-                    (nestedData.maxRadiusKm as number) ??
-                    null,
-                  nearestStoreId:
-                    ((data.nearestStore as Record<string, unknown>)
-                      ?.id as number) ??
-                    ((nestedData.nearestStore as Record<string, unknown>)
-                      ?.id as number) ??
-                    null,
-                } as ResolveInfo;
-              } catch {
-                map[a.id] = { inRange: false };
-              }
+          // Resolve all addresses first
+          const map: Record<number, ResolveInfo> = {};
+          for (const a of res) {
+            try {
+              const uid = userId ?? 4;
+              const rr = await apiClient.get(
+                `/stores/resolve?userId=${uid}&addressId=${a.id}`
+              );
+              const data = (rr as Record<string, unknown>) ?? {};
+              const nestedData =
+                (data.data as Record<string, unknown>) ?? data;
+              map[a.id] = {
+                inRange: Boolean(nestedData.inRange ?? data.inRange),
+                distanceMeters:
+                  (data.distanceMeters as number) ??
+                  (nestedData.distanceMeters as number) ??
+                  null,
+                maxRadiusKm:
+                  (data.maxRadiusKm as number) ??
+                  (nestedData.maxRadiusKm as number) ??
+                  null,
+                nearestStoreId:
+                  ((data.nearestStore as Record<string, unknown>)
+                    ?.id as number) ??
+                  ((nestedData.nearestStore as Record<string, unknown>)
+                    ?.id as number) ??
+                  null,
+              } as ResolveInfo;
+            } catch {
+              map[a.id] = { inRange: false };
             }
-            setResolveMap(map);
-          })();
+          }
+          setResolveMap(map);
+          
+          // Find best address to auto-select
+          const inRangeAddrs = res.filter((a) => {
+            const info = map[a.id];
+            return info ? info.inRange && (!info.nearestStoreId || info.nearestStoreId === checkoutStoreId) : false;
+          });
+          
+          let selectedAddr: Addr | null = null;
+          
+          // Try primary address if in range
+          const primaryInRange = inRangeAddrs.find((a) => a.isPrimary);
+          if (primaryInRange) {
+            selectedAddr = primaryInRange;
+          } else if (inRangeAddrs.length > 0) {
+            // Otherwise select first in range
+            selectedAddr = inRangeAddrs[0];
+          } else {
+            // Fallback to primary or first address even if out of range
+            selectedAddr = res.find((a) => a.isPrimary) ?? res[0];
+          }
+          
+          if (selectedAddr) {
+            setSelectedId(selectedAddr.id);
+            onSelect?.({ id: selectedAddr.id });
+          }
+        } else {
+          // No checkout context, just select primary or first
+          const primary = res.find((a) => a.isPrimary) ?? res[0];
+          if (primary) {
+            setSelectedId(primary.id);
+            onSelect?.({ id: primary.id });
+          }
         }
       } catch {
         setAddrs([]);
@@ -229,17 +257,36 @@ export default function AddressCard({
       if (found) return found;
     }
     if (!addrs || addrs.length === 0) return null;
+    
+    // If checkout context, try to auto-select address within range
+    if (checkoutStoreId) {
+      const inRangeAddrs = addrs.filter((a) => {
+        const info = resolveMap[a.id];
+        return info ? info.inRange && (!info.nearestStoreId || info.nearestStoreId === checkoutStoreId) : false;
+      });
+      
+      // Try to get primary from in-range addresses
+      const primInRange = inRangeAddrs.find((x) => x.isPrimary);
+      if (primInRange) return primInRange;
+      
+      // Otherwise return first in-range address
+      if (inRangeAddrs.length > 0) return inRangeAddrs[0];
+    }
+    
+    // Fallback to any primary or first address
     const prim = addrs.find((x) => x.isPrimary);
     if (prim) return prim;
-    if (checkoutStoreId) {
-      const inRange = addrs.find((a) => {
-        const info = resolveMap[a.id];
-        return info ? info.inRange : true;
-      });
-      if (inRange) return inRange;
-    }
     return addrs[0];
   }, [addrs, resolveMap, checkoutStoreId, selectedId]);
+
+  // Count addresses within range for display
+  const inRangeCount = React.useMemo(() => {
+    if (!addrs || addrs.length === 0 || !checkoutStoreId) return 0;
+    return addrs.filter((a) => {
+      const info = resolveMap[a.id];
+      return info ? info.inRange && (!info.nearestStoreId || info.nearestStoreId === checkoutStoreId) : false;
+    }).length;
+  }, [addrs, resolveMap, checkoutStoreId]);
 
   return (
     <Card className="bg-card rounded-2xl border border-border shadow-sm backdrop-blur-sm overflow-hidden">
@@ -359,48 +406,102 @@ export default function AddressCard({
                 </DrawerTrigger>
               </div>
 
-              <DrawerContent>
-                <DrawerHeader className="border-b bg-gradient-to-r from-primary/5 to-primary/10">
+              <DrawerContent className="max-h-[95vh]">
+                <DrawerHeader className="border-b bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 backdrop-blur-sm">
                   <div className="flex items-center justify-center gap-4 mb-3 w-full">
                     <div className="flex flex-col text-center">
-                      <DrawerTitle className="text-xl font-semibold">
-                        Choose Delivery Location
-                      </DrawerTitle>
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <div className="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center">
+                          <FaMapMarkerAlt className="w-4 h-4 text-primary" />
+                        </div>
+                        <DrawerTitle className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                          Choose Delivery Location
+                        </DrawerTitle>
+                      </div>
                       <DrawerDescription className="text-sm text-muted-foreground mt-1 max-w-md">
-                        Select your preferred delivery address from saved
-                        locations
+                        {checkoutStoreId 
+                          ? (
+                            <span className="flex items-center justify-center gap-1.5">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
+                                <CheckCircle className="w-3 h-3" />
+                                {inRangeCount} available
+                              </span>
+                              <span>within delivery range</span>
+                            </span>
+                          )
+                          : "Select your preferred delivery address from saved locations"
+                        }
                       </DrawerDescription>
                     </div>
                   </div>
                 </DrawerHeader>
 
-                <div className="p-4 bg-gradient-to-b from-background to-muted/20">
-                  <ScrollArea className="h-[70vh] md:h-[80vh]">
-                    <div className="space-y-4 p-1 pr-4 pb-44">
-                      {addrs.map((a) => {
+                <div className="p-6 bg-gradient-to-b from-background via-muted/10 to-muted/20">
+                  <ScrollArea className="h-[70vh] md:h-[75vh]">
+                    {!addrs || addrs.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                        <div className="relative mb-6">
+                          <div className="w-24 h-24 bg-gradient-to-br from-muted via-muted/80 to-muted/60 rounded-3xl flex items-center justify-center shadow-lg">
+                            <MapPin className="w-12 h-12 text-muted-foreground/70" />
+                          </div>
+                          <div className="absolute -top-1 -right-1 w-8 h-8 bg-red-100 rounded-full flex items-center justify-center border-2 border-background shadow-md">
+                            <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </div>
+                        </div>
+                        <h3 className="text-xl font-bold text-foreground mb-2">
+                          No Saved Addresses
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-3 max-w-sm leading-relaxed">
+                          You haven&apos;t saved any delivery addresses yet.
+                        </p>
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium mb-6">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>Add an address to continue checkout</span>
+                        </div>
+                        <Button
+                          variant="default"
+                          size="lg"
+                          className="shadow-lg"
+                          onClick={() => (window.location.href = "/profile/addresses")}
+                        >
+                          <MapPin className="w-4 h-4 mr-2" />
+                          Add New Address
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4 p-1 pr-4 pb-44">
+                        {addrs.map((a) => {
                         const info = resolveMap[a.id];
                         const disabled = isDisabled(info);
                         const isSelected = selectedId === a.id;
+                        const isInRange = info?.inRange && (!info.nearestStoreId || info.nearestStoreId === checkoutStoreId);
 
                         return (
                           <div
                             key={a.id}
-                            className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-300 hover:scale-[1.005] ${
-                              isSelected
-                                ? "border-primary bg-gradient-to-br from-primary/10 via-primary/5 to-transparent shadow-lg"
-                                : "border-border bg-card/80 backdrop-blur-sm hover:border-primary/30 hover:shadow-md"
+                            className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-300 ${
+                              disabled 
+                                ? "border-red-200/60 bg-red-50/30 opacity-75" 
+                                : isSelected
+                                ? "border-primary bg-gradient-to-br from-primary/10 via-primary/5 to-transparent shadow-lg hover:scale-[1.005]"
+                                : "border-border bg-card/80 backdrop-blur-sm hover:border-primary/30 hover:shadow-md hover:scale-[1.005]"
                             } ${
                               disabled
-                                ? "opacity-60 cursor-not-allowed"
+                                ? "cursor-not-allowed"
                                 : "cursor-pointer"
                             }`}
                             onClick={() =>
                               !disabled && handleSelectFromDrawer(a)
                             }
                           >
+
                             {/* Selection indicator line */}
-                            {isSelected && (
-                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
+                            {isSelected && !disabled && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary via-primary to-primary/70 rounded-r-full shadow-sm" />
                             )}
 
                             <div className="p-5">
@@ -418,25 +519,25 @@ export default function AddressCard({
 
                                 <div className="flex-1 min-w-0">
                                   {/* Header with name and badges */}
-                                  <div className="flex items-center gap-2 mb-3">
+                                  <div className="flex items-center gap-2 mb-3 flex-wrap">
                                     <h3 className="font-bold text-lg text-foreground truncate">
                                       {a.recipientName}
                                     </h3>
-                                    <div className="flex gap-1">
+                                    <div className="flex gap-1.5 flex-wrap">
                                       {a.isPrimary && (
                                         <Badge
                                           variant="default"
-                                          className="text-xs bg-green-100 text-green-800 border-green-200"
+                                          className="text-xs bg-blue-100 text-blue-800 border-blue-200"
                                         >
                                           Primary
                                         </Badge>
                                       )}
-                                      {!disabled && info?.inRange && (
+                                      {!disabled && isInRange && (
                                         <Badge
                                           variant="outline"
-                                          className="text-xs border-green-200 text-green-700"
+                                          className="text-xs border-green-300 bg-green-50 text-green-700 font-semibold"
                                         >
-                                          Available
+                                          ✓ In Range
                                         </Badge>
                                       )}
                                     </div>
@@ -479,44 +580,26 @@ export default function AddressCard({
                                     </div>
                                   </div>
 
-                                  {/* Distance info if available */}
-                                  {info?.distanceMeters && (
-                                    <div className="flex items-center gap-2 pl-6 mb-3">
-                                      <div className="w-3 h-3 text-blue-500">
-                                        <svg
-                                          viewBox="0 0 24 24"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          strokeWidth="2"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m-6 3l6-3"
-                                          />
-                                        </svg>
-                                      </div>
-                                      <span className="text-xs text-blue-600 font-medium">
-                                        ~
-                                        {(info.distanceMeters / 1000).toFixed(
-                                          1
-                                        )}{" "}
-                                        km away
-                                      </span>
-                                    </div>
-                                  )}
+                                  {/* Distance display removed in drawer per UX request */}
 
-                                  <ValidationWarnings info={info} />
+                                  {/* Show validation warnings only if disabled */}
+                                  {disabled && <ValidationWarnings info={info} />}
                                 </div>
 
                                 {/* Selection indicator */}
                                 <div className="flex-shrink-0 flex items-center">
-                                  {isSelected ? (
-                                    <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                                      <CheckCircle className="w-4 h-4 text-white" />
+                                  {isSelected && !disabled ? (
+                                    <div className="w-7 h-7 bg-primary rounded-full flex items-center justify-center shadow-md">
+                                      <CheckCircle className="w-5 h-5 text-white" />
+                                    </div>
+                                  ) : disabled ? (
+                                    <div className="w-7 h-7 border-2 border-red-300 bg-red-50 rounded-full flex items-center justify-center">
+                                      <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                      </svg>
                                     </div>
                                   ) : (
-                                    <div className="w-6 h-6 border-2 border-muted-foreground/30 rounded-full group-hover:border-primary/50 transition-colors duration-200" />
+                                    <div className="w-7 h-7 border-2 border-muted-foreground/30 rounded-full group-hover:border-primary/50 transition-colors duration-200" />
                                   )}
                                 </div>
                               </div>
@@ -530,29 +613,33 @@ export default function AddressCard({
                         );
                       })}
                     </div>
+                    )}
                   </ScrollArea>
 
-                  <DrawerFooter className="mt-4">
-                    <div className="w-full flex flex-col gap-2">
+                  <DrawerFooter className="mt-4 border-t bg-card/50 backdrop-blur-sm">
+                    <div className="w-full flex flex-col gap-3">
                       <Button
                         variant="default"
-                        className="w-full"
+                        size="lg"
+                        className="w-full shadow-md hover:shadow-lg transition-shadow"
                         onClick={() =>
                           (window.location.href = "/profile/addresses")
                         }
                       >
+                        <MapPin className="w-4 h-4 mr-2" />
                         Add New Address
                       </Button>
 
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        className="w-full"
+                        className="w-full border-border/50 hover:border-primary/30 hover:bg-primary/5"
                         onClick={() =>
                           (window.location.href = "/profile/addresses")
                         }
                       >
-                        Manage saved addresses
+                        <Settings className="w-3.5 h-3.5 mr-2" />
+                        Manage Saved Addresses
                       </Button>
                     </div>
                   </DrawerFooter>

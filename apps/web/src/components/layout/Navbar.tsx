@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useCart } from "@/hooks/useCart";
 import { useUser } from "@/hooks/useUsers";
 import useLocationStore from "@/stores/locationStore";
@@ -28,6 +28,7 @@ const LocationManager = dynamic(() => import("@/components/LocationManager"), {
 
 export default function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
   const [userId, setUserId] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
@@ -38,6 +39,9 @@ export default function Navbar() {
   const nearestStoreName = useLocationStore((s) => s.nearestStoreName);
   const activeAddress = useLocationStore((s) => s.activeAddress);
   const { data: cart } = useCart(userId, nearestStoreId);
+  
+  // Check if we're on checkout page
+  const isCheckoutPage = pathname === "/checkout";
   
   // Get user data to check role
   const { data: userData } = useUser(userId);
@@ -477,18 +481,29 @@ export default function Navbar() {
             {/* Right: Address Selection */}
             <div className="relative" ref={locationDropdownRef}>
               <button
-                onClick={() => setShowLocationDropdown(!showLocationDropdown)}
-                className="flex items-center gap-2 px-3.5 py-1.5 bg-card hover:bg-primary/5 rounded-lg transition-all border border-border hover:border-primary/30 shadow-sm hover:shadow group"
+                onClick={() => !isCheckoutPage && setShowLocationDropdown(!showLocationDropdown)}
+                disabled={isCheckoutPage}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all border shadow-sm ${
+                  isCheckoutPage 
+                    ? "bg-muted/50 border-border cursor-not-allowed opacity-60" 
+                    : "bg-card hover:bg-primary/5 border-border hover:border-primary/30 hover:shadow group"
+                }`}
               >
-                <MapPin className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-semibold text-foreground max-w-[200px] truncate">
+                <MapPin className={`h-4 w-4 transition-transform ${
+                  isCheckoutPage ? "text-muted-foreground" : "text-primary group-hover:scale-110"
+                }`} />
+                <span className={`text-sm font-semibold max-w-[200px] truncate ${
+                  isCheckoutPage ? "text-muted-foreground" : "text-foreground"
+                }`}>
                   {activeAddress?.addressLine || "Select Address"}
                 </span>
-                <ChevronDown
-                  className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${
-                    showLocationDropdown ? "rotate-180" : ""
-                  }`}
-                />
+                {!isCheckoutPage && (
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${
+                      showLocationDropdown ? "rotate-180" : ""
+                    }`}
+                  />
+                )}
               </button>
 
               {/* Location Dropdown */}
