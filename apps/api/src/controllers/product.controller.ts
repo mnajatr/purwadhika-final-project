@@ -3,9 +3,29 @@ import { ProductService } from "../services/product.service.js";
 import { v2 as cloudinary } from "cloudinary";
 import multer from "multer";
 import fs from "fs/promises";
+import { productForCreateSchema } from "packages/schemas/dist/product.schema.js";
 
 const service = new ProductService();
-const upload = multer({ dest: "uploads/" });
+const upload = multer({
+  dest: "uploads/",
+  limits: {
+    fileSize: 1 * 1024 * 1024, // 1 MB
+  },
+  fileFilter: (req, file, cb) => {
+    // validasi ekstensi file
+    const allowedTypes = /jpeg|jpg|png|gif/;
+    const mimeType = allowedTypes.test(file.mimetype);
+    const extName = allowedTypes.test(
+      file.originalname.toLowerCase().split(".").pop() || ""
+    );
+
+    if (mimeType && extName) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only .jpg, .jpeg, .png, and .gif formats are allowed!"));
+    }
+  },
+});
 
 // Cloudinary configuration
 cloudinary.config({
@@ -66,6 +86,25 @@ export class ProductController {
       try {
         const { name } = req.body;
         const existing = await service.getByName(name);
+
+        let inventories = [];
+        if (req.body.inventories) {
+          try {
+            inventories =
+              typeof req.body.inventories === "string"
+                ? JSON.parse(req.body.inventories)
+                : req.body.inventories;
+          } catch {
+            inventories = [];
+          }
+        }
+
+        const parsed = productForCreateSchema.parse({
+          ...req.body,
+          images: req.body.images,
+          inventories,
+        });
+
         if (existing) {
           return res
             .status(400)
@@ -110,13 +149,26 @@ export class ProductController {
         const files = req.files as Express.Multer.File[];
         let uploadedImages: { imageUrl: string }[] = [];
 
+        // parse inventories jika masih string
+        const inventories =
+          typeof req.body.inventories === "string"
+            ? JSON.parse(req.body.inventories)
+            : req.body.inventories;
+
+        // parse seluruh input pakai Zod
+        const parsed = productForCreateSchema.parse({
+          ...req.body,
+          images: req.body.images,
+          inventories,
+        });
+
+        // upload images jika ada
         if (files && files.length) {
           uploadedImages = await Promise.all(
             files.map(async (file) => {
               const result = await cloudinary.uploader.upload(file.path, {
                 folder: "products",
               });
-              // hapus file lokal setelah upload
               await fs.unlink(file.path);
               return { imageUrl: result.secure_url };
             })
@@ -124,8 +176,8 @@ export class ProductController {
         }
 
         const updatedData = {
-          ...req.body,
-          images: uploadedImages.length ? uploadedImages : req.body.images,
+          ...parsed,
+          images: uploadedImages.length ? uploadedImages : parsed.images,
         };
 
         const updated = await service.updateProduct(slug, updatedData);

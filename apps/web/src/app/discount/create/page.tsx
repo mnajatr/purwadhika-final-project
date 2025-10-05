@@ -9,6 +9,7 @@ import {
   DiscountType,
 } from "@/types/discount.types";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface CreateDiscountForm extends Omit<CreateDiscount, "store" | "product"> {
   storeId: number;
@@ -86,8 +87,11 @@ export default function CreateDiscountForm() {
 
     createDiscount.mutate(payload, {
       onSuccess: () => {
-        alert("✅ Discount created successfully!");
+        toast.success("✅ Discount created successfully!");
         reset();
+      },
+      onError: (err) => {
+        toast.error("❌ Failed to create discount: " + (err?.message ?? err));
       },
     });
   };
@@ -177,6 +181,10 @@ export default function CreateDiscountForm() {
           )}
         </>
       )}
+      <p className="text-gray-500 text-sm">
+        Amount pada percentage cth*: 10 jika pada nominal dalam rupia cth*:
+        5000:
+      </p>
 
       {/* Buy X Get Y */}
       {selectedValue === ValueType.BUY1GET1 && (
@@ -211,6 +219,9 @@ export default function CreateDiscountForm() {
           className="w-full p-2 border rounded"
         />
       </div>
+      <p className="text-gray-500 text-sm">
+        Jika pilih percentage wajib mengisi Min Purchase dan Max Discount
+      </p>
 
       {/* Expired At */}
       <p className="text-sm font-semibold">Expired At</p>

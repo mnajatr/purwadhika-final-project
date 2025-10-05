@@ -6,6 +6,7 @@ import { productsService } from "@/services/products.service";
 import { useCategories } from "@/hooks/useCategory";
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
 export type ProductForUpdate = {
   id: number;
@@ -32,22 +33,28 @@ export default function UpdateProductForm({
   const storeIdz = searchParams.get("storeId") ?? "1";
   const storeId = Number(storeIdz);
 
-  const { register, handleSubmit, reset, setValue, watch } =
-    useForm<ProductForUpdate>({
-      defaultValues: {
-        id: product.id,
-        name: product?.name || "",
-        slug: product?.slug || "",
-        description: product?.description || "",
-        price: product?.price ?? 0,
-        weight: product?.weight ?? 0,
-        width: product?.width ?? 0,
-        height: product?.height ?? 0,
-        length: product?.length ?? 0,
-        categoryId: product?.categoryId ?? undefined,
-        images: [],
-      },
-    });
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<ProductForUpdate>({
+    defaultValues: {
+      id: product.id,
+      name: product?.name || "",
+      slug: product?.slug || "",
+      description: product?.description || "",
+      price: product?.price ?? 0,
+      weight: product?.weight ?? 0,
+      width: product?.width ?? 0,
+      height: product?.height ?? 0,
+      length: product?.length ?? 0,
+      categoryId: product?.categoryId ?? undefined,
+      images: [],
+    },
+  });
 
   const images = watch("images");
 
@@ -98,10 +105,11 @@ export default function UpdateProductForm({
       if (!product.slug) throw new Error("Slug produk tidak ada!");
       await productsService.updateProduct(product.slug, formData);
 
-      alert("Produk berhasil diperbarui!");
+      toast.success("✅ Product updated successfully!");
+      reset();
     } catch (err) {
       console.error(err);
-      alert("Gagal memperbarui produk");
+      toast.error("❌ Failed to update product");
     }
   };
 
@@ -115,81 +123,133 @@ export default function UpdateProductForm({
       onSubmit={handleSubmit(onSubmit)}
       className="max-w-2xl mx-auto p-6 bg-white shadow rounded-lg space-y-6 m-10"
     >
-      <h2 className="text-2xl font-bold">Edit Produk</h2>
+      <h2 className="text-2xl font-bold">Edit Product</h2>
 
-      {/* Nama & Slug */}
+      {/* Name */}
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Product Name
+      </label>
       <input
         type="text"
-        placeholder="Nama Produk"
-        {...register("name", { required: true })}
+        placeholder="Enter product name"
+        {...register("name", { required: "Product name is required" })}
         className="w-full p-2 border rounded"
       />
+      {errors.name && (
+        <p className="text-red-500 text-sm">{errors.name.message}</p>
+      )}
+
+      {/* Slug */}
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Product Slug
+      </label>
       <input
         type="text"
-        placeholder="Slug Produk"
-        {...register("slug", { required: true })}
+        placeholder="product-slug-example"
+        {...register("slug", { required: "Product slug is required" })}
         className="w-full p-2 border rounded"
       />
+      {errors.slug && (
+        <p className="text-red-500 text-sm">{errors.slug.message}</p>
+      )}
 
-      {/* Deskripsi */}
+      {/* Description */}
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Description
+      </label>
       <textarea
-        placeholder="Deskripsi produk..."
+        placeholder="Enter product description..."
         {...register("description")}
         className="w-full p-2 border rounded"
       />
 
-      {/* Harga */}
+      {/* Price */}
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Price
+      </label>
       <input
         type="number"
-        placeholder="Harga"
-        {...register("price", { valueAsNumber: true })}
+        placeholder="Enter product price"
+        {...register("price", {
+          required: "Price is required",
+          valueAsNumber: true,
+        })}
         className="w-full p-2 border rounded"
       />
+      {errors.price && (
+        <p className="text-red-500 text-sm">{errors.price.message}</p>
+      )}
 
-      {/* Dimensi & Berat */}
+      {/* Dimensions & Weight */}
       <div className="grid grid-cols-2 gap-4">
-        <input
-          type="number"
-          placeholder="Berat"
-          {...register("weight", { valueAsNumber: true })}
-          className="w-full p-2 border rounded"
-        />
-        <input
-          type="number"
-          placeholder="Lebar"
-          {...register("width", { valueAsNumber: true })}
-          className="w-full p-2 border rounded"
-        />
-        <input
-          type="number"
-          placeholder="Tinggi"
-          {...register("height", { valueAsNumber: true })}
-          className="w-full p-2 border rounded"
-        />
-        <input
-          type="number"
-          placeholder="Panjang"
-          {...register("length", { valueAsNumber: true })}
-          className="w-full p-2 border rounded"
-        />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Weight (grams)
+          </label>
+          <input
+            type="number"
+            placeholder="Weight in grams"
+            {...register("weight", { valueAsNumber: true })}
+            className="w-full p-2 border rounded"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Width (cm)
+          </label>
+          <input
+            type="number"
+            placeholder="Width in cm"
+            {...register("width", { valueAsNumber: true })}
+            className="w-full p-2 border rounded"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Height (cm)
+          </label>
+          <input
+            type="number"
+            placeholder="Height in cm"
+            {...register("height", { valueAsNumber: true })}
+            className="w-full p-2 border rounded"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Length (cm)
+          </label>
+          <input
+            type="number"
+            placeholder="Length in cm"
+            {...register("length", { valueAsNumber: true })}
+            className="w-full p-2 border rounded"
+          />
+        </div>
       </div>
 
-      {/* Kategori */}
+      {/* Category */}
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Category
+      </label>
       <select
-        {...register("categoryId", { required: true })}
+        {...register("categoryId", { required: "Category is required" })}
         className="w-full p-2 border rounded"
       >
-        <option value="">-- Pilih Kategori --</option>
+        <option value="">-- Select Category --</option>
         {categories.map((cat) => (
           <option key={cat.id} value={cat.id}>
             {cat.name}
           </option>
         ))}
       </select>
+      {errors.categoryId && (
+        <p className="text-red-500 text-sm">{errors.categoryId.message}</p>
+      )}
 
-      {/* Gambar */}
+      {/* Images */}
       <div>
-        <label className="block mb-1 font-medium">Gambar Produk</label>
+        <label className="block mb-1 font-medium">Product Images</label>
         <input
           type="file"
           multiple
@@ -240,7 +300,10 @@ export default function UpdateProductForm({
         </div>
       </div>
 
-      {/* Inventories */}
+      {/* Store */}
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Store ID
+      </label>
       <input
         type="number"
         disabled
@@ -253,7 +316,7 @@ export default function UpdateProductForm({
         type="submit"
         className="w-full bg-primary text-white py-2 rounded hover:bg-primary-dark"
       >
-        Update Produk
+        Update Product
       </button>
     </form>
   );

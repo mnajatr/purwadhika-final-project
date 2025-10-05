@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { UpdateUserSchema } from "@repo/schemas";
 import { z } from "zod";
 import { updateUser } from "@/services/users.service";
+import { toast } from "sonner";
 
 type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
 
@@ -37,10 +38,10 @@ export default function UpdateUserForm({
   const onSubmit = async (data: UpdateUserInput) => {
     try {
       await updateUser(userId, data);
-      alert("✅ User updated successfully!");
+      toast.success("✅ User updated successfully!");
       onSuccess?.();
     } catch (err) {
-      alert((err as Error)?.message ?? "❌ Failed to create category");
+      toast.error("❌ Failed to update user");
     }
   };
 

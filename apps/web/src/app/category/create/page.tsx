@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createCategory } from "@/services/category.service";
 import { CreateCategoryInput, CreateCategorySchema } from "@repo/schemas";
+import { toast } from "sonner";
 
 export default function CreateCategoryForm() {
   const {
@@ -22,10 +23,10 @@ export default function CreateCategoryForm() {
   const onSubmit = async (data: CreateCategoryInput) => {
     try {
       await createCategory(data);
-      alert("✅ Category created successfully!");
+      toast.success("✅ Category created successfully!");
       reset();
     } catch (err) {
-      alert((err as Error)?.message ?? "❌ Failed to create category");
+      toast.error((err as Error)?.message ?? "❌ Failed to create category");
     }
   };
 
