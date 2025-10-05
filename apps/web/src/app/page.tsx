@@ -5,12 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useProducts } from "@/hooks/useProduct";
 import useLocationStore from "@/stores/locationStore";
-import NearestStoreIndicator from "@/components/products/NearestStoreIndicator";
-import dynamic from "next/dynamic";
-
-const LocationManager = dynamic(() => import("@/components/LocationManager"), {
-  ssr: false,
-});
 
 export default function Home() {
   // Location from global store (address picker)
@@ -21,7 +15,6 @@ export default function Home() {
 
   const products = data?.products || [];
   const nearestStore = data?.nearestStore || null;
-  const storeMessage = data?.message || "Loading...";
 
   React.useEffect(() => {
     try {
@@ -82,22 +75,6 @@ export default function Home() {
               </Link>
             </div>
           </div>
-
-          {/* Location Manager and Nearest Store Section */}
-          <div className="mb-16 max-w-4xl mx-auto">
-            <div className="bg-card rounded-3xl p-8 shadow-lg border border-border">
-              <NearestStoreIndicator
-                nearestStore={nearestStore}
-                message={storeMessage}
-              />
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold mb-4">
-                  Choose Your Location
-                </h3>
-                <LocationManager />
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -127,11 +104,6 @@ export default function Home() {
                       fill
                       className="object-cover"
                     />
-                    <div className="absolute top-4 right-4">
-                      <div className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-semibold">
-                        ⭐ 4.5
-                      </div>
-                    </div>
                   </div>
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-3">
