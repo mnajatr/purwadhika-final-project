@@ -10,7 +10,6 @@ import OrdersListHeader from "@/components/admin/orders/list/OrdersListHeader";
 import OrdersListStats from "@/components/admin/orders/list/OrdersListStats";
 import OrdersListFilters from "@/components/admin/orders/list/OrdersListFilters";
 import OrdersListTable from "@/components/admin/orders/list/OrdersListTable";
-import OrdersListDevPanel from "@/components/admin/orders/list/OrdersListDevPanel";
 import { toast } from "sonner";
 
 type OrderStats = {
@@ -47,7 +46,6 @@ export default function AdminOrdersPage() {
     role: string;
     storeId?: number | null;
   } | null>(null);
-  const [devUserId, setDevUserId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>(
     {}
   );
@@ -144,15 +142,6 @@ export default function AdminOrdersPage() {
   }, [items, selectedOrders, allOrdersStats]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      setDevUserId(localStorage.getItem("devUserId"));
-    } catch {
-      setDevUserId(null);
-    }
-  }, []);
-
-  useEffect(() => {
     let mounted = true;
     (async () => {
       try {
@@ -177,9 +166,6 @@ export default function AdminOrdersPage() {
       mounted = false;
     };
   }, []);
-
-  const isLikelyNonAdmin =
-    devUserId === null || devUserId === "none" || devUserId === "4";
 
   const handleOrderAction = async (
     orderId: number,
@@ -301,29 +287,6 @@ export default function AdminOrdersPage() {
             }}
             onRefresh={reload}
             onPageReset={() => setPage(1)}
-          />
-
-          <OrdersListDevPanel
-            devUserId={devUserId}
-            onReload={() => {
-              try {
-                const v =
-                  typeof window !== "undefined"
-                    ? localStorage.getItem("devUserId")
-                    : null;
-                setDevUserId(v);
-              } catch {
-                setDevUserId(null);
-              }
-            }}
-            onClear={() => {
-              try {
-                if (typeof window !== "undefined")
-                  localStorage.removeItem("devUserId");
-              } catch {}
-              setDevUserId(null);
-            }}
-            isLikelyNonAdmin={isLikelyNonAdmin}
           />
 
           <OrdersListTable
