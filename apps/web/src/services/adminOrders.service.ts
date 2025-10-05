@@ -49,11 +49,11 @@ class AdminOrdersService {
 
   async getOrderById(orderId: number): Promise<AdminOrderDetail> {
     const endpoint = `${this.basePath}/${orderId}`;
-    const response = await apiClient.get<{ 
-      success: boolean; 
+    const response = await apiClient.get<{
+      success: boolean;
       data: unknown;
     }>(endpoint);
-    
+
     const parsed = AdminOrderDetailSchema.safeParse(response.data);
     if (!parsed.success) {
       throw new Error(`Invalid order detail response: ${parsed.error.message}`);
