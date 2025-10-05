@@ -53,8 +53,9 @@ export default function ConfirmButton({ orderId, userId }: ConfirmButtonProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Order Receipt?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to confirm that you have received this order? 
-              This action confirms that the items have been delivered to you in good condition.
+              Are you sure you want to confirm that you have received this
+              order? This action confirms that the items have been delivered to
+              you in good condition.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

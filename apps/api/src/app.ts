@@ -19,7 +19,6 @@ import { apiRateLimit } from "./middleware/rateLimit.middleware.js";
 // Boot background workers/queues (side-effects)
 import "./workers/orderCancelWorker.js";
 import "./workers/orderConfirmWorker.js";
-import "./workers/autoConfirmWorker.js";
 
 export class App {
   app: Application;

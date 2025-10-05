@@ -15,11 +15,6 @@ export default function OrdersListHeader({
     <div className="mb-8">
       <div className="flex items-center justify-between mb-2">
         <div>
-          <nav className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <span>Property</span>
-            <span>›</span>
-            <span className="text-foreground font-medium">Order List</span>
-          </nav>
           <div className="flex items-center space-x-3">
             <h1 className="text-3xl font-bold text-foreground">Order List</h1>
             {selectedCount > 0 && (

@@ -473,7 +473,7 @@ export default function Navbar() {
                   Delivering from
                 </span>
                 <span className="text-sm font-bold text-primary">
-                  {nearestStoreName || "Grosirun Pusat"}
+                  {nearestStoreName || "Store Bandung"}
                 </span>
               </div>
             </div>

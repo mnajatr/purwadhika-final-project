@@ -110,7 +110,7 @@ export default function Home() {
                           </span>
                           {product.store && (
                             <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              📍 {product.store}
+                              {product.store}
                             </span>
                           )}
                         </div>
@@ -127,7 +127,7 @@ export default function Home() {
 
                         {/* Price */}
                         <div className="pt-2 border-t border-border/50">
-                          <p className="text-xs text-muted-foreground mb-1">Harga</p>
+                          <p className="text-xs text-muted-foreground mb-1">Price</p>
                           <p
                             className="text-3xl font-bold"
                             style={{
@@ -152,7 +152,7 @@ export default function Home() {
                           }`}
                           onClick={(e) => outOfStock && e.preventDefault()}
                         >
-                          {outOfStock ? "Habis" : "Lihat Detail"}
+                          {outOfStock ? "Out Of Stock" : "View Product"}
                         </Link>
                       </div>
                     </div>
