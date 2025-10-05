@@ -10,6 +10,7 @@ import {
 } from "@/types/discount.types";
 import { useUpdateDiscount } from "@/hooks/useDiscount";
 import { useProducts } from "@/hooks/useProduct";
+import { toast } from "sonner";
 
 type FormValues = {
   name: string;
@@ -113,8 +114,9 @@ export default function EditDiscountForm({
     updateDiscount.mutate(
       { id: discount.id, data: payload },
       {
-        onSuccess: () => alert("✅ Discount updated"),
-        onError: (err) => alert("Update failed: " + (err?.message ?? err)),
+        onSuccess: () => toast.success("✅ Discount updated"),
+        onError: (err) =>
+          toast.error("Update failed: " + (err?.message ?? err)),
       }
     );
   };

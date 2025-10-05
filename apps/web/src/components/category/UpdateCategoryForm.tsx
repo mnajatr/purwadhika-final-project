@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UpdateCategorySchema, UpdateCategoryInput } from "@repo/schemas";
 import { useUpdateCategory } from "@/hooks/useCategory";
+import { toast } from "sonner";
 
 interface UpdateCategoryFormProps {
   id: number;
@@ -36,10 +37,10 @@ export default function UpdateCategoryForm({
   const onSubmit = async (data: UpdateCategoryInput) => {
     try {
       await updateCategoryMutation.mutateAsync({ id, data });
-      alert("✅ Category updated successfully!");
+      toast.success("✅ Category updated successfully!");
       onSuccess?.();
     } catch (err) {
-      alert((err as Error)?.message ?? "❌ Failed to create category");
+      toast.error((err as Error)?.message ?? "❌ Failed to create category");
     }
   };
 

@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { createUser } from "@/services/users.service";
 import { CreateUserSchema } from "@repo/schemas";
+import { toast } from "sonner";
 
 type CreateUserInput = z.infer<typeof CreateUserSchema>;
 
@@ -29,10 +30,10 @@ export default function CreateUserForm() {
   const onSubmit = async (data: CreateUserInput) => {
     try {
       await createUser(data);
-      alert("✅ User created successfully!");
+      toast.success("✅ User created successfully!");
       reset();
     } catch (err) {
-      alert((err as Error)?.message ?? "❌ Failed to create category");
+      toast.error("❌ Failed to create user");
     }
   };
 
