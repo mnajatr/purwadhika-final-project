@@ -123,30 +123,30 @@ export default function OrderOverview({
   CancelButton,
 }: OrderOverviewProps) {
   const [countdown, setCountdown] = useState<string | null>(null);
-  
+
   useEffect(() => {
     if (order.status !== "PENDING_PAYMENT" || !order.createdAt) {
       return setCountdown(null);
     }
-    
+
     const start = new Date(order.createdAt).getTime();
     const due = start + 60 * 60 * 1000;
-    
+
     const update = () => {
       const diff = due - Date.now();
       if (diff <= 0) return setCountdown("Expired");
-      
+
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
-      
+
       setCountdown(
         `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s
           .toString()
           .padStart(2, "0")}`
       );
     };
-    
+
     update();
     const id = setInterval(update, 1000);
     return () => clearInterval(id);

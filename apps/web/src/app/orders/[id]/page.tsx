@@ -5,7 +5,18 @@ import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { Button } from "@/components/ui/button";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { AlertCircle, RefreshCw, XCircle } from "lucide-react";
 
 import OrderOverview from "@/components/orders/detail/OrderOverview";
 import { useGetOrder, useCancelOrder } from "@/hooks/useOrder";
@@ -21,12 +32,14 @@ function CancelButton({
   const cancel = useCancelOrder();
   const [loading, setLoading] = React.useState(false);
   const [errMsg, setErrMsg] = React.useState<string | null>(null);
+  const [open, setOpen] = React.useState(false);
 
-  const handle = async () => {
+  const handleCancel = async () => {
     setErrMsg(null);
     setLoading(true);
     try {
       await cancel.mutateAsync({ orderId, userId });
+      setOpen(false);
     } catch (e) {
       setErrMsg(e instanceof Error ? e.message : String(e));
     } finally {
@@ -36,9 +49,39 @@ function CancelButton({
 
   return (
     <div>
-      <Button onClick={handle} disabled={loading} variant="destructive">
-        {loading ? "Cancelling..." : "Cancel Order"}
-      </Button>
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogTrigger asChild>
+          <Button variant="destructive">
+            <XCircle className="mr-2 h-4 w-4" />
+            Cancel Order
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel This Order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this order? This action cannot be
+              undone. Your items will be returned to stock and any used vouchers
+              will be restored.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>
+              No, Keep Order
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleCancel();
+              }}
+              disabled={loading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {loading ? "Cancelling..." : "Yes, Cancel Order"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {errMsg && <div className="text-sm text-red-600 mt-2">{errMsg}</div>}
     </div>
   );

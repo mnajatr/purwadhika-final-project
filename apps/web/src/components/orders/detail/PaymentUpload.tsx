@@ -98,10 +98,10 @@ export default function PaymentUpload({
       }, 200);
 
       // Use apiClient instead of fetch to include auth headers
-      const result = await apiClient.postForm<{ message?: string; data?: Record<string, unknown> }>(
-        `/orders/${orderId}/payment-proof`,
-        formData
-      );
+      const result = await apiClient.postForm<{
+        message?: string;
+        data?: Record<string, unknown>;
+      }>(`/orders/${orderId}/payment-proof`, formData);
 
       clearInterval(progressInterval);
       setUploadProgress(100);
