@@ -15,7 +15,8 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
 
   const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? 1;
-  const addToCartMutation = useAddToCart(userId, nearestStoreId);
+  // useAddToCart accepts only userId; storeId is passed as part of the mutate payload
+  const addToCartMutation = useAddToCart(userId);
 
   const nearestStoreName = useLocationStore((s) => s.nearestStoreName);
   const [currentIndex, setCurrentIndex] = useState(0);
