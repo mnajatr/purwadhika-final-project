@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ interface ApplyDiscountProps {
 }
 
 export default function ApplyDiscount({
-  handleUpdateCart, // eslint-disable-line @typescript-eslint/no-unused-vars
+  handleUpdateCart,
   cart,
   onApplyDiscount,
   isLoading = false,
@@ -77,8 +78,13 @@ export default function ApplyDiscount({
       appliedDiscountIds.includes(id)
     );
 
+    // Build list of operations to perform so we can run them sequentially and
+    // revert on failure.
+    type Op = { itemId: number; from: number; to: number };
+    const ops: Op[] = [];
+
     if (allAlreadyApplied) {
-      // UNAPPLY
+      // UNAPPLY locally
       updated = appliedDiscountIds.filter(
         (id) => !selectedDiscountIds.includes(id)
       );
@@ -92,7 +98,7 @@ export default function ApplyDiscount({
           const cartItem = cart.items.find((it) => it.productId === productId);
           if (!cartItem) continue;
           const oldQty = cartItem.qty;
-          await handleUpdateCart(cartItem.id, oldQty - 1);
+          ops.push({ itemId: cartItem.id, from: oldQty, to: Math.max(0, oldQty - 1) });
         }
       }
     } else {
@@ -111,21 +117,60 @@ export default function ApplyDiscount({
           const cartItem = cart.items.find((it) => it.productId === productId);
           if (!cartItem) continue;
           const oldQty = cartItem.qty;
-          await handleUpdateCart(cartItem.id, oldQty + 1);
+          ops.push({ itemId: cartItem.id, from: oldQty, to: oldQty + 1 });
         }
       }
     }
 
-    setAppliedDiscountIds(updated);
+    // Execute ops sequentially and keep track of succeeded ones to allow revert
+    const succeeded: Op[] = [];
 
-    if (onApplyDiscount) {
-      const selected: DiscountResponse[] = discounts.filter((d) =>
-        updated.includes(d.id)
-      );
-      onApplyDiscount(selected);
+    try {
+      for (const op of ops) {
+        try {
+          await handleUpdateCart(op.itemId, op.to);
+          succeeded.push(op);
+        } catch (err: unknown) {
+          // Map and show friendly message, then throw to outer catch to revert
+          const msg = err instanceof Error ? err.message : "Update failed";
+          toast.error(msg.includes("stock") ?
+            "Not enough stock to apply selected discount(s)." : msg);
+          throw err;
+        }
+      }
+
+      // If all ops succeeded, commit the applied discount ids locally
+      setAppliedDiscountIds(updated);
+
+      if (onApplyDiscount) {
+        const selected: DiscountResponse[] = discounts.filter((d) =>
+          updated.includes(d.id)
+        );
+        onApplyDiscount(selected);
+      }
+
+      setSelectedDiscountIds([]);
+    } catch (err) {
+      // Revert any successful changes (best effort). Don't surface further errors
+      if (succeeded.length > 0) {
+        for (const s of succeeded.reverse()) {
+          try {
+            // revert to original qty
+            await handleUpdateCart(s.itemId, s.from);
+          } catch (revertErr) {
+            if (process.env.NODE_ENV === "development") {
+              console.warn("Failed to revert cart change:", revertErr);
+            }
+          }
+        }
+      }
+
+      // ensure UI state does not reflect a partially-applied discount
+      // do not modify appliedDiscountIds here since the server is the source of truth;
+      // but clear the current selection so user can try again
+      setSelectedDiscountIds([]);
+      if (process.env.NODE_ENV === "development") console.warn("Apply discount failed:", err);
     }
-
-    setSelectedDiscountIds([]);
   };
 
   return (

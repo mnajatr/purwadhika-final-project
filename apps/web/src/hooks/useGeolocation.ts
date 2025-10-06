@@ -31,6 +31,10 @@ export function useGeolocation(options?: PositionOptions) {
 
     // Get current position
     const onSuccess = (position: GeolocationPosition) => {
+      console.log("📍 Geolocation obtained:", {
+        lat: position.coords.latitude,
+        lon: position.coords.longitude,
+      });
       setState({
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
@@ -55,6 +59,7 @@ export function useGeolocation(options?: PositionOptions) {
           break;
       }
 
+      console.error("❌ Geolocation error:", errorMessage);
       setState({
         latitude: null,
         longitude: null,
@@ -63,14 +68,14 @@ export function useGeolocation(options?: PositionOptions) {
       });
     };
 
-    // Request current position
+    // Request current position with longer cache to avoid rate limiting
     navigator.geolocation.getCurrentPosition(
       onSuccess,
       onError,
       options || {
         enableHighAccuracy: false,
         timeout: 10000,
-        maximumAge: 300000, // Cache for 5 minutes
+        maximumAge: 600000, // Cache for 10 minutes to avoid excessive requests
       }
     );
   }, [options]);
@@ -80,6 +85,10 @@ export function useGeolocation(options?: PositionOptions) {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        console.log("📍 Geolocation refreshed:", {
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
+        });
         setState({
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
@@ -102,6 +111,7 @@ export function useGeolocation(options?: PositionOptions) {
             break;
         }
 
+        console.error("❌ Geolocation refresh error:", errorMessage);
         setState({
           latitude: null,
           longitude: null,
@@ -112,7 +122,7 @@ export function useGeolocation(options?: PositionOptions) {
       options || {
         enableHighAccuracy: false,
         timeout: 10000,
-        maximumAge: 0, // Force fresh location on refetch
+        maximumAge: 0, // Force fresh location only when manually refreshed
       }
     );
   };

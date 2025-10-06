@@ -5,13 +5,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { inventoryApi } from "@/services/inventory.service";
 import { ApiError } from "@/lib/axios-client";
-
-interface TransferItem {
-  productId: number;
-  productName: string;
-  qty: number;
-  availableStock: number;
-}
+import { StockTransferForm } from "@/components/admin/inventory/StockTransferForm";
+import { toast } from "sonner";
 
 export default function InventoryManagementPage() {
   const queryClient = useQueryClient();
@@ -19,14 +14,7 @@ export default function InventoryManagementPage() {
     "transfer" | "adjustment" | "journal"
   >("transfer");
 
-  // Transfer states
-  const [fromStoreId, setFromStoreId] = useState<string>("");
-  const [toStoreId, setToStoreId] = useState<string>("");
-  const [transferItems, setTransferItems] = useState<TransferItem[]>([]);
-  const [selectedProductId, setSelectedProductId] = useState<string>("");
-  const [transferQty, setTransferQty] = useState<number>(1);
-  const [transferNote, setTransferNote] = useState<string>("");
-
+  // Remove transfer states - now handled by StockTransferForm component
   // Manual adjustment states
   const [adjustmentStoreId, setAdjustmentStoreId] = useState<string>("");
   const [adjustmentProductId, setAdjustmentProductId] = useState<string>("");
@@ -45,12 +33,6 @@ export default function InventoryManagementPage() {
   const { data: stores = [] } = useQuery({
     queryKey: ["stores"],
     queryFn: inventoryApi.getStores,
-  });
-
-  const { data: products = [], isLoading: productsLoading } = useQuery({
-    queryKey: ["storeInventory", fromStoreId],
-    queryFn: () => inventoryApi.getStoreInventory(parseInt(fromStoreId)),
-    enabled: !!fromStoreId,
   });
 
   const { data: adjustmentProducts = [] } = useQuery({
@@ -81,26 +63,12 @@ export default function InventoryManagementPage() {
   const totalData = data?.total ?? 0;
 
   // Mutations
-  const transferMutation = useMutation({
-    mutationFn: inventoryApi.transferInventory,
-    onSuccess: () => {
-      alert("Inventory transferred successfully");
-      setTransferItems([]);
-      setFromStoreId("");
-      setToStoreId("");
-      setTransferNote("");
-      queryClient.invalidateQueries({ queryKey: ["storeInventory"] });
-      queryClient.invalidateQueries({ queryKey: ["stockJournals"] });
-    },
-    onError: (error: ApiError) => {
-      alert(error.response?.data?.message || "Failed to transfer inventory");
-    },
-  });
-
   const adjustmentMutation = useMutation({
     mutationFn: inventoryApi.adjustStock,
     onSuccess: () => {
-      alert("Stock adjustment successful!");
+      toast.success("✅ Stock adjustment successful!", {
+        description: "Inventory has been updated",
+      });
       setAdjustmentStoreId("");
       setAdjustmentProductId("");
       setAdjustmentQty(1);
@@ -109,7 +77,9 @@ export default function InventoryManagementPage() {
       queryClient.invalidateQueries({ queryKey: ["stockJournals"] });
     },
     onError: (error: ApiError) => {
-      alert(error.response?.data?.message || "Failed to adjust stock");
+      toast.error("❌ Failed to adjust stock", {
+        description: error.response?.data?.message || "Please try again",
+      });
     },
   });
 
@@ -121,12 +91,12 @@ export default function InventoryManagementPage() {
       !adjustmentQty ||
       !adjustmentReason
     ) {
-      alert("Please fill all fields");
+      toast.error("Please fill all fields");
       return;
     }
 
     if (adjustmentQty === 0) {
-      alert("Quantity cannot be zero");
+      toast.error("Quantity cannot be zero");
       return;
     }
 
@@ -135,83 +105,6 @@ export default function InventoryManagementPage() {
       productId: parseInt(adjustmentProductId),
       qtyChange: adjustmentQty,
       reason: adjustmentReason,
-    });
-  };
-  const addTransferItem = () => {
-    if (!selectedProductId || transferQty <= 0) {
-      alert("Please select a product and enter a valid quantity");
-      return;
-    }
-
-    const product = products.find((p) => p.id === parseInt(selectedProductId));
-    if (!product) {
-      alert("Product not found");
-      return;
-    }
-
-    if (transferQty > product.stockQty) {
-      alert(`Insufficient stock. Available: ${product.stockQty}`);
-      return;
-    }
-
-    const existingIndex = transferItems.findIndex(
-      (item) => item.productId === product.id
-    );
-    if (existingIndex >= 0) {
-      const updatedItems = [...transferItems];
-      const newQty = updatedItems[existingIndex].qty + transferQty;
-
-      if (newQty > product.stockQty) {
-        alert(
-          `Total quantity exceeds available stock. Available: ${product.stockQty}`
-        );
-        return;
-      }
-
-      updatedItems[existingIndex].qty = newQty;
-      setTransferItems(updatedItems);
-    } else {
-      const newItem: TransferItem = {
-        productId: product.id,
-        productName: product.name,
-        qty: transferQty,
-        availableStock: product.stockQty,
-      };
-      setTransferItems([...transferItems, newItem]);
-    }
-
-    setSelectedProductId("");
-    setTransferQty(1);
-  };
-
-  const removeTransferItem = (index: number) => {
-    setTransferItems(transferItems.filter((_, i) => i !== index));
-  };
-
-  const handleTransfer = () => {
-    if (!fromStoreId || !toStoreId) {
-      alert("Please select both source and destination stores");
-      return;
-    }
-
-    if (fromStoreId === toStoreId) {
-      alert("Source and destination stores must be different");
-      return;
-    }
-
-    if (transferItems.length === 0) {
-      alert("Please add at least one item to transfer");
-      return;
-    }
-
-    transferMutation.mutate({
-      fromStoreId: parseInt(fromStoreId),
-      toStoreId: parseInt(toStoreId),
-      items: transferItems.map((item) => ({
-        productId: item.productId,
-        qty: item.qty,
-      })),
-      note: transferNote,
     });
   };
 
@@ -274,210 +167,11 @@ export default function InventoryManagementPage() {
       </div>
 
       {/* Transfer Tab */}
-      {activeTab === "transfer" && (
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-semibold mb-6 text-gray-800">
-            Inventory Transfer
-          </h2>
-
-          {/* Store Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                From Store
-              </label>
-              <select
-                value={fromStoreId}
-                onChange={(e) => setFromStoreId(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-              >
-                <option value="">Select source store</option>
-                {stores.map((store) => (
-                  <option key={store.id} value={store.id.toString()}>
-                    {store.name} - {store.city}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                To Store
-              </label>
-              <select
-                value={toStoreId}
-                onChange={(e) => setToStoreId(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-              >
-                <option value="">Select destination store</option>
-                {stores
-                  .filter((store) => store.id.toString() !== fromStoreId)
-                  .map((store) => (
-                    <option key={store.id} value={store.id.toString()}>
-                      {store.name} - {store.city}
-                    </option>
-                  ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Add Items Section */}
-          {fromStoreId && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-4 text-gray-800">
-                Add Items to Transfer
-              </h3>
-
-              {productsLoading ? (
-                <div className="text-center py-4 text-gray-600">
-                  Loading inventory...
-                </div>
-              ) : (
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1">
-                    <select
-                      value={selectedProductId}
-                      onChange={(e) => setSelectedProductId(e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                    >
-                      <option value="">Select product</option>
-                      {products
-                        .filter((product) => product.stockQty > 0)
-                        .map((product) => (
-                          <option
-                            key={product.id}
-                            value={product.id.toString()}
-                          >
-                            {product.name} (Stock: {product.stockQty})
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-
-                  <div className="w-32">
-                    <input
-                      type="number"
-                      min="1"
-                      value={transferQty}
-                      onChange={(e) =>
-                        setTransferQty(parseInt(e.target.value) || 1)
-                      }
-                      placeholder="Qty"
-                      className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-
-                  <button
-                    onClick={addTransferItem}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors whitespace-nowrap"
-                  >
-                    Add Item
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Transfer Items Table */}
-          {transferItems.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-4 text-gray-800">
-                Items to Transfer
-              </h3>
-
-              <div className="overflow-x-auto rounded-lg border border-gray-200">
-                <table className="min-w-full bg-white">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Product
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Available Stock
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Transfer Quantity
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {transferItems.map((item, index) => (
-                      <tr key={item.productId} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {item.productName}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {item.availableStock}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <input
-                            type="number"
-                            min="1"
-                            max={item.availableStock}
-                            value={item.qty}
-                            onChange={(e) => {
-                              const newQty = parseInt(e.target.value) || 1;
-                              const updatedItems = [...transferItems];
-                              updatedItems[index].qty = Math.min(
-                                newQty,
-                                item.availableStock
-                              );
-                              setTransferItems(updatedItems);
-                            }}
-                            className="w-20 p-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button
-                            onClick={() => removeTransferItem(index)}
-                            className="text-red-600 hover:text-red-900 transition-colors"
-                          >
-                            Remove
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="flex justify-end mt-6">
-                <div className="flex items-center gap-4">
-                  <input
-                    type="text"
-                    placeholder="Reason / note (e.g. REPLENISH)"
-                    value={transferNote}
-                    onChange={(e) => setTransferNote(e.target.value)}
-                    className="p-2 border border-gray-300 rounded-md"
-                  />
-                  <button
-                    onClick={handleTransfer}
-                    disabled={
-                      transferMutation.isPending || transferItems.length === 0
-                    }
-                    className={`px-8 py-3 rounded-md font-medium transition-colors ${
-                      transferMutation.isPending || transferItems.length === 0
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : "bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                    }`}
-                  >
-                    {transferMutation.isPending
-                      ? "Transferring..."
-                      : "Transfer Inventory"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {activeTab === "transfer" && <StockTransferForm />}
 
       {/* Manual Adjustment Tab */}
       {activeTab === "adjustment" && (
-        <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="bg-card rounded-lg shadow-lg p-6">
           <h2 className="text-xl font-semibold mb-6 text-gray-800">
             Manual Stock Adjustment
           </h2>
@@ -491,7 +185,7 @@ export default function InventoryManagementPage() {
               <select
                 value={adjustmentStoreId}
                 onChange={(e) => setAdjustmentStoreId(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-card"
               >
                 <option value="">Select store</option>
                 {stores.map((store) => (
@@ -510,7 +204,7 @@ export default function InventoryManagementPage() {
               <select
                 value={adjustmentProductId}
                 onChange={(e) => setAdjustmentProductId(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-card"
                 disabled={!adjustmentStoreId}
               >
                 <option value="">Select product</option>
@@ -551,7 +245,7 @@ export default function InventoryManagementPage() {
                 onChange={(e) =>
                   setAdjustmentReason(e.target.value as "ADD" | "REMOVE")
                 }
-                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-card"
               >
                 <option value="ADD">Stock Addition</option>
                 <option value="REMOVE">Stock Removal</option>
@@ -578,7 +272,7 @@ export default function InventoryManagementPage() {
 
       {/* Journal Tab */}
       {activeTab === "journal" && (
-        <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="bg-card rounded-lg shadow-lg p-6">
           <h2 className="text-xl font-semibold mb-6 text-gray-800">
             Stock Journal
           </h2>
@@ -592,7 +286,7 @@ export default function InventoryManagementPage() {
               <select
                 value={selectedStoreForJournal}
                 onChange={(e) => setSelectedStoreForJournal(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-card"
               >
                 <option value="">All stores</option>
                 {stores.map((store) => (
@@ -635,7 +329,7 @@ export default function InventoryManagementPage() {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-gray-200">
-              <table className="min-w-full bg-white">
+              <table className="min-w-full bg-card">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -661,7 +355,7 @@ export default function InventoryManagementPage() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-card divide-y divide-gray-200">
                   {stockJournals.map((journal) => (
                     <tr key={journal.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -714,14 +408,14 @@ export default function InventoryManagementPage() {
               <div className="mt-6 flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <button
-                    className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-2 bg-card border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={page <= 1}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                   >
                     Previous
                   </button>
                   <button
-                    className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-2 bg-card border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={page * pageSize >= totalData}
                     onClick={() => setPage((p) => p + 1)}
                   >
