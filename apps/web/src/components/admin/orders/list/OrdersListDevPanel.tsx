@@ -11,9 +11,7 @@ export default function OrdersListDevPanel({
   onClear,
   isLikelyNonAdmin,
 }: OrdersListDevPanelProps) {
-  if (process.env.NODE_ENV === "production") {
-    return null;
-  }
+  // Always render dev panel (dev switcher controls header usage in axios)
 
   return (
     <div className="mb-4 p-3 bg-accent/10 border border-accent rounded-lg text-sm">

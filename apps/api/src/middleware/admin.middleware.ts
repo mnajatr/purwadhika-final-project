@@ -17,8 +17,8 @@ export async function adminAuth(req: Request, res: Response, next: NextFunction)
     // 1️⃣ Ambil userId dari req.user (kalau JWT sudah isi)
     let userId = authReq.user?.id;
 
-    // 2️⃣ Kalau ga ada, fallback ke header/query di DEV mode
-    if (!userId && process.env.NODE_ENV !== "production") {
+    // 2️⃣ Kalau ga ada, fallback ke header/query (dev shortcuts accepted in all envs)
+    if (!userId) {
       userId =
         toNumber(req.headers["x-dev-user-id"]) ||
         toNumber(req.query.userId) ||

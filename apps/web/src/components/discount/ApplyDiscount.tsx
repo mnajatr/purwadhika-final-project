@@ -98,7 +98,11 @@ export default function ApplyDiscount({
           const cartItem = cart.items.find((it) => it.productId === productId);
           if (!cartItem) continue;
           const oldQty = cartItem.qty;
-          ops.push({ itemId: cartItem.id, from: oldQty, to: Math.max(0, oldQty - 1) });
+          ops.push({
+            itemId: cartItem.id,
+            from: oldQty,
+            to: Math.max(0, oldQty - 1),
+          });
         }
       }
     } else {
@@ -133,8 +137,11 @@ export default function ApplyDiscount({
         } catch (err: unknown) {
           // Map and show friendly message, then throw to outer catch to revert
           const msg = err instanceof Error ? err.message : "Update failed";
-          toast.error(msg.includes("stock") ?
-            "Not enough stock to apply selected discount(s)." : msg);
+          toast.error(
+            msg.includes("stock")
+              ? "Not enough stock to apply selected discount(s)."
+              : msg
+          );
           throw err;
         }
       }
@@ -169,7 +176,8 @@ export default function ApplyDiscount({
       // do not modify appliedDiscountIds here since the server is the source of truth;
       // but clear the current selection so user can try again
       setSelectedDiscountIds([]);
-      if (process.env.NODE_ENV === "development") console.warn("Apply discount failed:", err);
+      if (process.env.NODE_ENV === "development")
+        console.warn("Apply discount failed:", err);
     }
   };
 
