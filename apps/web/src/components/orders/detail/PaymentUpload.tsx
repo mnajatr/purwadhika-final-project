@@ -16,17 +16,16 @@ import {
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import type { OrderDetail } from "@repo/schemas";
+import { apiClient } from "@/lib/axios-client";
 
 interface PaymentUploadProps {
   orderId: number;
-  apiBase: string;
   onUploadSuccess?: () => void;
   cancelButton?: React.ReactNode;
 }
 
 export default function PaymentUpload({
   orderId,
-  apiBase,
   onUploadSuccess,
   cancelButton,
 }: PaymentUploadProps) {
@@ -40,15 +39,15 @@ export default function PaymentUpload({
   >("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const maxFileSize = 5 * 1024 * 1024;
-  const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+  const maxFileSize = 1 * 1024 * 1024;
+  const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/jpeg"];
 
   const validateFile = (file: File): string | null => {
     if (!allowedTypes.includes(file.type)) {
-      return "Please upload a valid image file (JPG, PNG, WebP)";
+      return "Please upload a valid image file (JPG, PNG, JPEG)";
     }
     if (file.size > maxFileSize) {
-      return "File size must be less than 5MB";
+      return "File size must be less than 1MB";
     }
     return null;
   };
@@ -57,25 +56,33 @@ export default function PaymentUpload({
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
+    setFile(selectedFile);
+    const url = URL.createObjectURL(selectedFile);
+    setPreviewUrl(url);
+
     const validationError = validateFile(selectedFile);
     if (validationError) {
       setErrorMessage(validationError);
       setUploadStatus("error");
-      return;
+    } else {
+      setErrorMessage(null);
+      setUploadStatus("idle");
     }
-
-    setFile(selectedFile);
-    setErrorMessage(null);
-    setUploadStatus("idle");
-
-    const url = URL.createObjectURL(selectedFile);
-    setPreviewUrl(url);
   };
 
   const handleUpload = async () => {
     if (!file) {
       setErrorMessage("Please select a payment proof image");
       setUploadStatus("error");
+      return;
+    }
+
+    // Re-validate before upload
+    const validationError = validateFile(file);
+    if (validationError) {
+      setErrorMessage(validationError);
+      setUploadStatus("error");
+      toast.error(validationError);
       return;
     }
 
@@ -98,30 +105,22 @@ export default function PaymentUpload({
         });
       }, 200);
 
-      const response = await fetch(
-        `${apiBase}/orders/${orderId}/payment-proof`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const result = await apiClient.postForm<{
+        message?: string;
+        data?: Record<string, unknown>;
+      }>(`/orders/${orderId}/payment-proof`, formData);
 
       clearInterval(progressInterval);
       setUploadProgress(100);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Upload failed: ${response.status} ${errorText}`);
-      }
-
-      const result = await response.json();
       const payload = result?.data ?? result;
 
       setUploadStatus("success");
       toast.success("Payment proof uploaded successfully!");
 
       try {
-        const returnedOrder = payload.order ?? payload;
+        const payloadAny = payload as Record<string, unknown>;
+        const returnedOrder = payloadAny?.order ?? payload;
         if (returnedOrder && typeof returnedOrder === "object") {
           qc.setQueryData<OrderDetail | undefined>(
             ["order", orderId],
@@ -130,8 +129,8 @@ export default function PaymentUpload({
                 ...(prev ?? {}),
                 ...returnedOrder,
                 status:
-                  returnedOrder.orderStatus ||
-                  returnedOrder.status ||
+                  (returnedOrder as Record<string, unknown>).orderStatus ||
+                  (returnedOrder as Record<string, unknown>).status ||
                   prev?.status,
               } as OrderDetail)
           );
@@ -201,7 +200,7 @@ export default function PaymentUpload({
                     drag and drop
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    PNG, JPG, WebP (MAX. 5MB)
+                    PNG, JPG, JPEG (MAX. 1MB)
                   </p>
                 </div>
                 <input
@@ -298,7 +297,11 @@ export default function PaymentUpload({
             {file && uploadStatus !== "success" && (
               <Button
                 onClick={handleUpload}
-                disabled={loading || uploadStatus === "uploading"}
+                disabled={
+                  loading ||
+                  uploadStatus === "uploading" ||
+                  (uploadStatus === "error" && !!errorMessage)
+                }
                 className="flex-1"
               >
                 {loading ? (

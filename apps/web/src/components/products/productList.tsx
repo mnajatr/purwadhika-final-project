@@ -169,7 +169,7 @@ export default function ProductsList() {
                     }`}
                     onClick={(e) => outOfStock && e.preventDefault()}
                   >
-                    {outOfStock ? "Out of Stock" : "Lihat Detail"}
+                    {outOfStock ? "Out of Stock" : "View Product"}
                   </Link>
                 </div>
               </div>

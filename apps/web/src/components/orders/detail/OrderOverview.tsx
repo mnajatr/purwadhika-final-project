@@ -9,6 +9,7 @@ import OrderTimeline from "./OrderTimeline";
 import OrderShipment from "./OrderShipment";
 import OrderItems from "./OrderItems";
 import OrderSummary from "./OrderSummary";
+import { getOrderStatusBadgeColor } from "@/utils/orderStatus";
 
 function formatCurrency(amount: string | number): string {
   return new Intl.NumberFormat("id-ID", {
@@ -26,26 +27,6 @@ function formatDateShort(dateString?: string): string | null {
         year: "numeric",
       }).format(new Date(dateString))
     : null;
-}
-
-function getStatusColor(status: string): string {
-  switch (status) {
-    case "COMPLETED":
-    case "CONFIRMED":
-      return "bg-emerald-100/80 text-emerald-700 border-emerald-200";
-    case "PAID":
-    case "PROCESSING":
-      return "bg-primary/10 text-primary border-primary/20";
-    case "SHIPPED":
-      return "bg-indigo-100/80 text-indigo-700 border-indigo-200";
-    case "PENDING_PAYMENT":
-      return "bg-amber-100/80 text-amber-700 border-amber-200";
-    case "CANCELLED":
-    case "EXPIRED":
-      return "bg-rose-100/80 text-rose-700 border-rose-200";
-    default:
-      return "bg-muted text-muted-foreground border-border/60";
-  }
 }
 
 function getStatusHeadline(status: string, paymentMethod: string): string {
@@ -109,7 +90,6 @@ type OrderOverviewProps = {
     postalCode: string;
     phoneNumber?: string;
   } | null;
-  apiBase: string;
   onRefresh: () => void;
   isLoading?: boolean;
   CancelButton?: React.ComponentType<{ orderId: number; userId?: number }>;
@@ -119,36 +99,35 @@ export default function OrderOverview({
   order,
   items,
   address,
-  apiBase,
   onRefresh,
   isLoading = false,
   CancelButton,
 }: OrderOverviewProps) {
   const [countdown, setCountdown] = useState<string | null>(null);
-  
+
   useEffect(() => {
     if (order.status !== "PENDING_PAYMENT" || !order.createdAt) {
       return setCountdown(null);
     }
-    
+
     const start = new Date(order.createdAt).getTime();
     const due = start + 60 * 60 * 1000;
-    
+
     const update = () => {
       const diff = due - Date.now();
       if (diff <= 0) return setCountdown("Expired");
-      
+
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
-      
+
       setCountdown(
         `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s
           .toString()
           .padStart(2, "0")}`
       );
     };
-    
+
     update();
     const id = setInterval(update, 1000);
     return () => clearInterval(id);
@@ -180,7 +159,7 @@ export default function OrderOverview({
     toast.info("Receipt download coming soon!");
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--background)" }}>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/10">
       <div className="max-w-6xl mx-auto space-y-4 p-2 sm:p-4">
         <OrderHeader
           orderId={order.id}
@@ -191,10 +170,10 @@ export default function OrderOverview({
           onCopy={copyToClipboard}
           onShare={handleShare}
           onDownloadReceipt={handleDownloadReceipt}
-          getStatusColor={getStatusColor}
+          getStatusColor={getOrderStatusBadgeColor}
         />
 
-        <div className="bg-card/80 rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm border border-border/60 mb-6">
+        <div className="bg-card/95 backdrop-blur-sm rounded-2xl p-4 sm:p-6 lg:p-8 shadow-lg border border-border/40 mb-6">
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 mb-6">
             <OrderProgress
               status={order.status}
@@ -246,7 +225,6 @@ export default function OrderOverview({
         <OrderSummary
           order={order}
           items={items}
-          apiBase={apiBase}
           onRefresh={onRefresh}
           formatCurrency={formatCurrency}
           CancelButton={CancelButton}

@@ -13,6 +13,7 @@ import OrderDetailPayment from "@/components/admin/orders/detail/OrderDetailPaym
 import OrderDetailTotal from "@/components/admin/orders/detail/OrderDetailTotal";
 import { XCircle, X } from "lucide-react";
 import type { AdminOrderDetail } from "@repo/schemas";
+import { toast } from "sonner";
 
 type ConfirmDialogState = {
   open: boolean;
@@ -128,12 +129,14 @@ export default function OrderDetailPage() {
 
     try {
       await adminOrdersService.updateOrderStatus(order.id, action);
-      alert(`Order #${order.id} ${actionNames[action]}ed successfully!`);
+      toast.success(
+        `Order #${order.id} ${actionNames[action]}ed successfully!`
+      );
       await fetchOrderDetail(); // Refresh the order details
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "An error occurred";
-      alert(`Failed to ${actionNames[action]} order: ${message}`);
+      toast.error(`Failed to ${actionNames[action]} order: ${message}`);
     } finally {
       setActionLoading((prev) => ({ ...prev, [action]: false }));
     }
@@ -157,14 +160,26 @@ export default function OrderDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex bg-background">
+      <div className="min-h-screen flex bg-gradient-to-br from-background via-background to-muted/20">
         <aside className="w-48 bg-sidebar border-r border-sidebar-border p-4 space-y-4 sticky top-0 h-screen">
           <Sidebar />
         </aside>
         <div className="flex-1 p-8 flex items-center justify-center">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-            <p className="text-muted-foreground">Loading order details...</p>
+          <div className="text-center space-y-4">
+            <div className="relative inline-flex">
+              <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-8 h-8 bg-primary/20 rounded-full animate-pulse"></div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-lg font-medium text-foreground">
+                Loading order details
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Please wait while we fetch the information...
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -173,23 +188,27 @@ export default function OrderDetailPage() {
 
   if (error || !order) {
     return (
-      <div className="min-h-screen flex bg-background">
+      <div className="min-h-screen flex bg-gradient-to-br from-background via-background to-muted/20">
         <aside className="w-48 bg-sidebar border-r border-sidebar-border p-4 space-y-4 sticky top-0 h-screen">
           <Sidebar />
         </aside>
         <div className="flex-1 p-8 flex items-center justify-center">
-          <div className="text-center">
-            <div className="mb-4">
-              <XCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
-              <p className="text-destructive text-lg font-semibold">
-                {error || "Order not found"}
-              </p>
+          <div className="text-center max-w-md">
+            <div className="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-full bg-destructive/10">
+              <XCircle className="w-12 h-12 text-destructive" />
             </div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              Order Not Found
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              {error ||
+                "The order you're looking for doesn't exist or has been removed."}
+            </p>
             <button
               onClick={() => router.back()}
-              className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80 transition-colors"
+              className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium shadow-sm hover:shadow-md"
             >
-              Go Back
+              Go Back to Orders
             </button>
           </div>
         </div>
@@ -198,7 +217,7 @@ export default function OrderDetailPage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="min-h-screen flex bg-gradient-to-br from-background via-background to-muted/20">
       <aside className="w-48 bg-gray-800 text-white p-4 space-y-4 sticky top-0 h-screen">
         <Sidebar />
       </aside>
@@ -257,25 +276,29 @@ export default function OrderDetailPage() {
       {/* Image Zoom Modal */}
       {isImageZoomed && order?.payment?.proofImageUrl && (
         <div
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/95 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setIsImageZoomed(false)}
         >
           <button
-            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all hover:scale-110"
             onClick={() => setIsImageZoomed(false)}
+            aria-label="Close image"
           >
-            <X className="w-8 h-8" />
+            <X className="w-6 h-6" />
           </button>
           <div
-            className="max-w-7xl max-h-full"
+            className="max-w-7xl max-h-full relative"
             onClick={(e) => e.stopPropagation()}
           >
+            <div className="absolute -top-12 left-0 text-white text-sm opacity-75">
+              Press ESC or click outside to close
+            </div>
             <Image
               src={order.payment.proofImageUrl}
               alt="Payment Proof - Full Size"
               width={1200}
               height={800}
-              className="max-w-full max-h-[90vh] object-contain"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
             />
           </div>
         </div>

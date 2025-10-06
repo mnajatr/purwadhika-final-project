@@ -74,39 +74,18 @@ export class FulfillmentService {
         "../queues/orderConfirmQueue.js"
       );
       const DELAY_MS =
-        Number(process.env.ORDER_CONFIRM_DELAY_MS) || 48 * 60 * 60 * 1000;
+        Number(process.env.ORDER_CONFIRM_DELAY_MS) || 7 * 24 * 60 * 60 * 1000;
       await orderConfirmQueue.add(
         "confirm-order",
         { orderId },
         { jobId: String(orderId), delay: DELAY_MS }
       );
+      logger.info(
+        `Scheduled auto-confirmation for order ${orderId} in 7 days`
+      );
     } catch (e) {
       const logger = (await import("../utils/logger.js")).default;
       logger.error(`Failed to enqueue confirm job for order=${orderId}: %o`, e);
-    }
-
-    // Schedule auto-confirmation after 7 days
-    try {
-      const { scheduleAutoConfirmation, cancelAutoConfirmation } = await import(
-        "../queues/autoConfirmQueue.js"
-      );
-      const AUTO_CONFIRM_DELAY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-      // Remove any previously scheduled auto-confirm job to avoid duplicates
-      try {
-        await cancelAutoConfirmation(orderId);
-      } catch (innerErr) {
-        logger.warn(
-          `Failed to cancel existing auto-confirm for order=${orderId}: %o`,
-          innerErr
-        );
-      }
-      await scheduleAutoConfirmation(orderId, AUTO_CONFIRM_DELAY_MS);
-      logger.info(`Scheduled auto-confirmation for order ${orderId} in 7 days`);
-    } catch (e) {
-      logger.error(
-        `Failed to schedule auto-confirmation for order=${orderId}: %o`,
-        e
-      );
     }
 
     return result;
@@ -193,28 +172,18 @@ export class FulfillmentService {
       return confirmedOrder;
     });
 
-    // Remove any scheduled auto-confirm or cancel jobs that are no longer relevant.
+    // Remove any scheduled auto-confirm jobs that are no longer relevant.
     try {
       const { orderConfirmQueue } = await import(
         "../queues/orderConfirmQueue.js"
       );
       const job = await orderConfirmQueue.getJob(String(orderId));
-      if (job) await job.remove();
+      if (job) {
+        await job.remove();
+        logger.info(`Removed auto-confirm job for order ${orderId}`);
+      }
     } catch (e) {
       logger.error(`Failed to remove confirm job for order=${orderId}: %o`, e);
-    }
-
-    try {
-      const { cancelAutoConfirmation } = await import(
-        "../queues/autoConfirmQueue.js"
-      );
-      await cancelAutoConfirmation(orderId);
-      logger.info(`Cancelled auto-confirmation for order ${orderId}`);
-    } catch (e) {
-      logger.error(
-        `Failed to cancel auto-confirmation for order=${orderId}: %o`,
-        e
-      );
     }
 
     // Also remove any scheduled cancellation (payment deadline) since payment may now be accepted

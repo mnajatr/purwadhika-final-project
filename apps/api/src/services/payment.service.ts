@@ -27,10 +27,24 @@ export class PaymentService {
     });
     if (!order) throw new Error("Order not found");
 
+    // Check if order is cancelled
+    if (order.status === "CANCELLED") {
+      throw createConflictError(
+        "Cannot upload payment proof: order has been cancelled"
+      );
+    }
+
     // Allow upload only when order is PENDING_PAYMENT (including after rejection)
     if (order.status !== "PENDING_PAYMENT") {
       throw createConflictError(
         `Cannot upload payment proof: order is already ${order.status}`
+      );
+    }
+
+    // Additional check: if payment exists and is FAILED (cancelled by cron), don't allow upload
+    if (order.payment && order.payment.status === "FAILED") {
+      throw createConflictError(
+        "Cannot upload payment proof: payment has been cancelled"
       );
     }
 

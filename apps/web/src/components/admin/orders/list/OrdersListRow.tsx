@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CheckCircle, Truck, XCircle, Eye, MoreVertical } from "lucide-react";
 import type { AdminOrderListItem } from "@repo/schemas";
+import { getOrderStatusBadgeColor } from "@/utils/orderStatus";
 
 interface OrdersListRowProps {
   order: AdminOrderListItem;
@@ -20,25 +21,6 @@ export default function OrdersListRow({
   onOrderAction,
   actionLoading,
 }: OrdersListRowProps) {
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case "PENDING_PAYMENT":
-        return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border border-yellow-500/20";
-      case "PROCESSING":
-        return "bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20";
-      case "PAYMENT_REVIEW":
-        return "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border border-cyan-500/20";
-      case "CONFIRMED":
-        return "bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20";
-      case "SHIPPED":
-        return "bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20";
-      case "CANCELLED":
-        return "bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/20";
-      default:
-        return "bg-muted text-muted-foreground border border-border";
-    }
-  };
-
   const canConfirmPayment = (order: AdminOrderListItem) => {
     return (
       order.status === "PAYMENT_REVIEW" && order.payment?.status === "PENDING"
@@ -101,15 +83,15 @@ export default function OrdersListRow({
       </td>
       <td className="px-6 py-4">
         <span
-          className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${getStatusBadgeColor(
+          className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${getOrderStatusBadgeColor(
             order.status
           )}`}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-current mr-2"></span>
           {order.status === "CONFIRMED"
-            ? "Confirmed"
+            ? "CONFIRMED"
             : order.status === "CANCELLED"
-            ? "Canceled"
+            ? "CANCELLED"
             : order.status.replace(/_/g, " ")}
         </span>
       </td>
