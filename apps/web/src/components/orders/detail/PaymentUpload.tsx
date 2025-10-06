@@ -40,11 +40,11 @@ export default function PaymentUpload({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const maxFileSize = 1 * 1024 * 1024;
-  const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+  const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/jpeg"];
 
   const validateFile = (file: File): string | null => {
     if (!allowedTypes.includes(file.type)) {
-      return "Please upload a valid image file (JPG, PNG, WebP)";
+      return "Please upload a valid image file (JPG, PNG, JPEG)";
     }
     if (file.size > maxFileSize) {
       return "File size must be less than 1MB";
@@ -56,25 +56,33 @@ export default function PaymentUpload({
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
+    setFile(selectedFile);
+    const url = URL.createObjectURL(selectedFile);
+    setPreviewUrl(url);
+
     const validationError = validateFile(selectedFile);
     if (validationError) {
       setErrorMessage(validationError);
       setUploadStatus("error");
-      return;
+    } else {
+      setErrorMessage(null);
+      setUploadStatus("idle");
     }
-
-    setFile(selectedFile);
-    setErrorMessage(null);
-    setUploadStatus("idle");
-
-    const url = URL.createObjectURL(selectedFile);
-    setPreviewUrl(url);
   };
 
   const handleUpload = async () => {
     if (!file) {
       setErrorMessage("Please select a payment proof image");
       setUploadStatus("error");
+      return;
+    }
+
+    // Re-validate before upload
+    const validationError = validateFile(file);
+    if (validationError) {
+      setErrorMessage(validationError);
+      setUploadStatus("error");
+      toast.error(validationError);
       return;
     }
 
@@ -97,7 +105,6 @@ export default function PaymentUpload({
         });
       }, 200);
 
-      // Use apiClient instead of fetch to include auth headers
       const result = await apiClient.postForm<{
         message?: string;
         data?: Record<string, unknown>;
@@ -193,7 +200,7 @@ export default function PaymentUpload({
                     drag and drop
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    PNG, JPG, WebP (MAX. 1MB)
+                    PNG, JPG, JPEG (MAX. 1MB)
                   </p>
                 </div>
                 <input
@@ -290,7 +297,7 @@ export default function PaymentUpload({
             {file && uploadStatus !== "success" && (
               <Button
                 onClick={handleUpload}
-                disabled={loading || uploadStatus === "uploading"}
+                disabled={loading || uploadStatus === "uploading" || (uploadStatus === "error" && !!errorMessage)}
                 className="flex-1"
               >
                 {loading ? (
@@ -345,7 +352,7 @@ export default function PaymentUpload({
               <li>• Ensure the image is clear and readable</li>
               <li>• Include transaction details and amount</li>
               <li>• Maximum file size: 1MB</li>
-              <li>• Supported formats: JPG, JPEG, PNG, WebP</li>
+              <li>• Supported formats: JPG, JPEG, PNG</li>
             </ul>
           </div>
         </div>

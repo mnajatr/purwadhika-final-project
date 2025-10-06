@@ -131,43 +131,40 @@ export default function OrderPage({ params }: OrderPageProps) {
   //     })()
   //   : "http://localhost:8000/api";
 
-  // Loading state with enhanced skeleton
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-transparent">
-        {/* Header skeleton */}
-        <div className="border-b border-border/60 bg-card/70 backdrop-blur">
-          <div className="mx-auto max-w-5xl px-6 py-4">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Skeleton className="h-8 w-8 rounded-lg" />
-                <div>
-                  <Skeleton className="mb-2 h-8 w-48" />
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/10">
+
+        <div className="border-b border-border/40 bg-card/50 backdrop-blur-sm">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-10 w-10 rounded-xl" />
+                <div className="space-y-2">
+                  <Skeleton className="h-8 w-48" />
                   <Skeleton className="h-4 w-32" />
                 </div>
               </div>
-              <div className="flex space-x-2">
-                <Skeleton className="h-8 w-20" />
-                <Skeleton className="h-8 w-20" />
-                <Skeleton className="h-8 w-16" />
+              <div className="flex gap-2">
+                <Skeleton className="h-10 w-24" />
+                <Skeleton className="h-10 w-10" />
               </div>
             </div>
-            <Skeleton className="h-8 w-32" />
           </div>
         </div>
 
-        {/* Content skeleton */}
-        <div className="mx-auto max-w-5xl space-y-6 px-6 py-10">
-          <Skeleton className="h-20 w-full rounded-2xl" />
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 space-y-6">
+          <Skeleton className="h-32 w-full rounded-2xl" />
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="space-y-6 lg:col-span-2">
-              <Skeleton className="h-64 w-full rounded-2xl" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
               <Skeleton className="h-80 w-full rounded-2xl" />
+              <Skeleton className="h-96 w-full rounded-2xl" />
             </div>
             <div className="space-y-6">
-              <Skeleton className="h-96 w-full rounded-2xl" />
               <Skeleton className="h-64 w-full rounded-2xl" />
+              <Skeleton className="h-80 w-full rounded-2xl" />
             </div>
           </div>
         </div>
@@ -175,31 +172,35 @@ export default function OrderPage({ params }: OrderPageProps) {
     );
   }
 
-  // Error state
   if (error) {
     const message = error?.message ?? "Failed to load order";
     return (
-      <div className="flex min-h-screen items-center justify-center bg-transparent px-4">
-        <div className="mx-auto max-w-md">
-          <div className="rounded-3xl border border-border/60 bg-card/90 p-8 text-center shadow-xl backdrop-blur">
-            <AlertCircle className="mx-auto mb-4 h-12 w-12 text-rose-500" />
-            <h2 className="mb-2 text-xl font-semibold text-rose-600">
-              {message}
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/10 px-4">
+        <div className="mx-auto max-w-md w-full">
+          <div className="rounded-3xl border border-border/40 bg-card/95 backdrop-blur-sm p-10 text-center shadow-2xl">
+            <div className="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-full bg-rose-100/80 dark:bg-rose-900/20">
+              <AlertCircle className="h-10 w-10 text-rose-600 dark:text-rose-400" />
+            </div>
+            <h2 className="mb-3 text-2xl font-bold text-foreground">
+              Oops! Something went wrong
             </h2>
-            <p className="mb-6 text-sm text-muted-foreground">
-              Try refreshing the page or go back to your orders.
+            <p className="mb-8 text-sm text-muted-foreground leading-relaxed">
+              {message}. Try refreshing the page or go back to your orders.
             </p>
-            <div className="flex justify-center gap-3">
+            <div className="flex flex-col sm:flex-row justify-center gap-3">
               <Button
                 onClick={() => window.location.reload()}
                 variant="outline"
-                className="min-w-[110px]"
+                className="min-w-[130px] border-border/60 hover:bg-muted/50"
               >
-                <RefreshCw className="mr-1 h-4 w-4" />
+                <RefreshCw className="mr-2 h-4 w-4" />
                 Retry
               </Button>
-              <Button className="min-w-[110px]" onClick={() => router.back()}>
-                Back
+              <Button 
+                className="min-w-[130px] bg-primary-gradient hover:opacity-90" 
+                onClick={() => router.back()}
+              >
+                Back to Orders
               </Button>
             </div>
           </div>
@@ -210,21 +211,23 @@ export default function OrderPage({ params }: OrderPageProps) {
 
   if (!order) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-transparent px-4">
-        <div className="mx-auto max-w-md">
-          <div className="rounded-3xl border border-border/60 bg-card/90 p-8 text-center shadow-xl backdrop-blur">
-            <AlertCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-            <h2 className="mb-2 text-xl font-semibold text-foreground">
-              Order not found
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/10 px-4">
+        <div className="mx-auto max-w-md w-full">
+          <div className="rounded-3xl border border-border/40 bg-card/95 backdrop-blur-sm p-10 text-center shadow-2xl">
+            <div className="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted/50">
+              <AlertCircle className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <h2 className="mb-3 text-2xl font-bold text-foreground">
+              Order Not Found
             </h2>
-            <p className="mb-6 text-sm text-muted-foreground">
-              The requested order could not be located.
+            <p className="mb-8 text-sm text-muted-foreground leading-relaxed">
+              We couldn&apos;t find the order you&apos;re looking for. It may have been removed or the link is incorrect.
             </p>
             <Button
               onClick={() => router.push("/orders")}
-              className="min-w-[140px]"
+              className="min-w-[160px] bg-primary-gradient hover:opacity-90"
             >
-              Back to Orders
+              View All Orders
             </Button>
           </div>
         </div>

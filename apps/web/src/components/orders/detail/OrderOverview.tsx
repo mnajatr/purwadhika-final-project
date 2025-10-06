@@ -178,7 +178,7 @@ export default function OrderOverview({
     toast.info("Receipt download coming soon!");
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--background)" }}>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/10">
       <div className="max-w-6xl mx-auto space-y-4 p-2 sm:p-4">
         <OrderHeader
           orderId={order.id}
@@ -192,7 +192,7 @@ export default function OrderOverview({
           getStatusColor={getStatusColor}
         />
 
-        <div className="bg-card/80 rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm border border-border/60 mb-6">
+        <div className="bg-card/95 backdrop-blur-sm rounded-2xl p-4 sm:p-6 lg:p-8 shadow-lg border border-border/40 mb-6">
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 mb-6">
             <OrderProgress
               status={order.status}

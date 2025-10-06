@@ -35,6 +35,7 @@ export default function Navbar() {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const nearestStoreId = useLocationStore((s) => s.nearestStoreId) ?? 1;
   const nearestStoreName = useLocationStore((s) => s.nearestStoreName);
   const activeAddress = useLocationStore((s) => s.activeAddress);
@@ -64,6 +65,11 @@ export default function Navbar() {
 
   // Calculate cart totals from cart data
   const itemCount = cart?.items?.reduce((sum, item) => sum + item.qty, 0) || 0;
+
+  // Handle client-side mounting
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Get development user ID from localStorage
   useEffect(() => {
@@ -473,7 +479,7 @@ export default function Navbar() {
                   Delivering from
                 </span>
                 <span className="text-sm font-bold text-primary">
-                  {nearestStoreName || "Store Bandung"}
+                  {isMounted ? (nearestStoreName || "Store Bandung") : "Store Bandung"}
                 </span>
               </div>
             </div>
@@ -495,7 +501,7 @@ export default function Navbar() {
                 <span className={`text-sm font-semibold max-w-[200px] truncate ${
                   isCheckoutPage ? "text-muted-foreground" : "text-foreground"
                 }`}>
-                  {activeAddress?.addressLine || "Select Address"}
+                  {isMounted ? (activeAddress?.addressLine || "Select Address") : "Select Address"}
                 </span>
                 {!isCheckoutPage && (
                   <ChevronDown

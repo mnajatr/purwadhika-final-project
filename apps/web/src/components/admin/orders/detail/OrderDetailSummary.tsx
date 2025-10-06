@@ -38,7 +38,9 @@ export default function OrderDetailSummary({
             <User className="w-4 h-4" />
             <span>Customer</span>
           </div>
-          <p className="font-semibold text-foreground text-lg">User #{userId}</p>
+          <p className="font-semibold text-foreground text-lg">
+            User #{userId}
+          </p>
         </div>
 
         <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/50">
@@ -46,7 +48,9 @@ export default function OrderDetailSummary({
             <Store className="w-4 h-4" />
             <span>Store</span>
           </div>
-          <p className="font-semibold text-foreground text-lg">Store #{storeId}</p>
+          <p className="font-semibold text-foreground text-lg">
+            Store #{storeId}
+          </p>
         </div>
 
         <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/50">

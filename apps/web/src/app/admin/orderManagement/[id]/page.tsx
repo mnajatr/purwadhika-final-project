@@ -201,7 +201,8 @@ export default function OrderDetailPage() {
               Order Not Found
             </h2>
             <p className="text-muted-foreground mb-6">
-              {error || "The order you're looking for doesn't exist or has been removed."}
+              {error ||
+                "The order you're looking for doesn't exist or has been removed."}
             </p>
             <button
               onClick={() => router.back()}
