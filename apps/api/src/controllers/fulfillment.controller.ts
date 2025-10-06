@@ -17,15 +17,14 @@ function pickUserId(req: Request): number | undefined {
   const authUser = Number(authReq.user?.id ?? undefined);
   if (authUser) return authUser;
 
-  if (process.env.NODE_ENV !== "production") {
-    const header = toNumber(req.headers["x-dev-user-id"], undefined);
-    if (header) return header;
-    const q = toNumber(
-      req.query?.userId,
-      toNumber(req.query?.devUserId, toNumber(req.body?.userId, undefined))
-    );
-    if (q) return q;
-  }
+  // Accept dev-user shortcuts from header/query/body in all environments
+  const header = toNumber(req.headers["x-dev-user-id"], undefined);
+  if (header) return header;
+  const q = toNumber(
+    req.query?.userId,
+    toNumber(req.query?.devUserId, toNumber(req.body?.userId, undefined))
+  );
+  if (q) return q;
 
   return undefined;
 }

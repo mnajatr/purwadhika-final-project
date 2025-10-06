@@ -24,7 +24,6 @@ export class CheckoutController {
       return authReq.user.id;
     }
 
-    if (process.env.NODE_ENV !== "production") {
       const headerUserId = req.headers["x-dev-user-id"];
       if (headerUserId) {
         const parsed = Number(headerUserId);
@@ -36,7 +35,6 @@ export class CheckoutController {
         const parsed = Number(queryUserId);
         if (!isNaN(parsed)) return parsed;
       }
-    }
 
     throw createUnauthorizedError("Authentication required");
   }
@@ -161,8 +159,7 @@ export class CheckoutController {
 
       if (
         userId &&
-        order.userId !== userId &&
-        process.env.NODE_ENV === "production"
+        order.userId !== userId
       ) {
         throw createUnauthorizedError("Access denied");
       }

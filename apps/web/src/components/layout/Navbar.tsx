@@ -260,49 +260,47 @@ export default function Navbar() {
                       </div>
                     </Link>
 
-                    {/* Dev Tools - Only show in development */}
-                    {process.env.NODE_ENV !== "production" && (
-                      <div className="p-3 bg-accent/10 border-b border-border">
-                        <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
-                          Dev Tools
-                        </label>
-                        <select
-                          value={
-                            devUserId
-                              ? `${devUserId}-${role}${
-                                  storeId ? `-${storeId}` : ""
-                                }`
-                              : "4-USER"
-                          }
-                          onChange={(e) => {
-                            try {
-                              const target = e.target.value;
-                              const parts = target.split("-");
-                              const [newDevUserId, newRole, newStoreId] = parts;
-                              localStorage.setItem("devUserId", newDevUserId);
-                              localStorage.setItem("role", newRole);
-                              localStorage.setItem("storeId", newStoreId ?? "");
-                              window.location.reload();
-                            } catch {}
-                          }}
-                          className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        >
-                          <option value="none">(none)</option>
-                          <option value="1-SUPER_ADMIN">1 - SUPER_ADMIN</option>
-                          <option value="2-STORE_ADMIN-1">
-                            2 - STORE_ADMIN (Bandung)
-                          </option>
-                          <option value="3-STORE_ADMIN-2">
-                            3 - STORE_ADMIN (Jakarta)
-                          </option>
-                          <option value="4-USER">4 - Normal User</option>
-                          <option value="5-USER">5 - Normal User 5</option>
-                        </select>
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          Switch users for testing
-                        </p>
-                      </div>
-                    )}
+                    {/* Dev Tools */}
+                    <div className="p-3 bg-accent/10 border-b border-border">
+                      <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                        Dev Tools
+                      </label>
+                      <select
+                        value={
+                          devUserId
+                            ? `${devUserId}-${role}${
+                                storeId ? `-${storeId}` : ""
+                              }`
+                            : "4-USER"
+                        }
+                        onChange={(e) => {
+                          try {
+                            const target = e.target.value;
+                            const parts = target.split("-");
+                            const [newDevUserId, newRole, newStoreId] = parts;
+                            localStorage.setItem("devUserId", newDevUserId);
+                            localStorage.setItem("role", newRole);
+                            localStorage.setItem("storeId", newStoreId ?? "");
+                            window.location.reload();
+                          } catch {}
+                        }}
+                        className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      >
+                        <option value="none">(none)</option>
+                        <option value="1-SUPER_ADMIN">1 - SUPER_ADMIN</option>
+                        <option value="2-STORE_ADMIN-1">
+                          2 - STORE_ADMIN (Bandung)
+                        </option>
+                        <option value="3-STORE_ADMIN-2">
+                          3 - STORE_ADMIN (Jakarta)
+                        </option>
+                        <option value="4-USER">4 - Normal User</option>
+                        <option value="5-USER">5 - Normal User 5</option>
+                      </select>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Switch users for testing
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -439,51 +437,49 @@ export default function Navbar() {
                   </Link>
                 )}
 
-                {/* Mobile Dev Tools - Only show in development */}
-                {process.env.NODE_ENV !== "production" && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <div className="p-3 bg-accent/10 rounded-xl">
-                      <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
-                        Dev Tools
-                      </label>
-                      <select
-                        value={
-                          devUserId
-                            ? `${devUserId}-${role}${
-                                storeId ? `-${storeId}` : ""
-                              }`
-                            : "4-USER"
-                        }
-                        onChange={(e) => {
-                          try {
-                            const target = e.target.value;
-                            const parts = target.split("-");
-                            const [newDevUserId, newRole, newStoreId] = parts;
-                            localStorage.setItem("devUserId", newDevUserId);
-                            localStorage.setItem("role", newRole);
-                            localStorage.setItem("storeId", newStoreId ?? "");
-                            window.location.reload();
-                          } catch {}
-                        }}
-                        className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                      >
-                        <option value="none">(none)</option>
-                        <option value="1-SUPER_ADMIN">1 - SUPER_ADMIN</option>
-                        <option value="2-STORE_ADMIN-1">
-                          2 - STORE_ADMIN (Bandung)
-                        </option>
-                        <option value="3-STORE_ADMIN-2">
-                          3 - STORE_ADMIN (Jakarta)
-                        </option>
-                        <option value="4-USER">4 - Normal User</option>
-                        <option value="5-USER">5 - Normal User 5</option>
-                      </select>
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        Switch users for testing
-                      </p>
-                    </div>
+                {/* Mobile Dev Tools */}
+                <div className="mt-3 pt-3 border-t border-border">
+                  <div className="p-3 bg-accent/10 rounded-xl">
+                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                      Dev Tools
+                    </label>
+                    <select
+                      value={
+                        devUserId
+                          ? `${devUserId}-${role}${
+                              storeId ? `-${storeId}` : ""
+                            }`
+                          : "4-USER"
+                      }
+                      onChange={(e) => {
+                        try {
+                          const target = e.target.value;
+                          const parts = target.split("-");
+                          const [newDevUserId, newRole, newStoreId] = parts;
+                          localStorage.setItem("devUserId", newDevUserId);
+                          localStorage.setItem("role", newRole);
+                          localStorage.setItem("storeId", newStoreId ?? "");
+                          window.location.reload();
+                        } catch {}
+                      }}
+                      className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    >
+                      <option value="none">(none)</option>
+                      <option value="1-SUPER_ADMIN">1 - SUPER_ADMIN</option>
+                      <option value="2-STORE_ADMIN-1">
+                        2 - STORE_ADMIN (Bandung)
+                      </option>
+                      <option value="3-STORE_ADMIN-2">
+                        3 - STORE_ADMIN (Jakarta)
+                      </option>
+                      <option value="4-USER">4 - Normal User</option>
+                      <option value="5-USER">5 - Normal User 5</option>
+                    </select>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Switch users for testing
+                    </p>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           )}

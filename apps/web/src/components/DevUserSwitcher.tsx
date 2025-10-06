@@ -6,13 +6,14 @@ export default function DevUserSwitcher() {
   const [devUserId, setDevUserId] = useState("");
 
   useEffect(() => {
-    const stored = localStorage.getItem("devUserId");
-    setDevUserId(stored ?? "4");
+    try {
+      const stored = localStorage.getItem("devUserId");
+      setDevUserId(stored ?? "4");
+    } catch {
+      // ignore localStorage errors in non-browser environments
+      setDevUserId("4");
+    }
   }, []);
-
-  if (process.env.NODE_ENV === "production") {
-    return null;
-  }
 
   return (
     <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
