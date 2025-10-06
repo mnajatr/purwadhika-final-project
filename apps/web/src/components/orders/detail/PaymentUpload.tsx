@@ -297,7 +297,11 @@ export default function PaymentUpload({
             {file && uploadStatus !== "success" && (
               <Button
                 onClick={handleUpload}
-                disabled={loading || uploadStatus === "uploading" || (uploadStatus === "error" && !!errorMessage)}
+                disabled={
+                  loading ||
+                  uploadStatus === "uploading" ||
+                  (uploadStatus === "error" && !!errorMessage)
+                }
                 className="flex-1"
               >
                 {loading ? (

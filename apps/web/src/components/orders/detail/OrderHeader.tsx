@@ -53,9 +53,9 @@ export default function OrderHeader({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
           <Link href="/orders">
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="p-2 rounded-lg hover:bg-muted/80 transition-all hover:scale-105"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -122,7 +122,9 @@ export default function OrderHeader({
                 Share link
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onCopy(String(orderId), "Order ID")}>
+              <DropdownMenuItem
+                onClick={() => onCopy(String(orderId), "Order ID")}
+              >
                 <Copy className="mr-2 h-4 w-4" />
                 Copy Order ID
               </DropdownMenuItem>

@@ -22,7 +22,7 @@ enum UserRole {
 }
 
 enum OrderStatus {
-  PENDING_PAYMENT // aMenunggu Pembayaran
+  PENDING_PAYMENT // Menunggu Pembayaran
   PAYMENT_REVIEW // Menunggu Konfirmasi Pembayaran
   PROCESSING // Diproses
   SHIPPED // Dikirim
@@ -56,7 +56,7 @@ enum ValueType {
 enum StockChangeReason {
   ADD
   REMOVE
-  RESERVE
+  RESERVE 
   RELEASE
   TRANSFER_IN
   TRANSFER_OUT
@@ -278,6 +278,7 @@ model Voucher {
   isUsed     Boolean   @default(false)
   usedAt     DateTime?
 }
+// Voucher model is present for rollback support but not fully implemented yet.
 
 model Cart {
   id        Int      @id @default(autoincrement())

@@ -9,6 +9,7 @@ import OrderTimeline from "./OrderTimeline";
 import OrderShipment from "./OrderShipment";
 import OrderItems from "./OrderItems";
 import OrderSummary from "./OrderSummary";
+import { getOrderStatusBadgeColor } from "@/utils/orderStatus";
 
 function formatCurrency(amount: string | number): string {
   return new Intl.NumberFormat("id-ID", {
@@ -26,26 +27,6 @@ function formatDateShort(dateString?: string): string | null {
         year: "numeric",
       }).format(new Date(dateString))
     : null;
-}
-
-function getStatusColor(status: string): string {
-  switch (status) {
-    case "COMPLETED":
-    case "CONFIRMED":
-      return "bg-emerald-100/80 text-emerald-700 border-emerald-200";
-    case "PAID":
-    case "PROCESSING":
-      return "bg-primary/10 text-primary border-primary/20";
-    case "SHIPPED":
-      return "bg-indigo-100/80 text-indigo-700 border-indigo-200";
-    case "PENDING_PAYMENT":
-      return "bg-amber-100/80 text-amber-700 border-amber-200";
-    case "CANCELLED":
-    case "EXPIRED":
-      return "bg-rose-100/80 text-rose-700 border-rose-200";
-    default:
-      return "bg-muted text-muted-foreground border-border/60";
-  }
 }
 
 function getStatusHeadline(status: string, paymentMethod: string): string {
@@ -189,7 +170,7 @@ export default function OrderOverview({
           onCopy={copyToClipboard}
           onShare={handleShare}
           onDownloadReceipt={handleDownloadReceipt}
-          getStatusColor={getStatusColor}
+          getStatusColor={getOrderStatusBadgeColor}
         />
 
         <div className="bg-card/95 backdrop-blur-sm rounded-2xl p-4 sm:p-6 lg:p-8 shadow-lg border border-border/40 mb-6">

@@ -131,11 +131,9 @@ export default function OrderPage({ params }: OrderPageProps) {
   //     })()
   //   : "http://localhost:8000/api";
 
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/10">
-
         <div className="border-b border-border/40 bg-card/50 backdrop-blur-sm">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6">
             <div className="flex items-center justify-between mb-4">
@@ -196,8 +194,8 @@ export default function OrderPage({ params }: OrderPageProps) {
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Retry
               </Button>
-              <Button 
-                className="min-w-[130px] bg-primary-gradient hover:opacity-90" 
+              <Button
+                className="min-w-[130px] bg-primary-gradient hover:opacity-90"
                 onClick={() => router.back()}
               >
                 Back to Orders
@@ -221,7 +219,8 @@ export default function OrderPage({ params }: OrderPageProps) {
               Order Not Found
             </h2>
             <p className="mb-8 text-sm text-muted-foreground leading-relaxed">
-              We couldn&apos;t find the order you&apos;re looking for. It may have been removed or the link is incorrect.
+              We couldn&apos;t find the order you&apos;re looking for. It may
+              have been removed or the link is incorrect.
             </p>
             <Button
               onClick={() => router.push("/orders")}

@@ -40,14 +40,15 @@ export default function Navbar() {
   const nearestStoreName = useLocationStore((s) => s.nearestStoreName);
   const activeAddress = useLocationStore((s) => s.activeAddress);
   const { data: cart } = useCart(userId, nearestStoreId);
-  
+
   // Check if we're on checkout page
   const isCheckoutPage = pathname === "/checkout";
-  
+
   // Get user data to check role
   const { data: userData } = useUser(userId);
-  const isAdmin = userData?.role === "SUPER_ADMIN" || userData?.role === "STORE_ADMIN";
-  
+  const isAdmin =
+    userData?.role === "SUPER_ADMIN" || userData?.role === "STORE_ADMIN";
+
   // Dev tools state
   const [devUserId, setDevUserId] = useState("");
   const [role, setRole] = useState("");
@@ -79,7 +80,7 @@ export default function Navbar() {
     setRole(rolez ?? "");
     const storez = localStorage.getItem("storeId");
     setStoreId(storez ?? "");
-    
+
     if (devUserIdz && devUserIdz !== "none") {
       setUserId(parseInt(devUserIdz));
     } else {
@@ -210,8 +211,12 @@ export default function Navbar() {
                   <ShoppingBag className="h-4 w-4 text-primary-foreground" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] text-muted-foreground font-medium">Orders</span>
-                  <span className="text-sm font-semibold text-foreground leading-tight">My Orders</span>
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    Orders
+                  </span>
+                  <span className="text-sm font-semibold text-foreground leading-tight">
+                    My Orders
+                  </span>
                 </div>
               </Link>
 
@@ -238,7 +243,7 @@ export default function Navbar() {
                     }`}
                   />
                 </button>
-                
+
                 {/* User Dropdown Menu */}
                 {showUserDropdown && (
                   <div className="absolute top-full right-0 mt-2 w-64 bg-card rounded-xl shadow-xl border border-border overflow-hidden navbar-dropdown-enter z-50">
@@ -254,7 +259,7 @@ export default function Navbar() {
                         <span>My Profile</span>
                       </div>
                     </Link>
-                    
+
                     {/* Dev Tools - Only show in development */}
                     {process.env.NODE_ENV !== "production" && (
                       <div className="p-3 bg-accent/10 border-b border-border">
@@ -262,7 +267,13 @@ export default function Navbar() {
                           Dev Tools
                         </label>
                         <select
-                          value={devUserId ? `${devUserId}-${role}${storeId ? `-${storeId}` : ""}` : "4-USER"}
+                          value={
+                            devUserId
+                              ? `${devUserId}-${role}${
+                                  storeId ? `-${storeId}` : ""
+                                }`
+                              : "4-USER"
+                          }
                           onChange={(e) => {
                             try {
                               const target = e.target.value;
@@ -278,8 +289,12 @@ export default function Navbar() {
                         >
                           <option value="none">(none)</option>
                           <option value="1-SUPER_ADMIN">1 - SUPER_ADMIN</option>
-                          <option value="2-STORE_ADMIN-1">2 - STORE_ADMIN (Bandung)</option>
-                          <option value="3-STORE_ADMIN-2">3 - STORE_ADMIN (Jakarta)</option>
+                          <option value="2-STORE_ADMIN-1">
+                            2 - STORE_ADMIN (Bandung)
+                          </option>
+                          <option value="3-STORE_ADMIN-2">
+                            3 - STORE_ADMIN (Jakarta)
+                          </option>
                           <option value="4-USER">4 - Normal User</option>
                           <option value="5-USER">5 - Normal User 5</option>
                         </select>
@@ -423,7 +438,7 @@ export default function Navbar() {
                     </span>
                   </Link>
                 )}
-                
+
                 {/* Mobile Dev Tools - Only show in development */}
                 {process.env.NODE_ENV !== "production" && (
                   <div className="mt-3 pt-3 border-t border-border">
@@ -432,7 +447,13 @@ export default function Navbar() {
                         Dev Tools
                       </label>
                       <select
-                        value={devUserId ? `${devUserId}-${role}${storeId ? `-${storeId}` : ""}` : "4-USER"}
+                        value={
+                          devUserId
+                            ? `${devUserId}-${role}${
+                                storeId ? `-${storeId}` : ""
+                              }`
+                            : "4-USER"
+                        }
                         onChange={(e) => {
                           try {
                             const target = e.target.value;
@@ -448,8 +469,12 @@ export default function Navbar() {
                       >
                         <option value="none">(none)</option>
                         <option value="1-SUPER_ADMIN">1 - SUPER_ADMIN</option>
-                        <option value="2-STORE_ADMIN-1">2 - STORE_ADMIN (Bandung)</option>
-                        <option value="3-STORE_ADMIN-2">3 - STORE_ADMIN (Jakarta)</option>
+                        <option value="2-STORE_ADMIN-1">
+                          2 - STORE_ADMIN (Bandung)
+                        </option>
+                        <option value="3-STORE_ADMIN-2">
+                          3 - STORE_ADMIN (Jakarta)
+                        </option>
                         <option value="4-USER">4 - Normal User</option>
                         <option value="5-USER">5 - Normal User 5</option>
                       </select>
@@ -479,7 +504,9 @@ export default function Navbar() {
                   Delivering from
                 </span>
                 <span className="text-sm font-bold text-primary">
-                  {isMounted ? (nearestStoreName || "Store Bandung") : "Store Bandung"}
+                  {isMounted
+                    ? nearestStoreName || "Store Bandung"
+                    : "Store Bandung"}
                 </span>
               </div>
             </div>
@@ -487,21 +514,32 @@ export default function Navbar() {
             {/* Right: Address Selection */}
             <div className="relative" ref={locationDropdownRef}>
               <button
-                onClick={() => !isCheckoutPage && setShowLocationDropdown(!showLocationDropdown)}
+                onClick={() =>
+                  !isCheckoutPage &&
+                  setShowLocationDropdown(!showLocationDropdown)
+                }
                 disabled={isCheckoutPage}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all border shadow-sm ${
-                  isCheckoutPage 
-                    ? "bg-muted/50 border-border cursor-not-allowed opacity-60" 
+                  isCheckoutPage
+                    ? "bg-muted/50 border-border cursor-not-allowed opacity-60"
                     : "bg-card hover:bg-primary/5 border-border hover:border-primary/30 hover:shadow group"
                 }`}
               >
-                <MapPin className={`h-4 w-4 transition-transform ${
-                  isCheckoutPage ? "text-muted-foreground" : "text-primary group-hover:scale-110"
-                }`} />
-                <span className={`text-sm font-semibold max-w-[200px] truncate ${
-                  isCheckoutPage ? "text-muted-foreground" : "text-foreground"
-                }`}>
-                  {isMounted ? (activeAddress?.addressLine || "Select Address") : "Select Address"}
+                <MapPin
+                  className={`h-4 w-4 transition-transform ${
+                    isCheckoutPage
+                      ? "text-muted-foreground"
+                      : "text-primary group-hover:scale-110"
+                  }`}
+                />
+                <span
+                  className={`text-sm font-semibold max-w-[200px] truncate ${
+                    isCheckoutPage ? "text-muted-foreground" : "text-foreground"
+                  }`}
+                >
+                  {isMounted
+                    ? activeAddress?.addressLine || "Select Address"
+                    : "Select Address"}
                 </span>
                 {!isCheckoutPage && (
                   <ChevronDown

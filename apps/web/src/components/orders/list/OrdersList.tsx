@@ -18,6 +18,7 @@ import OrdersListError from "./OrdersListError";
 import OrdersListEmpty from "./OrdersListEmpty";
 import OrdersListPagination from "./OrdersListPagination";
 import OrderCard from "./OrderCard";
+import { getOrderStatusBadgeColor } from "@/utils/orderStatus";
 
 export default function OrdersList() {
   const [searchInput, setSearchInput] = React.useState<string>("");
@@ -54,34 +55,39 @@ export default function OrdersList() {
   const statusConfig = React.useMemo(
     () => ({
       PENDING_PAYMENT: {
-        color: "bg-amber-100/80 text-amber-700 border-amber-200",
+        color: getOrderStatusBadgeColor("PENDING_PAYMENT"),
         icon: <Clock className="h-3.5 w-3.5" />,
         label: "Pending Payment",
       },
       PAYMENT_REVIEW: {
-        color: "bg-orange-100/80 text-orange-700 border-orange-200",
+        color: getOrderStatusBadgeColor("PAYMENT_REVIEW"),
         icon: <CreditCard className="h-3.5 w-3.5" />,
         label: "Payment Review",
       },
       PROCESSING: {
-        color: "bg-blue-100/80 text-blue-700 border-blue-200",
+        color: getOrderStatusBadgeColor("PROCESSING"),
         icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
         label: "Processing",
       },
       SHIPPED: {
-        color: "bg-indigo-100/80 text-indigo-700 border-indigo-200",
+        color: getOrderStatusBadgeColor("SHIPPED"),
         icon: <Truck className="h-3.5 w-3.5" />,
         label: "Shipped",
       },
       CONFIRMED: {
-        color: "bg-emerald-100/80 text-emerald-700 border-emerald-200",
+        color: getOrderStatusBadgeColor("CONFIRMED"),
         icon: <CheckCircle2 className="h-3.5 w-3.5" />,
         label: "Confirmed",
       },
       CANCELLED: {
-        color: "bg-rose-100/80 text-rose-700 border-rose-200",
+        color: getOrderStatusBadgeColor("CANCELLED"),
         icon: <XCircle className="h-3.5 w-3.5" />,
         label: "Cancelled",
+      },
+      EXPIRED: {
+        color: getOrderStatusBadgeColor("EXPIRED"),
+        icon: <XCircle className="h-3.5 w-3.5" />,
+        label: "Expired",
       },
     }),
     []

@@ -102,7 +102,10 @@ export default function OrderProgress({
                 const isCompleted = i < currentStepIndex;
                 const isCurrent = i === currentStepIndex;
                 return (
-                  <div key={step} className="flex flex-col items-center gap-1.5">
+                  <div
+                    key={step}
+                    className="flex flex-col items-center gap-1.5"
+                  >
                     <div
                       className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${
                         isCompleted || isCurrent
