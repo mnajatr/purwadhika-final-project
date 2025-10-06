@@ -13,7 +13,7 @@ export default function Hero() {
       <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-prim-end/10 rounded-full blur-3xl animate-pulse delay-1000" />
 
-      <div className="relative container mx-auto px-4 py-16 md:py-24">
+  <div className="relative container mx-auto px-6 md:px-12 py-16 md:py-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="order-2 lg:order-1 text-center lg:text-left space-y-6 animate-fade-in-up">
             <div className="inline-flex items-center gap-2 bg-primary/10 backdrop-blur-sm px-4 py-2 rounded-full border border-primary/20">
@@ -70,7 +70,7 @@ export default function Hero() {
           </div>
 
           <div className="order-1 lg:order-2 flex justify-center lg:justify-end animate-fade-in">
-            <div className="relative w-full max-w-lg lg:max-w-xl">
+            <div className="relative w-full max-w-2xl lg:max-w-3xl">
               <div className="absolute inset-0 bg-gradient-to-br from-prim-start to-prim-end opacity-20 blur-3xl rounded-full scale-90" />
 
               <div className="relative">

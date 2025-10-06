@@ -95,7 +95,7 @@ export default function Home() {
                         {!outOfStock && (
                           <div className="absolute top-4 right-4 bg-card/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-primary/20">
                             <p className="text-xs font-semibold text-primary">
-                              {product.stock} tersedia
+                              {product.stock} available
                             </p>
                           </div>
                         )}
