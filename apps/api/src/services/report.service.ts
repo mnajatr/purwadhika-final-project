@@ -1,4 +1,4 @@
-import { prisma } from "@repo/database";
+import { prisma } from "../configs/prisma.config.js";
 import { OrderStatusEnum, StockChangeReasonEnum } from "../types/report.js";
 
 interface ReportFilter {

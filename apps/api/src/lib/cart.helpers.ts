@@ -1,4 +1,4 @@
-import { prisma } from "@repo/database";
+import { prisma } from "../configs/prisma.config.js";
 import { ERROR_MESSAGES, CART_CONSTANTS } from "../utils/helpers.js";
 import {
   createValidationError,

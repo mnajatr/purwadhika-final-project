@@ -1,9 +1,9 @@
-import { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from "express";
 import z, { ZodError } from "zod";
-import { Prisma } from "@repo/database/generated/prisma";
-import { AppError } from "../errors/app.error.js";
 import { MulterError } from "multer";
+import { AppError } from "../errors/app.error.js";
 import logger from "../utils/logger.js";
+import { Prisma } from "../../generated/prisma/index.js";
 
 export function errorMiddleware(
   error: Error,

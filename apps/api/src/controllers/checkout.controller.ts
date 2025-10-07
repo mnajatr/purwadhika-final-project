@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { checkoutService } from "../services/checkout.service.js";
 import { orderReadService } from "../services/order.read.service.js";
-import { CheckoutSchema } from "@repo/schemas";
+import { CheckoutSchema } from "../schemas/index.js";
 import {
   createValidationError,
   createUnauthorizedError,

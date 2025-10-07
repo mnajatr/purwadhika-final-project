@@ -1,4 +1,4 @@
-import { prisma } from "@repo/database";
+import { prisma } from "../configs/prisma.config.js";
 import { orderCancelQueue } from "../queues/orderCancelQueue.js";
 import { createConflictError } from "../errors/app.error.js";
 import { fileService } from "./file.service.js";

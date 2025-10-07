@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { prisma } from "@repo/database";
+import { prisma } from "../../configs/prisma.config.js";
 import { adminAuth } from "../../middleware/admin.middleware.js";
 
 const router = Router();

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { prisma } from "@repo/database";
+import { prisma } from "../configs/prisma.config.js";
 import { locationService } from "../services/location.service.js";
 import { AppError, createValidationError } from "../errors/app.error.js";
 

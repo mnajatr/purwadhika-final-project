@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { prisma } from "@repo/database";
+import { prisma } from "../configs/prisma.config.js";
 
 type AuthRequest = Request & {
   user?: { id?: number; role?: string; storeId?: number };

@@ -1,6 +1,6 @@
-import { prisma } from "@repo/database";
+import { prisma } from "../configs/prisma.config.js";
 import { inventoryService } from "./inventory.service.js";
-import type { Prisma } from "@repo/database/generated/prisma/index.js";
+import type { Prisma } from "../../generated/prisma/index.js";
 
 export class RollbackService {
 

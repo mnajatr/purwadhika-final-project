@@ -1,4 +1,4 @@
-import { prisma } from "@repo/database";
+import { prisma } from "../configs/prisma.config.js";
 
 export class AddressService {
   async resolveAddressId(userId: number, addressId?: number): Promise<number> {

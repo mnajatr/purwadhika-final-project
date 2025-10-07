@@ -1,5 +1,5 @@
 import { Worker, Job } from "bullmq";
-import { prisma } from "@repo/database";
+import { prisma } from "../configs/prisma.config.js";
 import logger from "../utils/logger.js";
 import {
   ORDER_CANCEL_QUEUE_NAME,

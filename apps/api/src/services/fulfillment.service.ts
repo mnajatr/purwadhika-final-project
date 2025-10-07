@@ -1,4 +1,4 @@
-import { prisma } from "@repo/database";
+import { prisma } from "../configs/prisma.config.js";
 import { createConflictError } from "../errors/app.error.js";
 import { rollbackService } from "./rollback.service.js";
 

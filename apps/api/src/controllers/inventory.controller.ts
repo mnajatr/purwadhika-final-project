@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
 import { inventoryService } from "../services/inventory.service.js";
-import { prisma } from "@repo/database";
+import { prisma } from "../configs/prisma.config.js";
 import type {
   TransferBody,
   UpdateStockBody,
   StockJournalsQuery,
-} from "@repo/schemas";
+} from "../schemas/index.js";
 
 function parseNumber(v: unknown, fallback = 0) {
   const n = Number(v);

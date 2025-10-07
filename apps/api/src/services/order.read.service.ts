@@ -1,4 +1,4 @@
-import { prisma } from "@repo/database";
+import { prisma } from "../configs/prisma.config.js";
 import { paginate, formatPagination } from "../utils/pagination.js";
 
 export interface OrderListOptions {

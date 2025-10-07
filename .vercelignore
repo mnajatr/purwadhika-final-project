@@ -1,33 +1,40 @@
 # Ignore dependency folders
+
 node_modules
-**/node_modules
+\*\*/node_modules
 
 # Ignore generated prisma client and other generated code
+
 packages/**/generated
 **/generated
 
 # Ignore build artifacts
+
 apps/web/.next
 apps/api/dist
 dist
 build
 
 # Ignore Vercel and git metadata
+
 .vercel
 .git
 .vscode
 
 # Environment files
+
 .env
-.env.*
+.env.\*
 
 # Logs, uploads, OS files
-*.log
+
+\*.log
 logs
 uploads
 .DS_Store
 Thumbs.db
 
 # Turbo/pnpm caches
+
 .turbo
 .next

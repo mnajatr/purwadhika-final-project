@@ -1,4 +1,4 @@
-import { prisma } from "@repo/database";
+import { prisma } from "../configs/prisma.config.js";
 import { locationService } from "./location.service.js";
 import { inventoryService } from "./inventory.service.js";
 import { addressService } from "./address.service.js";

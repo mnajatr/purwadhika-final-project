@@ -10,7 +10,7 @@ import {
   UpdateCartItemSchema,
   CartItemParamsSchema,
   UserQuerySchema,
-} from "@repo/schemas";
+} from "../schemas/index.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = Router();

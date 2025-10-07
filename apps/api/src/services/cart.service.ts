@@ -1,4 +1,4 @@
-import { AddToCartSchema, UpdateCartItemSchema } from "@repo/schemas";
+import { AddToCartSchema, UpdateCartItemSchema } from "../schemas/index.js";
 import { inventoryService } from "./inventory.service.js";
 import { CartValidation, CartUtils, CartRepo } from "../lib/cart.helpers.js";
 

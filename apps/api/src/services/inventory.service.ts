@@ -1,10 +1,10 @@
-import { prisma } from "@repo/database";
+import { prisma } from "../configs/prisma.config.js";
 import { ERROR_MESSAGES } from "../utils/helpers.js";
 import {
   createValidationError,
   createNotFoundError,
 } from "../errors/app.error.js";
-import type { Prisma } from "@repo/database/generated/prisma/index.js";
+import type { Prisma } from "../../generated/prisma/index.js";
 
 type OrderItemInput = { productId: number; qty: number };
 

@@ -1,5 +1,5 @@
-import { prisma } from "@repo/database";
-import { CreateUserInput, UpdateUserInput } from "@repo/schemas";
+import { prisma } from "../configs/prisma.config.js";
+import { CreateUserInput, UpdateUserInput } from "../schemas/index.js";
 
 export class UsersService {
   // ================= CREATE USER =================
