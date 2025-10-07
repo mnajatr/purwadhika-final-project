@@ -24,17 +24,17 @@ export class CheckoutController {
       return authReq.user.id;
     }
 
-      const headerUserId = req.headers["x-dev-user-id"];
-      if (headerUserId) {
-        const parsed = Number(headerUserId);
-        if (!isNaN(parsed)) return parsed;
-      }
+    const headerUserId = req.headers["x-dev-user-id"];
+    if (headerUserId) {
+      const parsed = Number(headerUserId);
+      if (!isNaN(parsed)) return parsed;
+    }
 
-      const queryUserId = req.query?.userId || req.body?.userId;
-      if (queryUserId) {
-        const parsed = Number(queryUserId);
-        if (!isNaN(parsed)) return parsed;
-      }
+    const queryUserId = req.query?.userId || req.body?.userId;
+    if (queryUserId) {
+      const parsed = Number(queryUserId);
+      if (!isNaN(parsed)) return parsed;
+    }
 
     throw createUnauthorizedError("Authentication required");
   }
@@ -157,10 +157,7 @@ export class CheckoutController {
       const authReq = req as AuthRequest;
       const userId = authReq.user?.id;
 
-      if (
-        userId &&
-        order.userId !== userId
-      ) {
+      if (userId && order.userId !== userId) {
         throw createUnauthorizedError("Access denied");
       }
 

@@ -4,7 +4,7 @@ import {
   createValidationError,
   createNotFoundError,
 } from "../errors/app.error.js";
-import type { Prisma } from "../../generated/prisma/index.js";
+import type { Prisma } from "@prisma/client";
 
 type OrderItemInput = { productId: number; qty: number };
 

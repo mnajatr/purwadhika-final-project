@@ -6,11 +6,11 @@ export class AddressService {
 
     if (typeof chosenAddressId !== "number") {
       // Pick user's primary or first address
-      const addr = await prisma.userAddress.findFirst({ 
+      const addr = await prisma.userAddress.findFirst({
         where: { userId },
-        orderBy: { id: "asc" } // Get the first address consistently
+        orderBy: { id: "asc" }, // Get the first address consistently
       });
-      
+
       if (addr) {
         chosenAddressId = addr.id;
       } else {
@@ -35,7 +35,7 @@ export class AddressService {
       const addr = await prisma.userAddress.findUnique({
         where: { id: chosenAddressId },
       });
-      
+
       if (!addr || addr.userId !== userId) {
         throw new Error("Address not found or does not belong to user");
       }
@@ -44,7 +44,9 @@ export class AddressService {
     return chosenAddressId;
   }
 
-  async getAddressCoordinates(addressId: number): Promise<{ lat: number; lon: number } | null> {
+  async getAddressCoordinates(
+    addressId: number
+  ): Promise<{ lat: number; lon: number } | null> {
     const addr = await prisma.userAddress.findUnique({
       where: { id: addressId },
       select: { latitude: true, longitude: true },
@@ -60,7 +62,9 @@ export class AddressService {
     return null;
   }
 
-  async getUserPrimaryAddressCoordinates(userId: number): Promise<{ lat: number; lon: number } | null> {
+  async getUserPrimaryAddressCoordinates(
+    userId: number
+  ): Promise<{ lat: number; lon: number } | null> {
     const addr = await prisma.userAddress.findFirst({
       where: { userId },
       select: { latitude: true, longitude: true },

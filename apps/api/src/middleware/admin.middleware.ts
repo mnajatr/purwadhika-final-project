@@ -56,12 +56,10 @@ export async function adminAuth(
       user.role === "STORE_ADMIN" &&
       (!user.storeAssignments || user.storeAssignments.length === 0)
     ) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Forbidden: store admin has no store assignment",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: store admin has no store assignment",
+      });
     }
 
     // 5️⃣ Tempel role & storeId ke req.user (assign concrete object to satisfy TS)
@@ -116,13 +114,11 @@ export function restrictToAssignedStoreIfNeeded(
 
         return next();
       } catch (err) {
-        return res
-          .status(500)
-          .json({
-            success: false,
-            message: "Store validation error",
-            error: String(err),
-          });
+        return res.status(500).json({
+          success: false,
+          message: "Store validation error",
+          error: String(err),
+        });
       }
     }
 

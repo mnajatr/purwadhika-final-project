@@ -1,5 +1,5 @@
 import { prisma } from "../configs/prisma.config.js";
-import type { Prisma } from "../../generated/prisma/index.js";
+import type { Prisma } from "@prisma/client";
 
 export interface ShippingCalculationInput {
   shippingMethod?: string;

@@ -1,30 +1,19 @@
 {
-  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "rootDir": ".",
-    "outDir": "./dist"
+    "target": "esnext",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "rootDir": "./",
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipDefaultLibCheck": true
   },
-  "include": ["src", "api"],
-  "exclude": ["dist"]
+  "include": ["src", "prisma", "generated"],
+  "exclude": ["dist", "node_modules"]
 }
-
-
-// {
-//   "compilerOptions": {
-//     "target": "esnext",
-//     "module": "nodenext",
-//     "moduleResolution": "nodenext",
-//     "rootDir": "./",
-//     "outDir": "./dist",
-//     "baseUrl": ".",
-//     "paths": {
-//       "@/*": ["src/*"]
-//     },
-//     "esModuleInterop": true,
-//     "forceConsistentCasingInFileNames": true,
-//     "strict": true,
-//     "skipDefaultLibCheck": true
-//   },
-//   "include": ["src", "prisma", "generated"],
-//   "exclude": ["dist", "node_modules"]
-// }

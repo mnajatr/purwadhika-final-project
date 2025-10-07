@@ -3,7 +3,7 @@ import z, { ZodError } from "zod";
 import { MulterError } from "multer";
 import { AppError } from "../errors/app.error.js";
 import logger from "../utils/logger.js";
-import { Prisma } from "../../generated/prisma/index.js";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 export function errorMiddleware(
   error: Error,
@@ -30,7 +30,7 @@ export function errorMiddleware(
       .json({ message: error.message, code: error.code });
   }
 
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+  if (error instanceof PrismaClientKnownRequestError) {
     if (error.code === "P2002") {
       return response.status(400).json({
         message: "Duplicate value violates unique constraint.",

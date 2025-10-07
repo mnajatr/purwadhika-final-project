@@ -3,7 +3,7 @@ import { ProductService } from "../services/product.service.js";
 import { v2 as cloudinary } from "cloudinary";
 import multer from "multer";
 import fs from "fs/promises";
-import { productForCreateSchema } from "packages/schemas/dist/product.schema.js";
+import { productForCreateSchema } from "../schemas/product.schema.js";
 
 const service = new ProductService();
 const upload = multer({

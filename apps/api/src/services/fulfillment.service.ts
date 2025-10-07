@@ -80,9 +80,7 @@ export class FulfillmentService {
         { orderId },
         { jobId: String(orderId), delay: DELAY_MS }
       );
-      logger.info(
-        `Scheduled auto-confirmation for order ${orderId} in 7 days`
-      );
+      logger.info(`Scheduled auto-confirmation for order ${orderId} in 7 days`);
     } catch (e) {
       const logger = (await import("../utils/logger.js")).default;
       logger.error(`Failed to enqueue confirm job for order=${orderId}: %o`, e);
