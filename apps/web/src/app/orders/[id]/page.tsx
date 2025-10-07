@@ -88,7 +88,9 @@ function CancelButton({
 }
 
 interface OrderPageProps {
-  params: { id: string };
+  // Next.js' PageProps can provide `params` as a thenable (Promise) or omit it.
+  // Use the Promise form to satisfy Next's PageProps constraint used during build.
+  params?: Promise<{ id: string }>;
 }
 
 export default function OrderPage({ params }: OrderPageProps) {

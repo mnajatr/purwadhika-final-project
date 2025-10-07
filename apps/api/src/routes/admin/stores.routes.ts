@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { prisma } from "@repo/database";
+import { prisma } from "../../configs/prisma.config.js";
 import { adminAuth } from "../../middleware/admin.middleware.js";
 
 const router = Router();
@@ -10,10 +10,18 @@ router.use(adminAuth);
 
 router.get("/", async (req, res) => {
   try {
-    const stores = await prisma.store.findMany({ select: { id: true, name: true } });
+    const stores = await prisma.store.findMany({
+      select: { id: true, name: true },
+    });
     return res.status(200).json({ success: true, data: stores });
   } catch (err) {
-    return res.status(500).json({ success: false, message: "Failed to fetch stores", error: String(err) });
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "Failed to fetch stores",
+        error: String(err),
+      });
   }
 });
 

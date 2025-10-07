@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { prisma } from "@repo/database";
+import { prisma } from "../configs/prisma.config.js";
 import { locationService } from "../services/location.service.js";
 import { AppError, createValidationError } from "../errors/app.error.js";
 
@@ -84,12 +84,10 @@ export class StoresController {
           where: { id: addressId },
         });
         if (!addr || !addr.latitude || !addr.longitude) {
-          return response
-            .status(200)
-            .json({
-              message: "Address has no coordinates",
-              data: { nearestStore: null },
-            });
+          return response.status(200).json({
+            message: "Address has no coordinates",
+            data: { nearestStore: null },
+          });
         }
         const computed = await locationService.computeNearestWithDistance(
           Number(addr.latitude),
@@ -104,12 +102,10 @@ export class StoresController {
           where: { id: computed.storeId },
           select: { id: true, name: true, locations: true },
         });
-        return response
-          .status(200)
-          .json({
-            message: "Nearest store found",
-            data: buildNearestData(store, computed),
-          });
+        return response.status(200).json({
+          message: "Nearest store found",
+          data: buildNearestData(store, computed),
+        });
       }
 
       if (latRaw && lonRaw) {
@@ -131,12 +127,10 @@ export class StoresController {
           where: { id: computed.storeId },
           select: { id: true, name: true, locations: true },
         });
-        return response
-          .status(200)
-          .json({
-            message: "Nearest store found",
-            data: buildNearestData(store, computed),
-          });
+        return response.status(200).json({
+          message: "Nearest store found",
+          data: buildNearestData(store, computed),
+        });
       }
 
       throw createValidationError("Provide userId+addressId or lat+lon");

@@ -5,7 +5,7 @@ import {
   StoreInventoryParamsSchema,
   StoreInventoryQuerySchema,
   InventoryReportQuerySchema,
-} from "@repo/schemas";
+} from "../schemas/index.js";
 
 import {
   validateBody,

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { UsersService } from "../services/user.service.js";
-import { CreateUserSchema, UpdateUserSchema } from "@repo/schemas";
+import { CreateUserSchema, UpdateUserSchema } from "../schemas/index.js";
 
 const service = new UsersService();
 

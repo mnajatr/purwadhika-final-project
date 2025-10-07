@@ -1,7 +1,25 @@
 import midtransClient from "midtrans-client";
+import logger from "../utils/logger.js";
 
-export const snap = new midtransClient.Snap({
-  isProduction: false,
-  clientKey: process.env.MIDTRANS_CLIENT_KEY as string,
-  serverKey: process.env.MIDTRANS_SERVER_KEY as string,
-});
+let snap: midtransClient.Snap | undefined = undefined;
+
+try {
+  const clientKey = process.env.MIDTRANS_CLIENT_KEY;
+  const serverKey = process.env.MIDTRANS_SERVER_KEY;
+  if (!clientKey || !serverKey) {
+    logger.warn(
+      "MIDTRANS keys are not configured. Midtrans client will be unavailable."
+    );
+  } else {
+    snap = new midtransClient.Snap({
+      isProduction: process.env.NODE_ENV === "production",
+      clientKey,
+      serverKey,
+    });
+    logger.info("Midtrans client initialized");
+  }
+} catch (err) {
+  logger.warn("Failed to initialize Midtrans client:", String(err));
+}
+
+export { snap };

@@ -1,17 +1,24 @@
 import { Worker, Job } from "bullmq";
-import { prisma } from "@repo/database";
+import { prisma } from "../configs/prisma.config.js";
 import logger from "../utils/logger.js";
 import {
   ORDER_CANCEL_QUEUE_NAME,
   type CancelOrderJobData,
 } from "../queues/orderCancelQueue.js";
-import { redis } from "../configs/redis.config.js";
+import { bullConnection } from "../configs/redis.config.js";
 
-logger.info("✅ Order cancel worker is running...");
+let worker: Worker<CancelOrderJobData> | undefined;
 
-const worker = new Worker<CancelOrderJobData>(
-  ORDER_CANCEL_QUEUE_NAME,
-  async (job: Job<CancelOrderJobData>) => {
+if (!bullConnection) {
+  logger.warn(
+    "Order cancel worker not started because bullConnection is not configured."
+  );
+} else {
+  logger.info("✅ Order cancel worker is running...");
+
+  worker = new Worker<CancelOrderJobData>(
+    ORDER_CANCEL_QUEUE_NAME,
+    async (job: Job<CancelOrderJobData>) => {
     const { orderId } = job.data;
     logger.info(`🚀 Starting cancel job for order=${orderId}`);
 
@@ -134,24 +141,25 @@ const worker = new Worker<CancelOrderJobData>(
       logger.error(`❌ Failed cancel job for order=${orderId}: ${String(err)}`);
       throw err;
     }
-  },
-  { connection: redis }
-);
+    },
+    { connection: bullConnection }
+  );
 
-worker.on("failed", (job: Job<CancelOrderJobData> | undefined, err: Error) => {
+  worker.on("failed", (job: Job<CancelOrderJobData> | undefined, err: Error) => {
   logger.error(
     `❌ Order cancel job failed. id=${job?.id} data=${JSON.stringify(
       job?.data
     )} error=${String(err)}`
   );
-});
+  });
 
-worker.on("completed", (job: Job<CancelOrderJobData>) => {
+  worker.on("completed", (job: Job<CancelOrderJobData>) => {
   logger.info(
     `🎉 Order cancel job completed. id=${job.id} data=${JSON.stringify(
       job.data
     )}`
   );
-});
+  });
+}
 
 export default worker;

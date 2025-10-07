@@ -1,9 +1,8 @@
-import { prisma } from "@repo/database";
+import { prisma } from "../configs/prisma.config.js";
 import { inventoryService } from "./inventory.service.js";
-import type { Prisma } from "@repo/database/generated/prisma/index.js";
+import type { Prisma } from "@prisma/client";
 
 export class RollbackService {
-
   async rollbackOrderInTransaction(
     order: any,
     tx: Prisma.TransactionClient
@@ -43,7 +42,9 @@ export class RollbackService {
       });
 
       logger.info(
-        `Order ${orderId} rolled back by user=${opts?.actorId ?? "system"} reason=${opts?.reason ?? "unknown"}`
+        `Order ${orderId} rolled back by user=${
+          opts?.actorId ?? "system"
+        } reason=${opts?.reason ?? "unknown"}`
       );
 
       return {
@@ -59,7 +60,7 @@ export class RollbackService {
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       logger.error(`Failed to rollback order ${orderId}: ${msg}`);
-      
+
       return {
         success: false,
         details: { orderId, error: msg },
@@ -73,7 +74,7 @@ export class RollbackService {
     tx: Prisma.TransactionClient
   ): Promise<void> {
     const logger = (await import("../utils/logger.js")).default;
-    
+
     try {
       if (orderCreatedAt) {
         const windowMs = 10 * 60 * 1000; // 10 minutes window
@@ -93,8 +94,10 @@ export class RollbackService {
             where: { id: { in: usedVouchers.map((v) => v.id) } },
             data: { isUsed: false, usedAt: null },
           });
-          
-          logger.info(`[TX] Rolled back ${usedVouchers.length} voucher(s) for user=${userId}`);
+
+          logger.info(
+            `[TX] Rolled back ${usedVouchers.length} voucher(s) for user=${userId}`
+          );
         }
       }
     } catch (e) {
