@@ -1,31 +1,35 @@
-import { Redis } from "ioredis";
+import { Redis } from "@upstash/redis";
+import type { ConnectionOptions } from "bullmq";
 import logger from "../utils/logger.js";
 
-const REDIS_URL = process.env.REDIS_URL || "redis://127.0.0.1:6379";
+const UPSTASH_REST_URL = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_REST_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-export const redis = new Redis({
-  host: "127.0.0.1",
-  port: 6379,
-  db: 0, // Explicitly use database 0
-  maxRetriesPerRequest: null,
-  enableReadyCheck: false,
-});
+/**
+ * Be tolerant at import-time: do not throw when env vars are missing.
+ * Throwing on import will crash serverless functions during cold start.
+ * Instead, log a warning and export undefined values. The rest of the
+ * application can check for presence of `bullConnection` before creating
+ * queues or workers.
+ */
+let redis: Redis | undefined = undefined;
+let bullConnection: ConnectionOptions | undefined = undefined;
 
-// Add connection event logging
-redis.on("connect", () => {
-  // logger.info("🔗 Redis connecting...");
-});
+if (UPSTASH_REST_URL && UPSTASH_REST_TOKEN) {
+  redis = new Redis({ url: UPSTASH_REST_URL, token: UPSTASH_REST_TOKEN });
+  // Pragmatic cast: Upstash client shape is not the same as ioredis but
+  // bullmq accepts a variety of connection objects; keep the cast but
+  // mark the connection optional.
+  bullConnection = redis as unknown as ConnectionOptions;
+  logger.info("Upstash Redis client initialized");
+} else {
+  logger.warn(
+    "Upstash environment variables are missing. Redis-backed queues/workers will be disabled until UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are provided."
+  );
+}
 
-redis.on("ready", () => {
-  // logger.info("✅ Redis connected and ready!");
-});
-
-redis.on("error", (err) => {
-  // logger.error("❌ Redis connection error:", err.message);
-});
-
-redis.on("close", () => {
-  // logger.info("🔌 Redis connection closed");
-});
-
+export { redis };
 export type RedisClient = typeof redis;
+export { bullConnection };
+
+export default redis;

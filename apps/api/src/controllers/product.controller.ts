@@ -2,12 +2,14 @@ import { Request, Response } from "express";
 import { ProductService } from "../services/product.service.js";
 import { v2 as cloudinary } from "cloudinary";
 import multer from "multer";
-import fs from "fs/promises";
 import { productForCreateSchema } from "../schemas/product.schema.js";
 
 const service = new ProductService();
+// Use memory storage in serverless environments to avoid writing to the function
+// filesystem (which is read-only on Vercel). We'll upload buffers directly to
+// Cloudinary instead of saving temporary files.
 const upload = multer({
-  dest: "uploads/",
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 1 * 1024 * 1024, // 1 MB
   },
@@ -116,11 +118,12 @@ export class ProductController {
         if (files && files.length) {
           uploadedImages = await Promise.all(
             files.map(async (file) => {
-              const result = await cloudinary.uploader.upload(file.path, {
+              // file is stored in memory (file.buffer). Convert to data URI and upload
+              // Cloudinary accepts data URIs like: data:<mime>;base64,<base64data>
+              const base64 = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+              const result = await cloudinary.uploader.upload(base64, {
                 folder: "products",
               });
-              // hapus file lokal setelah upload
-              await fs.unlink(file.path);
               return { imageUrl: result.secure_url };
             })
           );
@@ -166,10 +169,10 @@ export class ProductController {
         if (files && files.length) {
           uploadedImages = await Promise.all(
             files.map(async (file) => {
-              const result = await cloudinary.uploader.upload(file.path, {
+              const base64 = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+              const result = await cloudinary.uploader.upload(base64, {
                 folder: "products",
               });
-              await fs.unlink(file.path);
               return { imageUrl: result.secure_url };
             })
           );

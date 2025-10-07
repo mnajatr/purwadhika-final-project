@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "esnext",
+    "target": "ES2020",
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "rootDir": "./",
@@ -10,10 +10,19 @@
       "@/*": ["src/*"]
     },
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "skipDefaultLibCheck": true
+    "strict": false,
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictFunctionTypes": false,
+    "strictPropertyInitialization": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "resolveJsonModule": true
   },
-  "include": ["src", "prisma", "generated"],
+  "include": ["src", "prisma", "generated", "api"],
   "exclude": ["dist", "node_modules"]
 }

@@ -2,7 +2,7 @@ import { prisma } from "../configs/prisma.config.js";
 
 export class AddressService {
   async resolveAddressId(userId: number, addressId?: number): Promise<number> {
-    let chosenAddressId = addressId;
+    let chosenAddressId: number | undefined = addressId;
 
     if (typeof chosenAddressId !== "number") {
       // Pick user's primary or first address
@@ -39,6 +39,10 @@ export class AddressService {
       if (!addr || addr.userId !== userId) {
         throw new Error("Address not found or does not belong to user");
       }
+    }
+
+    if (typeof chosenAddressId !== "number") {
+      throw new Error("Failed to resolve address");
     }
 
     return chosenAddressId;

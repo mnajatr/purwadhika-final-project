@@ -5,13 +5,20 @@ import {
   ORDER_CONFIRM_QUEUE_NAME,
   type ConfirmOrderJobData,
 } from "../queues/orderConfirmQueue.js";
-import { redis } from "../configs/redis.config.js";
+import { bullConnection } from "../configs/redis.config.js";
 
-logger.info("✅ Order confirm worker is running...");
+let worker: Worker<ConfirmOrderJobData> | undefined;
 
-const worker = new Worker<ConfirmOrderJobData>(
-  ORDER_CONFIRM_QUEUE_NAME,
-  async (job: Job<ConfirmOrderJobData>) => {
+if (!bullConnection) {
+  logger.warn(
+    "Order confirm worker not started because bullConnection is not configured."
+  );
+} else {
+  logger.info("✅ Order confirm worker is running...");
+
+  worker = new Worker<ConfirmOrderJobData>(
+    ORDER_CONFIRM_QUEUE_NAME,
+    async (job: Job<ConfirmOrderJobData>) => {
     const { orderId } = job.data;
     logger.info(`🚀 Starting confirm job for order=${orderId}`);
 
@@ -68,11 +75,11 @@ const worker = new Worker<ConfirmOrderJobData>(
       );
       throw err;
     }
-  },
-  { connection: redis }
-);
+    },
+    { connection: bullConnection }
+  );
 
-worker.on("failed", (job: Job<ConfirmOrderJobData> | undefined, err: Error) => {
+  worker.on("failed", (job: Job<ConfirmOrderJobData> | undefined, err: Error) => {
   logger.error(
     `❌ Order confirm job failed. id=${job?.id} data=${JSON.stringify(
       job?.data
@@ -80,12 +87,13 @@ worker.on("failed", (job: Job<ConfirmOrderJobData> | undefined, err: Error) => {
   );
 });
 
-worker.on("completed", (job: Job<ConfirmOrderJobData>) => {
+  worker.on("completed", (job: Job<ConfirmOrderJobData>) => {
   logger.info(
     `🎉 Order confirm job completed. id=${job.id} data=${JSON.stringify(
       job.data
     )}`
   );
 });
+}
 
 export default worker;
