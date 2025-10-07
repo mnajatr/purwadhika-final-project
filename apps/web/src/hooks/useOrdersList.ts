@@ -8,7 +8,7 @@ import {
   OrdersListResponseSchema,
   type OrderListItem,
   type OrdersFilter,
-} from "@repo/schemas";
+} from "../schemas";
 
 interface UseOrdersListParams {
   page: number;

@@ -8,7 +8,7 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
-import type { CartResponse as Cart } from "@repo/schemas";
+import type { CartResponse as Cart } from "../../schemas";
 import { validateCartForCheckout } from "@/utils/cartStockUtils";
 
 export interface Props {

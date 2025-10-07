@@ -6,7 +6,7 @@ import type {
   AdminOrdersFilter,
   AdminOrderListItem,
   AdminOrdersListResponse,
-} from "@repo/schemas";
+} from "../schemas";
 
 type UseOrdersResult = {
   items: AdminOrderListItem[];

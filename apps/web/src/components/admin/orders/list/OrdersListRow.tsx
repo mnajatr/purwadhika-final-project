@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CheckCircle, Truck, XCircle, Eye, MoreVertical } from "lucide-react";
-import type { AdminOrderListItem } from "@repo/schemas";
+import type { AdminOrderListItem } from "../../../../schemas";
 import { getOrderStatusBadgeColor } from "@/utils/orderStatus";
 
 interface OrdersListRowProps {

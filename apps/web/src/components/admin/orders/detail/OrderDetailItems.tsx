@@ -1,5 +1,5 @@
 import { ShoppingCart } from "lucide-react";
-import type { AdminOrderDetailItem } from "@repo/schemas";
+import type { AdminOrderDetailItem } from "../../../../schemas";
 
 interface OrderDetailItemsProps {
   items: AdminOrderDetailItem[];

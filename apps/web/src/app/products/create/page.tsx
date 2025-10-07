@@ -6,7 +6,7 @@ import Image from "next/image";
 import { productsService } from "@/services/products.service";
 import { useStores } from "@/hooks/useStores";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { productForCreateSchema } from "@repo/schemas";
+import { productForCreateSchema } from "../../../schemas";
 import { toast } from "sonner";
 type InventoryInput = { storeId: number };
 

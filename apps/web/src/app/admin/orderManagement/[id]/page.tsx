@@ -12,7 +12,7 @@ import OrderDetailItems from "@/components/admin/orders/detail/OrderDetailItems"
 import OrderDetailPayment from "@/components/admin/orders/detail/OrderDetailPayment";
 import OrderDetailTotal from "@/components/admin/orders/detail/OrderDetailTotal";
 import { XCircle, X } from "lucide-react";
-import type { AdminOrderDetail } from "@repo/schemas";
+import type { AdminOrderDetail } from "../../../../schemas";
 import { toast } from "sonner";
 
 type ConfirmDialogState = {

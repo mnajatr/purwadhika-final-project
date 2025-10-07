@@ -3,7 +3,7 @@
 import { useUpdateCartItem, useRemoveCartItem } from "@/hooks/useCart";
 import { useStockHandler } from "@/hooks/useStockHandler";
 import { getRemainingStock } from "@/utils/cartStockUtils";
-import type { CartItemResponse as CartItemType } from "@repo/schemas";
+import type { CartItemResponse as CartItemType } from "../../schemas";
 import { useState, useEffect, useRef, useMemo } from "react";
 import CartItemImage from "./CartItemImage";
 import CategoryBadge from "./CategoryBadge";

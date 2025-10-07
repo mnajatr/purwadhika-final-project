@@ -7,7 +7,7 @@ import {
   type CreateOrderItem,
   type OrderDetail,
   type OrdersFilter,
-} from "@repo/schemas";
+} from "../schemas";
 
 export class OrderService {
   private base = "/orders";

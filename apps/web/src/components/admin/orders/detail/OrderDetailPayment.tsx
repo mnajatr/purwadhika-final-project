@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import Image from "next/image";
 import { CreditCard, FileText, ZoomIn } from "lucide-react";
-import type { AdminOrderDetailPayment } from "@repo/schemas";
+import type { AdminOrderDetailPayment } from "../../../../schemas";
 
 interface OrderDetailPaymentProps {
   payment: AdminOrderDetailPayment;

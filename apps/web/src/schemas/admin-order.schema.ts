@@ -3,7 +3,7 @@ import {
   OrderStatusEnum,
   PaymentMethodEnum,
   PaymentStatusEnum,
-} from "./order.schema.js";
+} from "./order.schema";
 
 const idSchema = z.number().int().positive();
 

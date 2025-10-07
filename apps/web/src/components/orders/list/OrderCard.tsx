@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import type { OrderListItem } from "@repo/schemas";
+import type { OrderListItem } from "../../../schemas";
 
 interface OrderCardProps {
   order: OrderListItem;

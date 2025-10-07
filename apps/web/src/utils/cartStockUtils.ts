@@ -1,4 +1,4 @@
-import type { CartItemResponse as CartItem } from "@repo/schemas";
+import type { CartItemResponse as CartItem } from "../schemas";
 
 export function isCartItemOutOfStock(item: CartItem): boolean {
   return item.storeInventory?.stockQty === 0;

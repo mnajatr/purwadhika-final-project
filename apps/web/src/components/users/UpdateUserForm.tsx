@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { UpdateUserSchema } from "@repo/schemas";
+import { UpdateUserSchema } from "../../schemas";
 import { z } from "zod";
 import { updateUser } from "@/services/users.service";
 import { toast } from "sonner";

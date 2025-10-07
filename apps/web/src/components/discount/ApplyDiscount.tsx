@@ -9,7 +9,7 @@ import { MdDiscount } from "react-icons/md";
 import { Tag } from "lucide-react";
 import { useDiscountsByProductIds } from "@/hooks/useDiscount";
 import { DiscountResponse } from "@/types/discount.types";
-import type { CartResponse as Cart } from "@repo/schemas";
+import type { CartResponse as Cart } from "../../schemas";
 
 interface ApplyDiscountProps {
   cart: Cart;

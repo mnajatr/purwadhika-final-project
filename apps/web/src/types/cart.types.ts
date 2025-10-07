@@ -5,7 +5,7 @@ import type {
   AddToCartInput,
   UpdateCartItemInput,
   CartItemParams,
-} from "@repo/schemas";
+} from "../schemas";
 
 export type CartItem = CartItemResponse;
 export type Cart = CartResponse;

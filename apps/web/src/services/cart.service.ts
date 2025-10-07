@@ -7,7 +7,7 @@ import {
   UpdateCartItemInput,
   AddToCartSchema,
   UpdateCartItemSchema,
-} from "@repo/schemas";
+} from "../schemas";
 
 export class CartService {
   private readonly basePath = "/cart";
