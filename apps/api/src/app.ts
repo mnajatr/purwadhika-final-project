@@ -34,7 +34,7 @@ export class App {
   setupMiddleware() {
     this.app.use(
       cors({
-        origin: process.env.API_CORS_ORIGIN || "http://localhost:3000",
+        origin: process.env.API_CORS_ORIGIN || "https://growseries.vercel.app",
         credentials: true,
       })
     );

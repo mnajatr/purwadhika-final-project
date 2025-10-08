@@ -40,12 +40,12 @@ export class OrderService {
     if (paymentMethod) body.paymentMethod = paymentMethod;
     if (shippingMethod) body.shippingMethod = shippingMethod;
     if (shippingOption) body.shippingOption = shippingOption;
-    
+
     const response = await apiClient.post<ApiResponse<OrderDetail>>(
       this.base,
       body
     );
-    
+
     return response;
   }
 
@@ -53,14 +53,14 @@ export class OrderService {
     const response = await apiClient.get<ApiResponse<OrderDetail>>(
       `${this.base}/${id}`
     );
-    
+
     if (response.data) {
       const parsed = OrderDetailSchema.safeParse(response.data);
       if (parsed.success) {
         return { ...response, data: parsed.data };
       }
     }
-    
+
     return response;
   }
 
@@ -68,7 +68,7 @@ export class OrderService {
     const validatedParams = params
       ? OrdersFilterSchema.partial().parse(params)
       : undefined;
-    
+
     return apiClient.get<ApiResponse<unknown>>(this.base, {
       params: validatedParams,
     });
@@ -80,7 +80,7 @@ export class OrderService {
   ): Promise<ApiResponse<OrderDetail>> {
     const body: Record<string, unknown> = {};
     if (typeof requesterUserId === "number") body.userId = requesterUserId;
-    
+
     return apiClient.patch<ApiResponse<OrderDetail>>(
       `${this.base}/${id}/cancel`,
       body
@@ -93,7 +93,7 @@ export class OrderService {
   ): Promise<ApiResponse<OrderDetail>> {
     const body: Record<string, unknown> = {};
     if (typeof requesterUserId === "number") body.userId = requesterUserId;
-    
+
     return apiClient.patch<ApiResponse<OrderDetail>>(
       `${this.base}/${id}/confirm`,
       body
@@ -106,7 +106,7 @@ export class OrderService {
   ): Promise<ApiResponse<OrderDetail>> {
     const body: Record<string, unknown> = {};
     if (typeof actorUserId === "number") body.userId = actorUserId;
-    
+
     return apiClient.patch<ApiResponse<OrderDetail>>(
       `${this.base}/${id}/ship`,
       body
@@ -115,4 +115,3 @@ export class OrderService {
 }
 
 export const orderService = new OrderService();
-

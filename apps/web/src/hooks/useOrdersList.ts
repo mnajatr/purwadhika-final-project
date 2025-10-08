@@ -65,7 +65,8 @@ async function fetchOrdersList(
     page: filters.page || 1,
     pageSize: filters.pageSize || 10,
   };
-}export function useOrdersList({
+}
+export function useOrdersList({
   page,
   pageSize,
   status,
