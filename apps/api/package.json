@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@faker-js/faker": "^9.9.0",
-    "@prisma/client": "^6.16.3",
+    "@prisma/client": "^6.17.0",
+    "@prisma/extension-accelerate": "^2.0.2",
     "@upstash/redis": "^1.35.5",
     "bullmq": "^1.84.0",
     "cloudinary": "^1.41.3",
@@ -31,7 +32,7 @@
     "@types/multer": "^2.0.0",
     "@types/node": "^20.19.9",
     "cross-env": "^7.0.3",
-    "prisma": "^6.16.3",
+    "prisma": "^6.17.0",
     "tsc-alias": "^1.8.16",
     "tsx": "^3.12.7",
     "typescript": "^5.3.3"
