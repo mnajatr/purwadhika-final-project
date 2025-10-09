@@ -14,7 +14,7 @@ type IdempotencyEntry =
 const IDEMPOTENCY_TTL_MS = 60 * 1000;
 const idempotencyStore = new Map<string, IdempotencyEntry>();
 const ORDER_CANCEL_DELAY_MS =
-  Number(process.env.ORDER_CANCEL_DELAY_MS) || 60 * 60 * 1000;
+  Number(process.env.ORDER_CANCEL_DELAY_MS) || 100000;
 
 export class CheckoutService {
   private locationService = locationService;

@@ -11,14 +11,13 @@ import categoryRouter from "./routes/admin/category.routes.js";
 import reportRouter from "./routes/admin/report.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import debugRoutes from "./routes/debug.routes.js";
+import orderCancelWorker from "./workers/orderCancelWorker.js";
+import orderConfirmWorker from "./workers/orderConfirmWorker.js";
 import { setupCloudinary } from "./configs/cloudinary.config.js";
 import logger from "./utils/logger.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 import { apiRateLimit } from "./middleware/rateLimit.middleware.js";
-// Boot background workers/queues (side-effects)
-import "./workers/orderCancelWorker.js";
-import "./workers/orderConfirmWorker.js";
 
 export class App {
   app: Application;
@@ -53,10 +52,14 @@ export class App {
     this.app.use("/api/category", categoryRouter);
     this.app.use("/api/reports", reportRouter);
     this.app.use("/api/payments", paymentRoutes);
+    
+    // QStash worker webhook endpoints
+    this.app.use("/api/workers", orderCancelWorker);
+    this.app.use("/api/workers", orderConfirmWorker);
+    
     if (process.env.NODE_ENV !== "production") {
       this.app.use("/api/debug", debugRoutes);
     }
-    // Debug routes removed for production; keep local/dev-only debug routes out of main app.
 
     this.app.get("/api/health", (request: Request, response: Response) =>
       response.status(200).json({ message: "API running!" })

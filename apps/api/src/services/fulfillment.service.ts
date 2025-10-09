@@ -170,29 +170,32 @@ export class FulfillmentService {
       return confirmedOrder;
     });
 
-    // Remove any scheduled auto-confirm jobs that are no longer relevant.
+    // Note: QStash doesn't support job removal like BullMQ.
+    // Scheduled jobs will still be delivered, but the confirmOrder logic
+    // will skip processing if the order is already confirmed.
     try {
       const { orderConfirmQueue } = await import(
         "../queues/orderConfirmQueue.js"
       );
-      const job = await orderConfirmQueue.getJob(String(orderId));
-      if (job) {
-        await job.remove();
-        logger.info(`Removed auto-confirm job for order ${orderId}`);
-      }
+      await orderConfirmQueue.getJob(String(orderId));
+      logger.info(
+        `Note: Scheduled auto-confirm job for order ${orderId} cannot be removed (QStash limitation). It will be skipped when delivered.`
+      );
     } catch (e) {
-      logger.error(`Failed to remove confirm job for order=${orderId}: %o`, e);
+      logger.error(`Failed to check confirm job for order=${orderId}: %o`, e);
     }
 
-    // Also remove any scheduled cancellation (payment deadline) since payment may now be accepted
+    // Also note: scheduled cancellation cannot be removed
     try {
       const { orderCancelQueue } = await import(
         "../queues/orderCancelQueue.js"
       );
-      const cj = await orderCancelQueue.getJob(String(orderId));
-      if (cj) await cj.remove();
+      await orderCancelQueue.getJob(String(orderId));
+      logger.info(
+        `Note: Scheduled cancel job for order ${orderId} cannot be removed (QStash limitation). It will be skipped when delivered.`
+      );
     } catch (e) {
-      logger.error(`Failed to remove cancel job for order=${orderId}: %o`, e);
+      logger.error(`Failed to check cancel job for order=${orderId}: %o`, e);
     }
 
     return result;
@@ -308,7 +311,7 @@ export class FulfillmentService {
     try {
       if (result && (result as any).status === "PENDING_PAYMENT") {
         const ORDER_CANCEL_DELAY_MS =
-          Number(process.env.ORDER_CANCEL_DELAY_MS) || 60 * 60 * 1000;
+          Number(process.env.ORDER_CANCEL_DELAY_MS) || 100000;
         const { orderCancelQueue } = await import(
           "../queues/orderCancelQueue.js"
         );
@@ -330,14 +333,17 @@ export class FulfillmentService {
 
   private async _removeScheduledCancellation(orderId: number): Promise<void> {
     try {
+      const logger = (await import("../utils/logger.js")).default;
       const { orderCancelQueue } = await import(
         "../queues/orderCancelQueue.js"
       );
-      const job = await orderCancelQueue.getJob(String(orderId));
-      if (job) await job.remove();
+      await orderCancelQueue.getJob(String(orderId));
+      logger.info(
+        `Note: Scheduled cancel job for order ${orderId} cannot be removed (QStash limitation). It will be skipped when delivered.`
+      );
     } catch (err) {
       const logger = (await import("../utils/logger.js")).default;
-      logger.error(`Failed to remove cancel job for order=${orderId}: %o`, err);
+      logger.error(`Failed to check cancel job for order=${orderId}: %o`, err);
     }
   }
 }

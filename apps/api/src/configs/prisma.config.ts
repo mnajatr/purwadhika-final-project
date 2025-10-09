@@ -23,7 +23,10 @@ if (globalForPrisma.prisma) {
   prismaClient = globalForPrisma.prisma;
 } else {
   const base = new PrismaClient(clientOptions as any);
-  if (process.env.DATABASE_URL?.startsWith("prisma+") && typeof withAccelerate === "function") {
+  if (
+    process.env.DATABASE_URL?.startsWith("prisma+") &&
+    typeof withAccelerate === "function"
+  ) {
     try {
       // $extends returns a dynamic extended client type; cast to any/PrismaClient
       // so our exports keep the expected runtime shape.
@@ -32,16 +35,22 @@ if (globalForPrisma.prisma) {
     } catch (e) {
       // fallback to base client if extension fails
       // eslint-disable-next-line no-console
-      console.warn("[prisma] failed to enable accelerate extension, falling back to plain client", e);
+      console.warn(
+        "[prisma] failed to enable accelerate extension, falling back to plain client",
+        e
+      );
       prismaClient = base;
     }
   } else {
     prismaClient = base;
   }
 
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = prismaClient;
-  }
+  // Cache the Prisma client on globalThis to avoid creating new instances
+  // on every module import. In serverless platforms (Vercel) this helps
+  // reuse the client across warm invocations and avoids using a client
+  // that was previously disconnected. Storing on globalThis is safe as
+  // PrismaClient is a single long-lived instance.
+  globalForPrisma.prisma = prismaClient;
 }
 
 export const prisma = prismaClient;

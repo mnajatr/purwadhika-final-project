@@ -81,22 +81,24 @@ export class PaymentService {
       })) as unknown as PaymentMinimal;
     }
 
+    // Note: QStash doesn't support job removal like BullMQ.
+    // The scheduled cancel job will still be delivered, but the worker
+    // will skip processing if the order status is no longer PENDING_PAYMENT.
     try {
-      const job = await orderCancelQueue.getJob(String(order.id));
-      if (job) {
-        await job.remove();
-        try {
-          const logger = (await import("../utils/logger.js")).default;
-          logger.info(`Removed cancel job for order=${order.id}`);
-        } catch (e) {
-          // swallow logging errors
-        }
+      await orderCancelQueue.getJob(String(order.id));
+      try {
+        const logger = (await import("../utils/logger.js")).default;
+        logger.info(
+          `Note: Scheduled cancel job for order ${order.id} cannot be removed (QStash limitation). It will be skipped when delivered.`
+        );
+      } catch (e) {
+        // swallow logging errors
       }
     } catch (err) {
       try {
         const logger = (await import("../utils/logger.js")).default;
         logger.error(
-          `Failed to remove cancel job for order=${order.id}: %o`,
+          `Failed to check cancel job for order=${order.id}: %o`,
           err
         );
       } catch (e) {
