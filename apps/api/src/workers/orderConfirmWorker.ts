@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { Receiver } from "@upstash/qstash";
+import express from "express";
+// NOTE: Signature verification removed by request. We no longer import Receiver.
 import { prisma } from "../configs/prisma.config.js";
 import logger from "../utils/logger.js";
 import type { ConfirmOrderJobData } from "../queues/orderConfirmQueue.js";
@@ -8,6 +9,12 @@ const QSTASH_CURRENT_SIGNING_KEY = process.env.QSTASH_CURRENT_SIGNING_KEY;
 const QSTASH_NEXT_SIGNING_KEY = process.env.QSTASH_NEXT_SIGNING_KEY;
 
 const router = Router();
+
+// Health check endpoint to allow probes (GET) to succeed.
+// Some external services validate routes using GET/HEAD before publishing.
+router.get('/order-confirm', (_req, res) => {
+  res.status(200).json({ ok: true });
+});
 
 /**
  * Process order confirmation job.
@@ -73,31 +80,18 @@ async function processConfirmOrder(data: ConfirmOrderJobData) {
 // QStash webhook endpoint for order confirmation
 router.post("/order-confirm", async (req, res) => {
   try {
-    if (!QSTASH_CURRENT_SIGNING_KEY || !QSTASH_NEXT_SIGNING_KEY) {
-      logger.error("QStash signing keys not configured");
-      return res.status(500).json({ error: "QStash not configured" });
-    }
-
-    const receiver = new Receiver({
-      currentSigningKey: QSTASH_CURRENT_SIGNING_KEY,
-      nextSigningKey: QSTASH_NEXT_SIGNING_KEY,
-    });
-
-    const signature = req.headers["upstash-signature"] as string;
-    const body = JSON.stringify(req.body);
-
-    // Verify the request is from QStash
-    const isValid = await receiver.verify({
-      signature,
-      body,
-    });
-
-    if (!isValid) {
-      logger.error("Invalid QStash signature for order confirm");
-      return res.status(401).json({ error: "Invalid signature" });
-    }
+    // Debug: log incoming header keys so we can see what the caller sent
+    try {
+      logger.info(`Incoming headers: ${Object.keys(req.headers).join(", ")}`);
+    } catch {}
 
     const data = req.body as ConfirmOrderJobData;
+
+    if (!data || typeof data.orderId !== "number") {
+      logger.error("Invalid request body for order confirm:", req.body);
+      return res.status(400).json({ error: "Invalid request body" });
+    }
+
     logger.info(`🎉 Order confirm job received: ${JSON.stringify(data)}`);
 
     await processConfirmOrder(data);

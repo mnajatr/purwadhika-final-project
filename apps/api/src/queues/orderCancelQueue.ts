@@ -7,12 +7,6 @@ export type CancelOrderJobData = {
   orderId: number;
 };
 
-/**
- * Enqueue an order cancellation job using QStash.
- * @param jobName - Name of the job (e.g., "cancel-order")
- * @param data - Job data containing orderId
- * @param opts - Options including delay (in ms)
- */
 async function add(
   jobName: string,
   data: CancelOrderJobData,

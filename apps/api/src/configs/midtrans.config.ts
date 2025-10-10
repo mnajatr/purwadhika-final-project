@@ -14,13 +14,17 @@ try {
     // Use MIDTRANS_IS_PRODUCTION env var to control sandbox vs production
     // Default to false (sandbox) for safety
     const isProduction = process.env.MIDTRANS_IS_PRODUCTION === "true";
-    
+
     snap = new midtransClient.Snap({
       isProduction,
       clientKey,
       serverKey,
     });
-    logger.info(`Midtrans client initialized (${isProduction ? 'production' : 'sandbox'} mode)`);
+    logger.info(
+      `Midtrans client initialized (${
+        isProduction ? "production" : "sandbox"
+      } mode)`
+    );
   }
 } catch (err) {
   logger.warn("Failed to initialize Midtrans client:", String(err));

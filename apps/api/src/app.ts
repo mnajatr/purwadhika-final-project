@@ -52,11 +52,11 @@ export class App {
     this.app.use("/api/category", categoryRouter);
     this.app.use("/api/reports", reportRouter);
     this.app.use("/api/payments", paymentRoutes);
-    
+
     // QStash worker webhook endpoints
     this.app.use("/api/workers", orderCancelWorker);
     this.app.use("/api/workers", orderConfirmWorker);
-    
+
     if (process.env.NODE_ENV !== "production") {
       this.app.use("/api/debug", debugRoutes);
     }
