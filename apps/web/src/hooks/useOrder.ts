@@ -4,7 +4,7 @@ import * as React from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { orderService } from "@/services/order.service";
 import type { ApiResponse } from "@/types/api";
-import { type OrderDetail, type CreateOrderItem } from "@repo/schemas";
+import { type OrderDetail, type CreateOrderItem } from "../schemas";
 import { cartService } from "@/services/cart.service";
 
 // Tiny UUIDv4 generator (no deps) for idempotency keys in the client

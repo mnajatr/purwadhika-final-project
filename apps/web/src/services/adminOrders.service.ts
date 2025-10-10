@@ -5,7 +5,7 @@ import {
   type AdminOrdersListResponse,
   type AdminOrdersFilter,
   type AdminOrderDetail,
-} from "@repo/schemas";
+} from "../schemas";
 
 class AdminOrdersService {
   private readonly basePath = "/admin/orders";

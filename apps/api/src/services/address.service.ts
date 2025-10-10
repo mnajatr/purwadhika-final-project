@@ -5,16 +5,14 @@ export class AddressService {
     let chosenAddressId: number | undefined = addressId;
 
     if (typeof chosenAddressId !== "number") {
-      // Pick user's primary or first address
       const addr = await prisma.userAddress.findFirst({
         where: { userId },
-        orderBy: { id: "asc" }, // Get the first address consistently
+        orderBy: { id: "asc" },
       });
 
       if (addr) {
         chosenAddressId = addr.id;
       } else {
-        // Auto-create a lightweight placeholder so DB constraints are satisfied
         const createdAddr = await prisma.userAddress.create({
           data: {
             userId,
@@ -31,7 +29,6 @@ export class AddressService {
         chosenAddressId = createdAddr.id;
       }
     } else {
-      // Validate ownership: ensure the provided address belongs to the user
       const addr = await prisma.userAddress.findUnique({
         where: { id: chosenAddressId },
       });
@@ -72,7 +69,7 @@ export class AddressService {
     const addr = await prisma.userAddress.findFirst({
       where: { userId },
       select: { latitude: true, longitude: true },
-      orderBy: { id: "asc" }, // Get first address consistently
+      orderBy: { id: "asc" },
     });
 
     if (addr && addr.latitude && addr.longitude) {

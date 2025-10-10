@@ -4,6 +4,7 @@ import { inventoryService } from "./inventory.service.js";
 import { addressService } from "./address.service.js";
 import { shippingService } from "./shipping.service.js";
 import { AppError } from "../errors/app.error.js";
+import logger from "../utils/logger.js";
 
 type OrderItemInput = { productId: number; qty: number };
 
@@ -14,7 +15,7 @@ type IdempotencyEntry =
 const IDEMPOTENCY_TTL_MS = 60 * 1000;
 const idempotencyStore = new Map<string, IdempotencyEntry>();
 const ORDER_CANCEL_DELAY_MS =
-  Number(process.env.ORDER_CANCEL_DELAY_MS) || 60 * 60 * 1000;
+  Number(process.env.ORDER_CANCEL_DELAY_MS) || 100000;
 
 export class CheckoutService {
   private locationService = locationService;
@@ -92,129 +93,194 @@ export class CheckoutService {
       throw new AppError("No items provided", 400);
     }
 
-    const resolvedStoreId = await this.locationService.resolveStoreId(
-      storeId,
-      userId,
-      userLat,
-      userLon,
-      addressId
-    );
-
-    const result = await prisma.$transaction(async (tx) => {
-      await this.inventoryService.validateInventoryAvailability(
-        resolvedStoreId,
-        items
-      );
-
-      const chosenAddressId = await this.addressService.resolveAddressId(
+    const [resolvedStoreId, chosenAddressId] = await Promise.all([
+      this.locationService.resolveStoreId(
+        storeId,
         userId,
+        userLat,
+        userLon,
         addressId
-      );
-      let subtotal = 0;
-      let totalItems = 0;
+      ),
+      this.addressService.resolveAddressId(userId, addressId),
+    ]);
 
-      const createdOrder = await tx.order.create({
-        data: {
-          userId,
-          storeId: resolvedStoreId,
-          addressId: chosenAddressId,
-          status: "PENDING_PAYMENT",
-          paymentMethod:
-            paymentMethod === "Gateway" ? "GATEWAY" : "MANUAL_TRANSFER",
-          subtotalAmount: 0,
-          shippingCost: 0,
-          discountTotal: 0,
-          grandTotal: 0,
-          totalItems: 0,
-          paymentDeadlineAt: new Date(Date.now() + 60 * 60 * 1000),
-        },
-      });
+    const productIds = items.map((item) => item.productId);
+    const [products, inventories] = await Promise.all([
+      prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, price: true },
+      }),
+      prisma.storeInventory.findMany({
+        where: { storeId: resolvedStoreId, productId: { in: productIds } },
+      }),
+    ]);
 
-      // Resolve shipping method and cost using shipping service
-      const resolvedMethodId = await this.shippingService.resolveShippingMethod(
-        { shippingMethod, shippingOption },
-        tx
-      );
-
-      const shippingCost = 0; // Default cost (can be enhanced with calculation logic)
-
-      // Create shipment record
-      await this.shippingService.createShipment(
-        tx,
-        createdOrder.id,
-        resolvedMethodId,
-        shippingCost
-      );
-
-      for (const item of items) {
-        const product = await tx.product.findUnique({
-          where: { id: item.productId },
-        });
-
-        const unitPrice = Math.round(Number(product?.price ?? 0));
-        const totalAmount = unitPrice * item.qty;
-
-        subtotal += totalAmount;
-        totalItems += item.qty;
-
-        await tx.orderItem.create({
-          data: {
-            orderId: createdOrder.id,
-            productId: item.productId,
-            productSnapshot: JSON.stringify({ productId: item.productId }),
-            unitPriceSnapshot: unitPrice,
-            qty: item.qty,
-            totalAmount,
-          },
-        });
+    const inventoryMap = new Map(
+      inventories.map((inv) => [inv.productId, inv])
+    );
+    for (const item of items) {
+      const inventory = inventoryMap.get(item.productId);
+      if (!inventory) {
+        throw new AppError("Product not available in this store", 400);
       }
-
-      await this.inventoryService.reserveInventory(
-        resolvedStoreId,
-        createdOrder.id,
-        items,
-        userId,
-        tx
-      );
-
-      const grandTotal = subtotal;
-
-      await tx.order.update({
-        where: { id: createdOrder.id },
-        data: { subtotalAmount: subtotal, grandTotal, totalItems },
-      });
-
-      const fullOrder = await tx.order.findUnique({
-        where: { id: createdOrder.id },
-        include: { items: true },
-      });
-
-      return fullOrder;
-    });
-
-    if (result?.id) {
-      await this._scheduleAutoCancellation(result.id, ORDER_CANCEL_DELAY_MS);
+      if (inventory.stockQty < item.qty) {
+        throw new AppError(
+          `Insufficient stock. Available: ${inventory.stockQty}`,
+          400
+        );
+      }
     }
 
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    let subtotal = 0;
+    let totalItems = 0;
+    const orderItemsData = [];
+    const stockJournalData = [];
+
+    for (const item of items) {
+      const product = productMap.get(item.productId);
+      const unitPrice = Math.round(Number(product?.price ?? 0));
+      const totalAmount = unitPrice * item.qty;
+
+      subtotal += totalAmount;
+      totalItems += item.qty;
+
+      orderItemsData.push({
+        productId: item.productId,
+        productSnapshot: JSON.stringify({ productId: item.productId }),
+        unitPriceSnapshot: unitPrice,
+        qty: item.qty,
+        totalAmount,
+      });
+
+      const inventory = inventoryMap.get(item.productId);
+      if (inventory) {
+        stockJournalData.push({
+          storeId: inventory.storeId,
+          productId: inventory.productId,
+          qtyChange: -item.qty,
+          reason: "REMOVE",
+          adminId: userId,
+        });
+      }
+    }
+
+    const shippingCost = 0;
+    const grandTotal = subtotal;
+
+    const result = await prisma.$transaction(
+      async (tx) => {
+        const resolvedMethodId =
+          await this.shippingService.resolveShippingMethod(
+            { shippingMethod, shippingOption },
+            tx
+          );
+
+        const createdOrder = await tx.order.create({
+          data: {
+            userId,
+            storeId: resolvedStoreId,
+            addressId: chosenAddressId,
+            status: "PENDING_PAYMENT",
+            paymentMethod:
+              paymentMethod === "Gateway" ? "GATEWAY" : "MANUAL_TRANSFER",
+            subtotalAmount: subtotal,
+            shippingCost,
+            discountTotal: 0,
+            grandTotal,
+            totalItems,
+            paymentDeadlineAt: new Date(Date.now() + 60 * 60 * 1000),
+          },
+        });
+
+        await Promise.all([
+          tx.shipment.create({
+            data: {
+              orderId: createdOrder.id,
+              methodId: resolvedMethodId,
+              trackingNumber: null,
+              cost: shippingCost,
+              status: "PENDING",
+              shippedAt: null,
+              deliveredAt: null,
+            },
+          }),
+          tx.orderItem.createMany({
+            data: orderItemsData.map((item) => ({
+              ...item,
+              orderId: createdOrder.id,
+            })),
+          }),
+        ]);
+
+        for (const item of items) {
+          const inventory = inventoryMap.get(item.productId);
+          if (!inventory) continue;
+
+          const updateRes = await tx.storeInventory.updateMany({
+            where: { id: inventory.id, stockQty: { gte: item.qty } },
+            data: { stockQty: { decrement: item.qty } },
+          });
+
+          if (updateRes.count === 0) {
+            throw new AppError(
+              `Insufficient stock for product ${item.productId}`,
+              400
+            );
+          }
+        }
+
+        await tx.stockJournal.createMany({
+          data: stockJournalData,
+        });
+
+        return createdOrder;
+      },
+      {
+        maxWait: 5000,
+        timeout: 10000,
+      }
+    );
+
+    Promise.all([
+      result?.id
+        ? this._scheduleAutoCancellation(result.id, ORDER_CANCEL_DELAY_MS)
+        : Promise.resolve(),
+      this._cleanupCart(userId, resolvedStoreId, items, result?.id),
+    ]).catch((err) => {
+      logger.error(`Background tasks failed for order=${result?.id}`, err);
+    });
+
+    const fullOrder = await prisma.order.findUnique({
+      where: { id: result.id },
+      include: { items: true },
+    });
+
+    return fullOrder;
+  }
+
+  private async _cleanupCart(
+    userId: number,
+    storeId: number,
+    items: OrderItemInput[],
+    orderId?: number
+  ): Promise<void> {
     try {
       const productIds = items.map((it) => it.productId).filter(Boolean);
-      if (productIds.length > 0 && resolvedStoreId) {
+      if (productIds.length > 0 && storeId) {
         await prisma.cartItem.deleteMany({
           where: {
             productId: { in: productIds },
-            cart: { userId, storeId: resolvedStoreId },
+            cart: { userId, storeId },
           },
         });
       }
     } catch (err) {
-      const logger = (await import("../utils/logger.js")).default;
       logger.error(
-        `Failed to clean up cart for user=${userId} order=${result?.id}`,
+        `Failed to clean up cart for user=${userId} order=${orderId}`,
         err
       );
     }
-
-    return result;
   }
 
   private async _scheduleAutoCancellation(
@@ -232,7 +298,6 @@ export class CheckoutService {
         { jobId: String(orderId), delay: delayMs }
       );
     } catch (err) {
-      const logger = (await import("../utils/logger.js")).default;
       logger.error(`Failed to enqueue cancel job for order=${orderId}`, err);
     }
   }

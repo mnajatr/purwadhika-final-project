@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://growseries-api2.vercel.app"
+    },
+    {
+      "src": "(.*)",
+      "dest": "/$1"
+    }
+  ]
+}

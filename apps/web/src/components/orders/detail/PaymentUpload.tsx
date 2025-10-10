@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import type { OrderDetail } from "@repo/schemas";
+import type { OrderDetail } from "../../../schemas";
 import { apiClient } from "@/lib/axios-client";
 
 interface PaymentUploadProps {

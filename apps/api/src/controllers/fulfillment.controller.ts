@@ -46,7 +46,7 @@ export class FulfillmentController {
 
     const authReq = req as any;
     const isAdmin =
-      authReq.user &&
+      authReq.user && 
       (authReq.user.role === "SUPER_ADMIN" ||
         authReq.user.role === "STORE_ADMIN");
     const requester = isAdmin ? undefined : userId;

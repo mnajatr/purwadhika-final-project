@@ -10,12 +10,10 @@ export class LocationService {
     lat: number,
     lon: number
   ): Promise<number | undefined> {
-    // Validate coordinates
     if (!isValidCoordinates(lat, lon)) {
       throw new Error(`Invalid coordinates: lat=${lat}, lon=${lon}`);
     }
 
-    // Load all store locations (small number expected) and compute distance
     const locations = await prisma.storeLocation.findMany({
       include: { store: true },
     });
@@ -37,15 +35,12 @@ export class LocationService {
       }
     }
 
-    // Enforce a max service radius (e.g., 10 km) to avoid assigning very distant store
     const MAX_KM = Number(process.env.MAX_STORE_RADIUS_KM ?? 10);
     if (best && best.distKm <= MAX_KM) return best.storeId;
     return undefined;
   }
 
-  // New helper to compute nearest store + distance details
   async computeNearestWithDistance(lat: number, lon: number) {
-    // Validate coordinates
     if (!isValidCoordinates(lat, lon)) {
       throw new Error(`Invalid coordinates: lat=${lat}, lon=${lon}`);
     }
@@ -98,13 +93,11 @@ export class LocationService {
 
     if (!resolvedStoreId) {
       if (coordsExplicit) {
-        // If user explicitly provided coords, only use them
         resolvedStoreId = await this.findNearestStoreId(userLat!, userLon!);
         if (!resolvedStoreId) {
           throw new Error(ERROR_MESSAGES.STORE.NO_NEARBY);
         }
       } else {
-        // No explicit coords: try addressId coords first
         if (typeof addressId === "number") {
           const addr = await prisma.userAddress.findUnique({
             where: { id: addressId },
@@ -117,7 +110,6 @@ export class LocationService {
           }
         }
 
-        // Finally try user's primary address if still not resolved
         if (!resolvedStoreId) {
           const addr = await prisma.userAddress.findFirst({
             where: { userId },

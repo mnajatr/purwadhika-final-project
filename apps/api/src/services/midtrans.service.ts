@@ -66,7 +66,7 @@ export class MidtransService {
     const frontendUrl =
       process.env.FRONTEND_URL ||
       process.env.NEXT_PUBLIC_FRONTEND_URL ||
-      "http://localhost:3000";
+      "https://growseries.vercel.app";
 
     const payload: any = {
       transaction_details: transactionDetails,

@@ -1,7 +1,7 @@
 import { ShoppingBag } from "lucide-react";
 import OrdersListPagination from "./OrdersListPagination";
 import OrdersListRow from "./OrdersListRow";
-import type { AdminOrderListItem } from "@repo/schemas";
+import type { AdminOrderListItem } from "../../../../schemas";
 
 interface OrdersListTableProps {
   items: AdminOrderListItem[];

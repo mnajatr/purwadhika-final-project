@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { UpdateCategorySchema, UpdateCategoryInput } from "@repo/schemas";
+import { UpdateCategorySchema, UpdateCategoryInput } from "../../schemas";
 import { useUpdateCategory } from "@/hooks/useCategory";
 import { toast } from "sonner";
 

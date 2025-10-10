@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { createUser } from "@/services/users.service";
-import { CreateUserSchema } from "@repo/schemas";
+import { CreateUserSchema } from "../../../schemas";
 import { toast } from "sonner";
 
 type CreateUserInput = z.infer<typeof CreateUserSchema>;

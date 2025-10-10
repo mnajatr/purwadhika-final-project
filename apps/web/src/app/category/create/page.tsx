@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createCategory } from "@/services/category.service";
-import { CreateCategoryInput, CreateCategorySchema } from "@repo/schemas";
+import { CreateCategoryInput, CreateCategorySchema } from "../../../schemas";
 import { toast } from "sonner";
 
 export default function CreateCategoryForm() {
