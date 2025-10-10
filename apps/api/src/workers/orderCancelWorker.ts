@@ -1,6 +1,5 @@
 import { Router } from "express";
-// express.json() is enabled globally in app.ts; we don't need express here.
-// NOTE: Signature verification removed by request. We no longer import Receiver.
+import { Receiver } from "@upstash/qstash";
 import { prisma } from "../configs/prisma.config.js";
 import logger from "../utils/logger.js";
 import type { CancelOrderJobData } from "../queues/orderCancelQueue.js";
@@ -9,12 +8,6 @@ const QSTASH_CURRENT_SIGNING_KEY = process.env.QSTASH_CURRENT_SIGNING_KEY;
 const QSTASH_NEXT_SIGNING_KEY = process.env.QSTASH_NEXT_SIGNING_KEY;
 
 const router = Router();
-
-// Health check endpoint to allow probes (GET) to succeed.
-// Some external services validate routes using GET/HEAD before publishing.
-router.get('/order-cancel', (_req, res) => {
-  res.status(200).json({ ok: true });
-});
 
 /**
  * Process order cancellation job.
@@ -141,18 +134,31 @@ async function processCancelOrder(data: CancelOrderJobData) {
 // QStash webhook endpoint for order cancellation
 router.post("/order-cancel", async (req, res) => {
   try {
-    // Debug: log incoming header keys so we can see what the caller sent
-    try {
-      logger.info(`Incoming headers: ${Object.keys(req.headers).join(", ")}`);
-    } catch {}
-
-    const data = req.body as CancelOrderJobData;
-
-    if (!data || typeof data.orderId !== "number") {
-      logger.error("Invalid request body for order cancel:", req.body);
-      return res.status(400).json({ error: "Invalid request body" });
+    if (!QSTASH_CURRENT_SIGNING_KEY || !QSTASH_NEXT_SIGNING_KEY) {
+      logger.error("QStash signing keys not configured");
+      return res.status(500).json({ error: "QStash not configured" });
     }
 
+    const receiver = new Receiver({
+      currentSigningKey: QSTASH_CURRENT_SIGNING_KEY,
+      nextSigningKey: QSTASH_NEXT_SIGNING_KEY,
+    });
+
+    const signature = req.headers["upstash-signature"] as string;
+    const body = JSON.stringify(req.body);
+
+    // Verify the request is from QStash
+    const isValid = await receiver.verify({
+      signature,
+      body,
+    });
+
+    if (!isValid) {
+      logger.error("Invalid QStash signature for order cancel");
+      return res.status(401).json({ error: "Invalid signature" });
+    }
+
+    const data = req.body as CancelOrderJobData;
     logger.info(`🎉 Order cancel job received: ${JSON.stringify(data)}`);
 
     await processCancelOrder(data);

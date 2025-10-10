@@ -102,10 +102,16 @@ export class InventoryService {
       where: { storeId, productId: { in: productIds } },
     });
 
+    // Create inventory map for faster lookup
+    const inventoryMap = new Map(
+      inventories.map((inv) => [inv.productId, inv])
+    );
+
+    // Prepare batch operations
+    const stockJournalData = [];
+
     for (const item of items) {
-      const inventory = inventories.find(
-        (inv) => inv.productId === item.productId
-      );
+      const inventory = inventoryMap.get(item.productId);
       if (!inventory) {
         throw new Error(ERROR_MESSAGES.INVENTORY.NO_INVENTORY);
       }
@@ -122,15 +128,20 @@ export class InventoryService {
         );
       }
 
-      // Record stock journal for the decrement
-      await tx.stockJournal.create({
-        data: {
-          storeId: inventory.storeId,
-          productId: inventory.productId,
-          qtyChange: -item.qty,
-          reason: "REMOVE",
-          adminId: userId,
-        },
+      // Prepare stock journal entry
+      stockJournalData.push({
+        storeId: inventory.storeId,
+        productId: inventory.productId,
+        qtyChange: -item.qty,
+        reason: "REMOVE",
+        adminId: userId,
+      });
+    }
+
+    // Batch create stock journal entries
+    if (stockJournalData.length > 0) {
+      await tx.stockJournal.createMany({
+        data: stockJournalData,
       });
     }
   }
@@ -141,20 +152,28 @@ export class InventoryService {
     userId: number,
     tx: Prisma.TransactionClient
   ): Promise<void> {
+    // Prepare batch operations
+    const stockJournalData = [];
+
     for (const item of items) {
       await tx.storeInventory.updateMany({
         where: { storeId: storeId, productId: item.productId },
         data: { stockQty: { increment: item.qty } },
       });
 
-      await tx.stockJournal.create({
-        data: {
-          storeId: storeId,
-          productId: item.productId,
-          qtyChange: item.qty,
-          reason: "ADD",
-          adminId: userId,
-        },
+      stockJournalData.push({
+        storeId: storeId,
+        productId: item.productId,
+        qtyChange: item.qty,
+        reason: "ADD",
+        adminId: userId,
+      });
+    }
+
+    // Batch create stock journal entries
+    if (stockJournalData.length > 0) {
+      await tx.stockJournal.createMany({
+        data: stockJournalData,
       });
     }
   }

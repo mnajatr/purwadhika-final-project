@@ -154,13 +154,6 @@ export class CheckoutController {
         throw createNotFoundError("Order");
       }
 
-      // const authReq = req as AuthRequest;
-      // const userId = authReq.user?.id;
-
-      // if (userId && order.userId !== userId) {
-      //   throw createUnauthorizedError("Access denied");
-      // }
-
       res.status(200).json({
         message: "Order retrieved successfully",
         data: order,

@@ -29,7 +29,6 @@ export class ShippingService {
     let serviceCode: string;
 
     if (shippingMethod) {
-      // Try to find existing shipping method
       const existingMethod = await client.shippingMethod.findFirst({
         where: {
           OR: [{ carrier: shippingMethod }, { serviceCode: shippingMethod }],
@@ -41,15 +40,11 @@ export class ShippingService {
         carrier = existingMethod.carrier;
         serviceCode = existingMethod.serviceCode;
       } else {
-        // If method doesn't exist, we'll need to create it in transaction
-        // For now, return the data to be created by checkout service
-        // This keeps the calculation pure
         carrier = shippingMethod;
         serviceCode = shippingOption || shippingMethod;
-        methodId = -1; // Sentinel value indicating "needs creation"
+        methodId = -1;
       }
     } else {
-      // Use default shipping method
       const defaultMethod = await client.shippingMethod.findFirst({
         where: { isActive: true },
         orderBy: { id: "asc" },
